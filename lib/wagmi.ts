@@ -15,5 +15,5 @@ export const wagmiConfig = getDefaultConfig({
   appUrl: "https://lae.finance",
   projectId: process.env.NEXT_PUBLIC_WC_PROJECT_ID || "lae_demo_project_id",
   chains: [mainnet, polygon, arbitrum, bsc, optimism, base],
-  ssr: true,
+  ssr: false,
 });

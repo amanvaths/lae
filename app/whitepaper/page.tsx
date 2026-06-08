@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Footer } from "@/components/sections/Footer";
 import { Reveal } from "@/components/ui/Reveal";
+import { withBasePath } from "@/lib/paths";
 import { FileText, Download, ArrowRight } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -10,7 +11,7 @@ export const metadata: Metadata = {
     "The LAE Protocol whitepaper: token, tokenomics, the on-chain network reward model, architecture, security, governance and roadmap.",
 };
 
-const PDF = "/lae-whitepaper.pdf";
+const PDF = withBasePath("/lae-whitepaper.pdf");
 
 const contents = [
   "Abstract",

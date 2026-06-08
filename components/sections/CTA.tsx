@@ -5,6 +5,7 @@ import { ArrowRight, Copy, Check } from "lucide-react";
 import { useState } from "react";
 import { SplineEmbed } from "@/components/three/SplineEmbed";
 import { Reveal } from "@/components/ui/Reveal";
+import { withBasePath } from "@/lib/paths";
 
 export function CTA() {
   const [copied, setCopied] = useState(false);
@@ -46,7 +47,7 @@ export function CTA() {
                   <a href="#" className="btn-primary">
                     Buy $LAE now <ArrowRight className="h-4 w-4" />
                   </a>
-                  <a href="/whitepaper" className="btn-ghost">
+                  <a href={withBasePath("/whitepaper")} className="btn-ghost">
                     Read whitepaper
                   </a>
                 </div>

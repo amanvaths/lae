@@ -1,11 +1,15 @@
 /** @type {import('next').NextConfig} */
 const isGithubPages = process.env.GITHUB_PAGES === "true";
+const basePath = isGithubPages ? "/lae" : "";
 
 const nextConfig = {
   output: "export",
   trailingSlash: true,
-  basePath: isGithubPages ? "/lae" : "",
+  basePath,
   assetPrefix: isGithubPages ? "/lae/" : "",
+  env: {
+    NEXT_PUBLIC_BASE_PATH: basePath,
+  },
   images: { unoptimized: true },
   reactStrictMode: true,
   transpilePackages: ["three"],

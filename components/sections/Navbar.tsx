@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion, useMotionValueEvent, useScroll, AnimatePresence } from "framer-motion";
 import { Menu, X, Hexagon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { withBasePath } from "@/lib/paths";
 import { ConnectWallet } from "@/components/web3/ConnectWallet";
 
 const links = [
@@ -12,7 +13,7 @@ const links = [
   { label: "Network", href: "/#network" },
   { label: "Roadmap", href: "/#roadmap" },
   { label: "P2P", href: "/p2p" },
-];
+].map((l) => ({ ...l, href: withBasePath(l.href) }));
 
 export function Navbar() {
   const [scrolled, setScrolled] = useState(false);

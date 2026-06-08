@@ -4,6 +4,7 @@ import { Canvas, useFrame } from "@react-three/fiber";
 import { useTexture, Environment, Float } from "@react-three/drei";
 import { Suspense, useMemo, useRef } from "react";
 import * as THREE from "three";
+import { withBasePath } from "@/lib/paths";
 
 /**
  * The LAE token rendered as a real 3D coin: a textured cylinder whose two
@@ -13,7 +14,7 @@ import * as THREE from "three";
 function Coin({ radius = 2, thickness = 0.26 }: { radius?: number; thickness?: number }) {
   const spin = useRef<THREE.Group>(null);
 
-  const tex = useTexture("/lae-coin.png");
+  const tex = useTexture(withBasePath("/lae-coin.png"));
   useMemo(() => {
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.anisotropy = 8;
