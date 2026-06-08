@@ -1,23 +1,39 @@
 "use client";
 
 import { Canvas, useFrame } from "@react-three/fiber";
-import { useTexture, Environment, Float } from "@react-three/drei";
-import { Suspense, useMemo, useRef } from "react";
+import { useTexture, Float } from "@react-three/drei";
+import { Suspense, useMemo, useRef, useState, useEffect } from "react";
 import * as THREE from "three";
 import { withBasePath } from "@/lib/paths";
+import { CoinFallback } from "@/components/three/CoinFallback";
+import { WebGLErrorBoundary } from "@/components/three/WebGLErrorBoundary";
 
-/**
- * The LAE token rendered as a real 3D coin: a textured cylinder whose two
- * faces use /lae-coin.png with a milled gold edge. Drop the official artwork
- * at public/lae-coin.png (square, transparent outside the circle) to swap it.
- */
-function Coin({ radius = 2, thickness = 0.26 }: { radius?: number; thickness?: number }) {
+function supportsWebGL() {
+  if (typeof window === "undefined") return false;
+  try {
+    const canvas = document.createElement("canvas");
+    return !!(
+      window.WebGLRenderingContext &&
+      (canvas.getContext("webgl2") || canvas.getContext("webgl"))
+    );
+  } catch {
+    return false;
+  }
+}
+
+function Coin({
+  radius = 2,
+  thickness = 0.26,
+}: {
+  radius?: number;
+  thickness?: number;
+}) {
   const spin = useRef<THREE.Group>(null);
 
   const tex = useTexture(withBasePath("/lae-coin.png"));
   useMemo(() => {
     tex.colorSpace = THREE.SRGBColorSpace;
-    tex.anisotropy = 8;
+    tex.anisotropy = 4;
     tex.center.set(0.5, 0.5);
   }, [tex]);
 
@@ -54,14 +70,58 @@ function Coin({ radius = 2, thickness = 0.26 }: { radius?: number; thickness?: n
     <group ref={spin} rotation={[0.12, 0, 0]}>
       <Float speed={1.3} rotationIntensity={0.15} floatIntensity={0.8}>
         <mesh rotation={[Math.PI / 2, 0, 0]} material={[edgeMat, faceMat, faceMat]}>
-          <cylinderGeometry args={[radius, radius, thickness, 96]} />
+          <cylinderGeometry args={[radius, radius, thickness, 64]} />
         </mesh>
         <mesh rotation={[Math.PI / 2, 0, 0]}>
-          <torusGeometry args={[radius - 0.01, 0.03, 16, 96]} />
+          <torusGeometry args={[radius - 0.01, 0.03, 12, 64]} />
           <meshStandardMaterial color="#ffe9a8" metalness={1} roughness={0.2} />
         </mesh>
       </Float>
     </group>
+  );
+}
+
+function LaeCoinCanvas({
+  radius = 2,
+  thickness = 0.26,
+  className,
+  onFail,
+}: {
+  radius?: number;
+  thickness?: number;
+  className?: string;
+  onFail: () => void;
+}) {
+  return (
+    <Canvas
+      className={className}
+      camera={{ position: [0, 0, 6.4], fov: 40 }}
+      dpr={[1, 1.25]}
+      gl={{
+        antialias: true,
+        alpha: true,
+        powerPreference: "low-power",
+        failIfMajorPerformanceCaveat: false,
+      }}
+      onCreated={({ gl }) => {
+        gl.domElement.addEventListener(
+          "webglcontextlost",
+          (event) => {
+            event.preventDefault();
+            onFail();
+          },
+          { once: true }
+        );
+      }}
+    >
+      <Suspense fallback={null}>
+        <ambientLight intensity={0.65} />
+        <directionalLight position={[4, 5, 5]} intensity={2.4} color="#fff4d6" />
+        <directionalLight position={[-5, -2, 2]} intensity={1.1} color="#8b5cf6" />
+        <pointLight position={[0, 0, 5]} intensity={1.4} color="#ffd86b" />
+        <Coin radius={radius} thickness={thickness} />
+      </Suspense>
+    </Canvas>
   );
 }
 
@@ -74,21 +134,28 @@ export default function LaeCoin({
   thickness?: number;
   className?: string;
 }) {
+  const [failed, setFailed] = useState(false);
+  const [canRender, setCanRender] = useState(false);
+
+  useEffect(() => {
+    setCanRender(supportsWebGL());
+  }, []);
+
+  const fallback = <CoinFallback className={className} />;
+
+  if (failed || !canRender) return fallback;
+
   return (
-    <Canvas
-      className={className}
-      camera={{ position: [0, 0, 6.4], fov: 40 }}
-      dpr={[1, 2]}
-      gl={{ antialias: true, alpha: true }}
+    <WebGLErrorBoundary
+      fallback={fallback}
+      onError={() => setFailed(true)}
     >
-      <Suspense fallback={null}>
-        <ambientLight intensity={0.5} />
-        <directionalLight position={[4, 5, 5]} intensity={2.6} color="#fff4d6" />
-        <directionalLight position={[-5, -2, 2]} intensity={1.2} color="#8b5cf6" />
-        <pointLight position={[0, 0, 5]} intensity={1.6} color="#ffd86b" />
-        <Coin radius={radius} thickness={thickness} />
-        <Environment preset="sunset" environmentIntensity={0.85} />
-      </Suspense>
-    </Canvas>
+      <LaeCoinCanvas
+        radius={radius}
+        thickness={thickness}
+        className={className}
+        onFail={() => setFailed(true)}
+      />
+    </WebGLErrorBoundary>
   );
 }

@@ -3,9 +3,9 @@
 import { motion } from "framer-motion";
 import { ArrowRight, Copy, Check } from "lucide-react";
 import { useState } from "react";
-import { SplineEmbed } from "@/components/three/SplineEmbed";
 import { Reveal } from "@/components/ui/Reveal";
 import { withBasePath } from "@/lib/paths";
+import { CoinFallback } from "@/components/three/CoinFallback";
 
 export function CTA() {
   const [copied, setCopied] = useState(false);
@@ -74,7 +74,7 @@ export function CTA() {
                 transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
                 className="relative mx-auto aspect-square w-full max-w-[420px]"
               >
-                <SplineEmbed />
+                <CoinFallback spin={false} />
               </motion.div>
             </div>
           </div>
