@@ -47,14 +47,14 @@ const statusMap = {
 
 export function Roadmap() {
   return (
-    <section id="roadmap" className="relative py-24 sm:py-32">
+    <section id="roadmap" className="relative scroll-mt-28 py-24 sm:py-32">
       <div className="container-edge">
         <SectionHeading
           eyebrow="Roadmap"
           title={
             <>
               The path from token to{" "}
-              <span className="text-gradient">global network</span>
+              <span className="text-gradient-gold">global network</span>
             </>
           }
           description="A deliberate rollout — security first, then scale, then full community ownership."

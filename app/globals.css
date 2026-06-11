@@ -3,9 +3,12 @@
 @tailwind utilities;
 
 :root {
-  --font-sans: "Inter", system-ui, sans-serif;
-  --font-display: "Inter", system-ui, sans-serif;
+  --font-sans: "Poppins", system-ui, sans-serif;
+  --font-display: var(--font-sans);
   --font-mono: ui-monospace, "SF Mono", monospace;
+  --cryptro-gold: #ffc31a;
+  --cryptro-dark: #191919;
+  --cryptro-bg: #0a0a0a;
 }
 
 @layer base {
@@ -19,17 +22,8 @@
   }
 
   body {
-    @apply bg-ink-950 text-slate-200 font-sans antialiased;
-    background-image: radial-gradient(
-        70% 50% at 50% -10%,
-        rgba(30, 155, 255, 0.12),
-        transparent 60%
-      ),
-      radial-gradient(
-        50% 40% at 90% 10%,
-        rgba(139, 92, 246, 0.1),
-        transparent 60%
-      );
+    @apply bg-ink-950 text-slate-300 font-sans antialiased;
+    background-color: var(--cryptro-bg);
     overflow-x: hidden;
   }
 
@@ -43,57 +37,130 @@
     @apply mx-auto w-full max-w-7xl px-5 sm:px-8;
   }
 
-  /* Glass surface used across cards */
   .glass {
-    @apply rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl;
-    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.06),
-      0 30px 60px -30px rgba(0, 0, 0, 0.8);
+    @apply rounded-2xl border border-white/10 bg-ink-900/80 backdrop-blur-xl;
+    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.04),
+      0 20px 50px -25px rgba(0, 0, 0, 0.8);
   }
 
   .glass-hover {
-    @apply transition-all duration-500 hover:border-white/20 hover:bg-white/[0.05];
+    @apply transition-all duration-500 hover:border-brand-500/20 hover:bg-ink-800/80;
   }
 
-  /* Gradient text */
   .text-gradient {
-    @apply bg-gradient-to-r from-white via-brand-200 to-accent-400 bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-gold-300 via-brand-400 to-gold-500 bg-clip-text text-transparent;
   }
 
   .text-gradient-gold {
-    @apply bg-gradient-to-r from-gold-300 via-gold-400 to-gold-500 bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-gold-300 via-brand-400 to-gold-500 bg-clip-text text-transparent;
   }
 
-  /* Animated conic border ring */
   .ring-conic {
     background: conic-gradient(
       from 180deg at 50% 50%,
-      rgba(30, 155, 255, 0) 0deg,
-      rgba(30, 155, 255, 0.7) 120deg,
-      rgba(139, 92, 246, 0.7) 240deg,
-      rgba(30, 155, 255, 0) 360deg
+      rgba(255, 195, 26, 0) 0deg,
+      rgba(255, 195, 26, 0.8) 120deg,
+      rgba(255, 215, 80, 0.6) 240deg,
+      rgba(255, 195, 26, 0) 360deg
     );
   }
 
   .btn-primary {
-    @apply relative inline-flex items-center justify-center gap-2 rounded-full
-      bg-gradient-to-b from-brand-400 to-brand-600 px-6 py-3 text-sm font-semibold
-      text-white shadow-glow transition-all duration-300 hover:shadow-[0_0_80px_-10px_rgba(30,155,255,0.8)]
-      hover:-translate-y-0.5 active:translate-y-0;
+    @apply relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-sm
+      bg-brand-500 px-6 py-3 text-sm font-semibold uppercase tracking-wide
+      text-ink-950 shadow-glow transition-all duration-300
+      hover:bg-brand-400 hover:-translate-y-0.5 active:translate-y-0;
+  }
+
+  .btn-primary::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      105deg,
+      transparent 40%,
+      rgba(255, 255, 255, 0.35) 50%,
+      transparent 60%
+    );
+    transform: translateX(-120%);
+    transition: transform 0.55s ease;
+  }
+
+  .btn-primary:hover::after {
+    transform: translateX(120%);
+  }
+
+  .btn-gold {
+    @apply relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-sm
+      bg-brand-500 px-6 py-3 text-sm font-semibold uppercase tracking-wide
+      text-ink-950 shadow-glow transition-all duration-300
+      hover:bg-brand-400 hover:-translate-y-0.5 active:translate-y-0;
   }
 
   .btn-ghost {
-    @apply inline-flex items-center justify-center gap-2 rounded-full border border-white/15
-      bg-white/[0.02] px-6 py-3 text-sm font-semibold text-slate-200 backdrop-blur-md
-      transition-all duration-300 hover:border-white/30 hover:bg-white/[0.06] hover:text-white;
+    @apply inline-flex items-center justify-center gap-2 rounded-sm border border-white/20
+      bg-transparent px-6 py-3 text-sm font-semibold uppercase tracking-wide text-slate-200
+      transition-all duration-300 hover:border-brand-500/50 hover:text-brand-400;
   }
 
   .chip {
-    @apply inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04]
-      px-3 py-1 text-xs font-medium text-slate-300;
+    @apply inline-flex items-center gap-2 rounded-sm border border-brand-500/20 bg-brand-500/5
+      px-3 py-1 text-xs font-medium uppercase tracking-wider text-brand-400;
+  }
+
+  .section-label {
+    @apply inline-flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.2em] text-brand-400;
+  }
+
+  .section-label::before,
+  .section-label::after {
+    content: "";
+    @apply h-px w-6 bg-gradient-to-r from-transparent to-brand-500;
+  }
+
+  .section-label::after {
+    @apply bg-gradient-to-l from-transparent to-brand-500;
+  }
+
+  .section-dark {
+    @apply bg-ink-900;
+  }
+
+  .feature-box {
+    @apply relative overflow-hidden rounded-sm border border-white/10 bg-ink-900 p-8
+      transition-all duration-500 hover:border-brand-500/30 hover:-translate-y-1 hover:shadow-glow-gold;
+  }
+
+  .feature-box::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--cryptro-gold), transparent);
+    transform: scaleX(0);
+    transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .feature-box:hover::before {
+    transform: scaleX(1);
+  }
+
+  .text-shimmer {
+    @apply animate-shimmer bg-gradient-to-r from-gold-300 via-white to-gold-400 bg-[length:200%_auto] bg-clip-text text-transparent;
+  }
+
+  .scanline {
+    @apply pointer-events-none absolute inset-0 overflow-hidden opacity-[0.04];
+  }
+
+  .scanline::after {
+    content: "";
+    @apply absolute inset-x-0 h-32 bg-gradient-to-b from-transparent via-brand-400/40 to-transparent animate-scanline;
   }
 }
 
-/* Hide scrollbar in marquee tracks but keep functionality */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
@@ -102,13 +169,12 @@
   scrollbar-width: none;
 }
 
-/* Subtle grain overlay */
 .grain::before {
   content: "";
   position: fixed;
   inset: 0;
   z-index: 1;
   pointer-events: none;
-  opacity: 0.035;
+  opacity: 0.03;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' /%3E%3C/svg%3E");
 }

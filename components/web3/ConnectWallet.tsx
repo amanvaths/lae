@@ -3,12 +3,9 @@
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { Wallet, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useWeb3Loaded } from "@/app/providers";
+import { withBasePath } from "@/lib/paths";
 
-/**
- * Custom-styled RainbowKit connect button that matches the LAE design system.
- * Shows a glossy "Connect" pill when disconnected, and chain + account pills
- * when connected.
- */
 export function ConnectWallet({
   full = false,
   variant = "ghost",
@@ -16,6 +13,24 @@ export function ConnectWallet({
   full?: boolean;
   variant?: "ghost" | "primary";
 }) {
+  const web3Ready = useWeb3Loaded();
+
+  if (!web3Ready) {
+    return (
+      <a
+        href={withBasePath("/login")}
+        className={cn(
+          variant === "primary" ? "btn-primary" : "btn-ghost",
+          full && "w-full justify-center",
+          "inline-flex items-center gap-2"
+        )}
+      >
+        <Wallet className="h-4 w-4" />
+        {variant === "primary" ? "Connect Wallet" : "Connect"}
+      </a>
+    );
+  }
+
   return (
     <ConnectButton.Custom>
       {({

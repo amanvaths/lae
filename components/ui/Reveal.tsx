@@ -4,14 +4,13 @@ import { motion, useInView, type Variants } from "framer-motion";
 import { useRef } from "react";
 
 const variants: Variants = {
-  hidden: { opacity: 0, y: 28, filter: "blur(8px)" },
+  hidden: { opacity: 0, y: 20 },
   visible: (i: number) => ({
     opacity: 1,
     y: 0,
-    filter: "blur(0px)",
     transition: {
-      duration: 0.7,
-      delay: i * 0.08,
+      duration: 0.55,
+      delay: i * 0.06,
       ease: [0.22, 1, 0.36, 1],
     },
   }),

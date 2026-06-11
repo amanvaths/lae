@@ -24,10 +24,7 @@ export function SectionHeading({
     >
       {eyebrow && (
         <Reveal>
-          <span className="chip">
-            <span className="h-1.5 w-1.5 rounded-full bg-brand-400 shadow-glow" />
-            {eyebrow}
-          </span>
+          <span className="section-label">{eyebrow}</span>
         </Reveal>
       )}
       <Reveal delay={1}>

@@ -1,34 +1,34 @@
 "use client";
 
-import { useState } from "react";
-import { WagmiProvider } from "wagmi";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  RainbowKitProvider,
-  darkTheme,
-  type Theme,
-} from "@rainbow-me/rainbowkit";
-import "@rainbow-me/rainbowkit/styles.css";
-import { wagmiConfig } from "@/lib/wagmi";
+import { createContext, useContext, useEffect, useState } from "react";
 
-const laeTheme: Theme = darkTheme({
-  accentColor: "#1e9bff",
-  accentColorForeground: "#ffffff",
-  borderRadius: "large",
-  fontStack: "system",
-  overlayBlur: "small",
-});
+const Web3LoadedContext = createContext(false);
 
+export function useWeb3Loaded() {
+  return useContext(Web3LoadedContext);
+}
+
+/** Loads Wagmi/RainbowKit in a separate chunk after first paint. */
 export function Providers({ children }: { children: React.ReactNode }) {
-  const [queryClient] = useState(() => new QueryClient());
+  const [Web3, setWeb3] = useState<
+    React.ComponentType<{ children: React.ReactNode }> | null
+  >(null);
+
+  useEffect(() => {
+    import("./web3-providers").then((m) => setWeb3(() => m.Web3Providers));
+  }, []);
+
+  if (!Web3) {
+    return (
+      <Web3LoadedContext.Provider value={false}>
+        {children}
+      </Web3LoadedContext.Provider>
+    );
+  }
 
   return (
-    <WagmiProvider config={wagmiConfig}>
-      <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider theme={laeTheme} modalSize="compact">
-          {children}
-        </RainbowKitProvider>
-      </QueryClientProvider>
-    </WagmiProvider>
+    <Web3LoadedContext.Provider value={true}>
+      <Web3>{children}</Web3>
+    </Web3LoadedContext.Provider>
   );
 }

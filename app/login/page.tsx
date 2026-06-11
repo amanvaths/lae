@@ -5,14 +5,42 @@ import { motion } from "framer-motion";
 import { useAccount } from "wagmi";
 import { Hexagon, ShieldCheck, ArrowRight, CheckCircle2 } from "lucide-react";
 import { ConnectWallet } from "@/components/web3/ConnectWallet";
+import { useWeb3Loaded } from "@/app/providers";
 
 const ease = [0.22, 1, 0.36, 1] as const;
 
 const wallets = ["MetaMask", "WalletConnect", "Coinbase", "Rabby", "Ledger"];
 
-export default function LoginPage() {
-  const { isConnected, address } = useAccount();
+function ConnectedStatus() {
+  const web3Ready = useWeb3Loaded();
+  if (!web3Ready) return null;
 
+  const { isConnected, address } = useAccount();
+  if (!isConnected) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="w-full"
+    >
+      <div className="mb-3 flex items-center justify-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-2.5 text-sm text-emerald-300">
+        <CheckCircle2 className="h-4 w-4" />
+        Wallet connected
+        {address ? (
+          <span className="font-mono text-emerald-400/80">
+            {address.slice(0, 6)}…{address.slice(-4)}
+          </span>
+        ) : null}
+      </div>
+      <Link href="/dashboard" className="btn-primary w-full justify-center">
+        Enter Dashboard <ArrowRight className="h-4 w-4" />
+      </Link>
+    </motion.div>
+  );
+}
+
+export default function LoginPage() {
   return (
     <main className="relative grid min-h-screen place-items-center overflow-hidden px-5 py-12">
       {/* background */}
@@ -58,26 +86,7 @@ export default function LoginPage() {
             <ConnectWallet full variant="primary" />
           </div>
 
-          {isConnected && (
-            <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="w-full"
-            >
-              <div className="mb-3 flex items-center justify-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-2.5 text-sm text-emerald-300">
-                <CheckCircle2 className="h-4 w-4" />
-                Wallet connected
-                {address ? (
-                  <span className="font-mono text-emerald-400/80">
-                    {address.slice(0, 6)}…{address.slice(-4)}
-                  </span>
-                ) : null}
-              </div>
-              <Link href="/dashboard" className="btn-primary w-full justify-center">
-                Enter Dashboard <ArrowRight className="h-4 w-4" />
-              </Link>
-            </motion.div>
-          )}
+          <ConnectedStatus />
         </div>
 
         {/* supported wallets */}

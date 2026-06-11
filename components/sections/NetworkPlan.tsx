@@ -15,7 +15,7 @@ const levels = [
 
 export function NetworkPlan() {
   return (
-    <section id="network" className="relative py-24 sm:py-32">
+    <section id="network" className="relative scroll-mt-28 py-24 sm:py-32">
       <div className="container-edge">
         <SectionHeading
           align="left"
@@ -23,7 +23,7 @@ export function NetworkPlan() {
           title={
             <>
               Earn on every level of{" "}
-              <span className="text-gradient">your tree</span>
+              <span className="text-gradient-gold">your tree</span>
             </>
           }
           description="$LAE rewards flow up through your entire network — transparently, on every transaction your downline makes. The deeper and wider you build, the more you earn."
@@ -52,13 +52,14 @@ export function NetworkPlan() {
               <Reveal key={l.level} delay={i}>
                 <motion.div
                   whileHover={{ x: 4 }}
-                  className="flex items-center justify-between rounded-2xl border border-white/8 bg-gradient-to-r from-white/[0.04] to-transparent px-5 py-4"
+                  className="group relative flex items-center justify-between overflow-hidden rounded-sm border border-white/10 bg-gradient-to-r from-white/[0.04] to-transparent px-5 py-4 transition-colors hover:border-brand-500/20"
                 >
+                  <span className="absolute inset-y-0 left-0 w-[3px] bg-gradient-to-b from-gold-400 to-brand-500 opacity-0 transition-opacity group-hover:opacity-100" />
                   <div>
                     <p className="text-sm font-semibold text-white">{l.level}</p>
                     <p className="text-xs text-slate-400">{l.note}</p>
                   </div>
-                  <span className="font-display text-2xl font-bold text-gradient">
+                  <span className="font-display text-2xl font-bold text-brand-400">
                     {l.rate}
                   </span>
                 </motion.div>

@@ -38,10 +38,11 @@ function Row({ q, a, i }: { q: string; a: string; i: number }) {
   const [open, setOpen] = useState(false);
   return (
     <Reveal delay={i}>
-      <div
+      <motion.div
+        layout
         className={cn(
-          "glass overflow-hidden transition-colors",
-          open && "border-white/20"
+          "glass overflow-hidden transition-colors duration-300",
+          open && "border-brand-500/25 shadow-glow-gold"
         )}
       >
         <button
@@ -51,8 +52,8 @@ function Row({ q, a, i }: { q: string; a: string; i: number }) {
           <span className="font-medium text-white">{q}</span>
           <motion.span
             animate={{ rotate: open ? 45 : 0 }}
-            transition={{ duration: 0.3 }}
-            className="grid h-7 w-7 shrink-0 place-items-center rounded-full border border-white/10 bg-white/5 text-brand-300"
+            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            className="grid h-7 w-7 shrink-0 place-items-center rounded-sm border border-white/10 bg-white/5 text-brand-400"
           >
             <Plus className="h-4 w-4" />
           </motion.span>
@@ -65,20 +66,18 @@ function Row({ q, a, i }: { q: string; a: string; i: number }) {
               exit={{ height: 0, opacity: 0 }}
               transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
             >
-              <p className="px-6 pb-5 text-sm leading-relaxed text-slate-400">
-                {a}
-              </p>
+              <p className="px-6 pb-5 text-sm leading-relaxed text-slate-400">{a}</p>
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
+      </motion.div>
     </Reveal>
   );
 }
 
 export function FAQ() {
   return (
-    <section id="faq" className="relative py-24 sm:py-32">
+    <section id="faq" className="relative scroll-mt-28 py-24 sm:py-32">
       <div className="container-edge">
         <SectionHeading
           eyebrow="FAQ"

@@ -7,6 +7,7 @@ import * as THREE from "three";
 import { withBasePath } from "@/lib/paths";
 import { CoinFallback } from "@/components/three/CoinFallback";
 import { WebGLErrorBoundary } from "@/components/three/WebGLErrorBoundary";
+import { useDeferredReady, useIsMobile, usePrefersReducedMotion } from "@/lib/useDeferredReady";
 
 function supportsWebGL() {
   if (typeof window === "undefined") return false;
@@ -70,10 +71,10 @@ function Coin({
     <group ref={spin} rotation={[0.12, 0, 0]}>
       <Float speed={1.3} rotationIntensity={0.15} floatIntensity={0.8}>
         <mesh rotation={[Math.PI / 2, 0, 0]} material={[edgeMat, faceMat, faceMat]}>
-          <cylinderGeometry args={[radius, radius, thickness, 64]} />
+          <cylinderGeometry args={[radius, radius, thickness, 32]} />
         </mesh>
         <mesh rotation={[Math.PI / 2, 0, 0]}>
-          <torusGeometry args={[radius - 0.01, 0.03, 12, 64]} />
+          <torusGeometry args={[radius - 0.01, 0.03, 8, 32]} />
           <meshStandardMaterial color="#ffe9a8" metalness={1} roughness={0.2} />
         </mesh>
       </Float>
@@ -96,9 +97,9 @@ function LaeCoinCanvas({
     <Canvas
       className={className}
       camera={{ position: [0, 0, 6.4], fov: 40 }}
-      dpr={[1, 1.25]}
+      dpr={[1, 1]}
       gl={{
-        antialias: true,
+        antialias: false,
         alpha: true,
         powerPreference: "low-power",
         failIfMajorPerformanceCaveat: false,
@@ -136,14 +137,17 @@ export default function LaeCoin({
 }) {
   const [failed, setFailed] = useState(false);
   const [canRender, setCanRender] = useState(false);
+  const deferred = useDeferredReady(1800);
+  const mobile = useIsMobile();
+  const reduced = usePrefersReducedMotion();
 
   useEffect(() => {
     setCanRender(supportsWebGL());
   }, []);
 
-  const fallback = <CoinFallback className={className} />;
+  const fallback = <CoinFallback className={className} spin={false} />;
 
-  if (failed || !canRender) return fallback;
+  if (failed || !canRender || mobile || reduced || !deferred) return fallback;
 
   return (
     <WebGLErrorBoundary

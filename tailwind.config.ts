@@ -11,32 +11,33 @@ const config: Config = {
     extend: {
       colors: {
         ink: {
-          950: "#05060a",
-          900: "#080a12",
-          800: "#0c0f1a",
-          700: "#12152360",
+          950: "#0a0a0a",
+          900: "#191919",
+          800: "#222222",
+          700: "#2a2a2a",
         },
         brand: {
-          50: "#eef9ff",
-          100: "#d8f1ff",
-          200: "#b6e6ff",
-          300: "#83d6ff",
-          400: "#48bcff",
-          500: "#1e9bff",
-          600: "#067bf5",
-          700: "#0062e1",
-          800: "#0850b6",
-          900: "#0d458f",
+          50: "#fffbeb",
+          100: "#fff3c4",
+          200: "#ffe082",
+          300: "#ffd54f",
+          400: "#ffca28",
+          500: "#ffc31a",
+          600: "#e5a800",
+          700: "#c89200",
+          800: "#a67c00",
+          900: "#7a5a00",
         },
         accent: {
-          400: "#a78bfa",
-          500: "#8b5cf6",
-          600: "#7c3aed",
+          400: "#ffd86b",
+          500: "#ffc31a",
+          600: "#e5a820",
         },
         gold: {
-          300: "#ffe9a8",
-          400: "#ffd86b",
-          500: "#f5c33b",
+          300: "#ffe082",
+          400: "#ffd54f",
+          500: "#ffc31a",
+          600: "#e5a800",
         },
       },
       fontFamily: {
@@ -45,15 +46,17 @@ const config: Config = {
         mono: ["var(--font-mono)", "ui-monospace", "monospace"],
       },
       boxShadow: {
-        glow: "0 0 60px -15px rgba(30,155,255,0.55)",
-        "glow-violet": "0 0 70px -10px rgba(139,92,246,0.5)",
+        glow: "0 0 60px -15px rgba(255,195,26,0.45)",
+        "glow-gold": "0 0 60px -10px rgba(255,195,26,0.35)",
         "inner-line": "inset 0 1px 0 0 rgba(255,255,255,0.06)",
       },
       backgroundImage: {
         "radial-fade":
-          "radial-gradient(60% 60% at 50% 0%, rgba(30,155,255,0.18) 0%, rgba(5,6,10,0) 70%)",
+          "radial-gradient(60% 60% at 50% 0%, rgba(255,195,26,0.1) 0%, rgba(10,10,10,0) 70%)",
         "grid-lines":
-          "linear-gradient(to right, rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.04) 1px, transparent 1px)",
+          "linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px)",
+        "cryptro-stats":
+          "linear-gradient(135deg, #1a1408 0%, #0a0a0a 50%, #191919 100%)",
       },
       keyframes: {
         float: {
@@ -61,6 +64,10 @@ const config: Config = {
           "50%": { transform: "translateY(-12px)" },
         },
         shimmer: {
+          "0%": { backgroundPosition: "200% center" },
+          "100%": { backgroundPosition: "-200% center" },
+        },
+        "shimmer-slide": {
           "100%": { transform: "translateX(100%)" },
         },
         "spin-slow": {
@@ -74,13 +81,28 @@ const config: Config = {
           from: { transform: "translateX(0)" },
           to: { transform: "translateX(-50%)" },
         },
+        "bob-scroll": {
+          "0%, 100%": { transform: "translateY(0)", opacity: "0.6" },
+          "50%": { transform: "translateY(8px)", opacity: "1" },
+        },
+        scanline: {
+          "0%": { transform: "translateY(-100%)" },
+          "100%": { transform: "translateY(100vh)" },
+        },
+        orbit: {
+          to: { transform: "rotate(360deg)" },
+        },
       },
       animation: {
         float: "float 6s ease-in-out infinite",
-        shimmer: "shimmer 2.5s infinite",
+        "shimmer-slide": "shimmer-slide 2.5s infinite",
         "spin-slow": "spin-slow 22s linear infinite",
         "pulse-glow": "pulse-glow 4s ease-in-out infinite",
         marquee: "marquee 28s linear infinite",
+        "bob-scroll": "bob-scroll 2.5s ease-in-out infinite",
+        shimmer: "shimmer 4s linear infinite",
+        scanline: "scanline 8s linear infinite",
+        orbit: "orbit 30s linear infinite",
       },
     },
   },
