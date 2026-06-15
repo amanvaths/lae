@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { BrandLogo } from "@/components/ui/BrandLogo";
 
 const cols = [
   {
@@ -32,9 +33,7 @@ export function Footer() {
         <div className="grid gap-10 lg:grid-cols-[1.4fr_1fr_1fr_1.2fr]">
           <div className="flex flex-col gap-4">
             <a href="#top" className="flex items-center gap-3">
-              <span className="grid h-10 w-10 place-items-center bg-brand-500 font-display text-lg font-bold text-ink-950">
-                L
-              </span>
+              <BrandLogo />
               <span className="font-display text-lg font-semibold text-white">
                 LAE Protocol
               </span>

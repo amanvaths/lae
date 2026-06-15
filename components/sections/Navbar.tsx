@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { withBasePath } from "@/lib/paths";
 import { useScrollSpy, sectionFromHref } from "@/lib/useScrollSpy";
 import { TopBar } from "@/components/ui/TopBar";
+import { BrandLogo } from "@/components/ui/BrandLogo";
 
 const ConnectWallet = dynamic(
   () => import("@/components/web3/ConnectWallet").then((m) => m.ConnectWallet),
@@ -76,9 +77,7 @@ export function Navbar() {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
-            <span className="grid h-10 w-10 place-items-center bg-brand-500 font-display text-lg font-bold text-ink-950 shadow-glow">
-              L
-            </span>
+            <BrandLogo />
             <span className="font-display text-lg font-semibold text-white">
               LAE<span className="font-normal text-slate-400">Protocol</span>
             </span>
