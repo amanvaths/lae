@@ -230,17 +230,17 @@ export function Hero() {
                 transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
                 className="absolute left-0 top-8 border border-brand-500/20 bg-ink-950/90 px-4 py-3 backdrop-blur-md"
               >
-                <p className="text-xs text-slate-500">$LAE Price</p>
-                <p className="font-mono text-lg font-bold text-white">$0.842</p>
-                <p className="text-xs font-medium text-emerald-400">+18.4% 24h</p>
+                <p className="text-xs text-slate-500">Launch price</p>
+                <p className="font-mono text-lg font-bold text-white">$0.10</p>
+                <p className="text-xs font-medium text-emerald-400">500K supply</p>
               </motion.div>
               <motion.div
                 animate={{ y: [0, 12, 0] }}
                 transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
                 className="absolute bottom-10 right-0 border border-brand-500/20 bg-ink-950/90 px-4 py-3 backdrop-blur-md"
               >
-                <p className="text-xs text-slate-500">Rewards paid</p>
-                <p className="font-mono text-lg font-bold text-brand-400">$4.2M</p>
+                <p className="text-xs text-slate-500">Ecosystem target</p>
+                <p className="font-mono text-lg font-bold text-brand-400">Up To 1 BTC</p>
               </motion.div>
             </>
           )}
@@ -251,12 +251,9 @@ export function Hero() {
         <div className="flex w-max animate-marquee items-center gap-10 px-4 text-xs font-medium uppercase tracking-widest text-slate-600">
           {[...Array(2)].map((_, k) => (
             <div key={k} className="flex items-center gap-10 whitespace-nowrap">
-              <span>Ethereum</span>
               <span>BNB Chain</span>
-              <span>Polygon</span>
-              <span>Arbitrum</span>
-              <span>CertiK</span>
-              <span>Chainlink</span>
+              <span>CertiK Audited</span>
+              <span>Chainlink Oracles</span>
             </div>
           ))}
         </div>

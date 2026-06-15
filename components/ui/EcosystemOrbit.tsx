@@ -3,19 +3,11 @@
 import { motion } from "framer-motion";
 import { usePrefersReducedMotion } from "@/lib/useDeferredReady";
 
-const orbitNodes = [
-  { label: "ETH", angle: 0, color: "#627EEA" },
-  { label: "BNB", angle: 72, color: "#F3BA2F" },
-  { label: "MATIC", angle: 144, color: "#8247E5" },
-  { label: "ARB", angle: 216, color: "#28A0F0" },
-  { label: "LINK", angle: 288, color: "#375BD2" },
-];
-
 export function EcosystemOrbit() {
   const reduced = usePrefersReducedMotion();
   const cx = 160;
   const cy = 160;
-  const radius = 105;
+  const radius = 90;
 
   return (
     <div className="relative mx-auto aspect-square w-full max-w-[320px]">
@@ -43,7 +35,7 @@ export function EcosystemOrbit() {
             cy={cy}
             r={radius}
             fill="none"
-            stroke="rgba(255,195,26,0.25)"
+            stroke="rgba(243,186,47,0.35)"
             strokeWidth="0.5"
             animate={{ rotate: 360 }}
             transition={{ duration: 40, repeat: Infinity, ease: "linear" }}
@@ -51,36 +43,34 @@ export function EcosystemOrbit() {
           />
         )}
 
-        {orbitNodes.map((n) => {
-          const rad = (n.angle * Math.PI) / 180;
-          const x = cx + radius * Math.cos(rad);
-          const y = cy + radius * Math.sin(rad);
-          return (
-            <g key={n.label}>
-              <line
-                x1={cx}
-                y1={cy}
-                x2={x}
-                y2={y}
-                stroke="rgba(255,195,26,0.1)"
-                strokeWidth="1"
-              />
-              <circle cx={x} cy={y} r="22" fill={`${n.color}22`} stroke={`${n.color}88`} strokeWidth="1" />
-              <text
-                x={x}
-                y={y + 1}
-                textAnchor="middle"
-                dominantBaseline="middle"
-                fill="#e2e8f0"
-                fontSize="11"
-                fontWeight="600"
-                fontFamily="system-ui, sans-serif"
-              >
-                {n.label}
-              </text>
-            </g>
-          );
-        })}
+        <line
+          x1={cx}
+          y1={cy}
+          x2={cx}
+          y2={cy - radius}
+          stroke="rgba(243,186,47,0.25)"
+          strokeWidth="1"
+        />
+        <circle
+          cx={cx}
+          cy={cy - radius}
+          r="26"
+          fill="#F3BA2F22"
+          stroke="#F3BA2F88"
+          strokeWidth="1"
+        />
+        <text
+          x={cx}
+          y={cy - radius + 1}
+          textAnchor="middle"
+          dominantBaseline="middle"
+          fill="#e2e8f0"
+          fontSize="12"
+          fontWeight="600"
+          fontFamily="system-ui, sans-serif"
+        >
+          BNB
+        </text>
 
         <circle cx={cx} cy={cy} r="36" fill="rgba(255,195,26,0.15)" stroke="#ffc31a" strokeWidth="1.5" />
         <text

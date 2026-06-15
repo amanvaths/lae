@@ -1,7 +1,7 @@
 "use client";
 
 import { ConnectButton } from "@rainbow-me/rainbowkit";
-import { Wallet, ChevronDown } from "lucide-react";
+import { Wallet } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useWeb3Loaded } from "@/app/providers";
 import { withBasePath } from "@/lib/paths";
@@ -37,7 +37,6 @@ export function ConnectWallet({
         account,
         chain,
         openAccountModal,
-        openChainModal,
         openConnectModal,
         authenticationStatus,
         mounted,
@@ -70,21 +69,17 @@ export function ConnectWallet({
               </button>
             ) : (
               <>
-                <button
-                  onClick={openChainModal}
-                  className="hidden items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-3 py-2 text-sm font-medium text-slate-200 transition-colors hover:border-white/20 sm:inline-flex"
-                >
+                <span className="hidden items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-3 py-2 text-sm font-medium text-slate-200 sm:inline-flex">
                   {chain.hasIcon && chain.iconUrl && (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={chain.iconUrl}
-                      alt={chain.name ?? "chain"}
+                      alt={chain.name ?? "BNB Chain"}
                       className="h-4 w-4 rounded-full"
                     />
                   )}
-                  {chain.name}
-                  <ChevronDown className="h-3.5 w-3.5 opacity-60" />
-                </button>
+                  BNB Chain
+                </span>
                 <button
                   onClick={openAccountModal}
                   className={cn(

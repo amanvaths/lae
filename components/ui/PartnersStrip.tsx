@@ -3,10 +3,7 @@
 import { motion } from "framer-motion";
 
 const partners = [
-  { name: "Ethereum", abbr: "ETH", color: "#627EEA" },
   { name: "BNB Chain", abbr: "BNB", color: "#F3BA2F" },
-  { name: "Polygon", abbr: "MATIC", color: "#8247E5" },
-  { name: "Arbitrum", abbr: "ARB", color: "#28A0F0" },
   { name: "CertiK", abbr: "CK", color: "#E5453D" },
   { name: "Chainlink", abbr: "LINK", color: "#375BD2" },
 ];
@@ -33,7 +30,7 @@ export function PartnersStrip() {
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_100%_at_50%_50%,rgba(255,195,26,0.06),transparent)]" />
       <div className="container-edge mb-5 text-center">
         <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">
-          Built on trusted infrastructure
+          Built on BNB Chain
         </p>
       </div>
       <div className="relative flex overflow-hidden [mask-image:linear-gradient(90deg,transparent,black_12%,black_88%,transparent)]">

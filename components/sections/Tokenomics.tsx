@@ -4,37 +4,61 @@ import { SectionHeading } from "@/components/ui/SectionHeading";
 import { Reveal } from "@/components/ui/Reveal";
 import { TokenomicsDonut, type Slice } from "@/components/charts/TokenomicsDonut";
 import { TokenSupplyGraphic } from "@/components/ui/TokenSupplyGraphic";
+import { LAE_TOKENOMICS, fmtLae } from "@/lib/lae-content";
+
+const { communityReward, liquidityPool } = LAE_TOKENOMICS;
 
 const slices: Slice[] = [
-  { label: "Network rewards", value: 40, color: "#ffc31a" },
-  { label: "Staking & liquidity", value: 22, color: "#ffd54f" },
-  { label: "Treasury", value: 15, color: "#e5a800" },
-  { label: "Team (vested)", value: 12, color: "#ffca28" },
-  { label: "Ecosystem fund", value: 8, color: "#ffe082" },
-  { label: "Public sale", value: 3, color: "#34d399" },
+  { label: communityReward.label, value: communityReward.pct, color: "#ffc31a" },
+  { label: liquidityPool.label, value: liquidityPool.pct, color: "#ffd54f" },
+];
+
+const metrics = [
+  {
+    label: "Total supply",
+    value: `${fmtLae(LAE_TOKENOMICS.totalSupply)} LAE`,
+  },
+  {
+    label: "Community rewards",
+    value: `${fmtLae(communityReward.amount)} LAE`,
+    sub: `${communityReward.pct}%`,
+  },
+  {
+    label: "Liquidity pool",
+    value: `${fmtLae(liquidityPool.amount)} LAE`,
+    sub: `${liquidityPool.pct}%`,
+  },
+  {
+    label: "Launch price",
+    value: LAE_TOKENOMICS.launchPriceLabel,
+  },
+  {
+    label: "Future ecosystem target",
+    value: LAE_TOKENOMICS.ecosystemTarget,
+  },
 ];
 
 export function Tokenomics() {
   return (
-    <section id="tokenomics" className="relative scroll-mt-28 py-24 sm:py-32">
+    <section id="tokenomics" className="relative scroll-mt-28 py-20 sm:py-28">
       <div className="pointer-events-none absolute left-1/2 top-1/2 h-[400px] w-[700px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand-500/5 blur-[120px]" />
       <div className="container-edge">
         <SectionHeading
           eyebrow="Tokenomics"
           title={
             <>
-              A supply engineered to{" "}
-              <span className="text-gradient-gold">reward the network</span>
+              LAE token{" "}
+              <span className="text-gradient-gold">supply structure</span>
             </>
           }
-          description="1,000,000,000 $LAE, fixed forever. The largest allocation flows straight back to the people who grow the protocol."
+          description={`${fmtLae(LAE_TOKENOMICS.totalSupply)} $LAE fixed supply on ${LAE_TOKENOMICS.chain}. Community-first allocation with transparent on-chain distribution.`}
         />
 
-        <div className="mt-16 grid items-center gap-12 lg:grid-cols-2">
+        <div className="mt-12 grid items-start gap-8 lg:grid-cols-2 lg:gap-12">
           <Reveal>
-            <div className="glass space-y-8 p-8">
+            <div className="glass space-y-6 p-5 sm:space-y-8 sm:p-8">
               <TokenomicsDonut data={slices} />
-              <div className="border-t border-white/5 pt-8">
+              <div className="border-t border-white/5 pt-6 sm:pt-8">
                 <p className="mb-4 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">
                   Allocation breakdown
                 </p>
@@ -44,40 +68,22 @@ export function Tokenomics() {
           </Reveal>
 
           <div className="flex flex-col gap-3">
-            {slices.map((s, i) => (
-              <Reveal key={s.label} delay={i}>
-                <div className="group flex items-center justify-between rounded-2xl border border-white/5 bg-white/[0.02] px-5 py-4 transition-colors hover:bg-white/[0.04]">
-                  <div className="flex items-center gap-3">
-                    <span
-                      className="h-3 w-3 rounded-full"
-                      style={{ backgroundColor: s.color, boxShadow: `0 0 12px ${s.color}` }}
-                    />
-                    <span className="text-sm font-medium text-slate-200">
-                      {s.label}
+            {metrics.map((m, i) => (
+              <Reveal key={m.label} delay={i}>
+                <div className="flex items-center justify-between gap-4 border border-white/5 bg-white/[0.02] px-4 py-4 transition-colors hover:bg-white/[0.04] sm:px-5">
+                  <span className="text-sm font-medium text-slate-300">{m.label}</span>
+                  <div className="text-right">
+                    <span className="font-mono text-sm font-semibold text-white sm:text-base">
+                      {m.value}
                     </span>
+                    {m.sub && (
+                      <span className="ml-2 text-xs text-brand-400">{m.sub}</span>
+                    )}
                   </div>
-                  <span className="font-mono text-sm font-semibold text-white">
-                    {s.value}%
-                  </span>
                 </div>
               </Reveal>
             ))}
-            <Reveal delay={6}>
-              <div className="mt-2 grid grid-cols-2 gap-3">
-                <div className="glass px-5 py-4">
-                  <p className="text-xs text-slate-400">Transaction burn</p>
-                  <p className="font-display text-xl font-bold text-gradient-gold">
-                    1.5%
-                  </p>
-                </div>
-                <div className="glass px-5 py-4">
-                  <p className="text-xs text-slate-400">Team vesting</p>
-                  <p className="font-display text-xl font-bold text-white">
-                    36 mo
-                  </p>
-                </div>
-              </div>
-            </Reveal>
+
           </div>
         </div>
       </div>

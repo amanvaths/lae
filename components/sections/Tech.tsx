@@ -10,7 +10,7 @@ const cards = [
     icon: Globe2,
     title: "Meet LAE System",
     body: "LAE connects holders, payment providers and exchanges via on-chain routing to provide one frictionless experience to earn and settle globally.",
-    points: ["Cross-chain connectivity", "Instant on-demand settlement", "Low operational costs"],
+    points: ["BNB Chain native", "Instant on-demand settlement", "Low operational costs"],
   },
   {
     icon: Shield,

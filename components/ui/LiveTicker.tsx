@@ -4,12 +4,12 @@ export function LiveTicker() {
       <div className="flex w-max animate-marquee items-center gap-10 px-4">
         {[...Array(2)].map((_, k) => (
           <div key={k} className="flex items-center gap-10 whitespace-nowrap">
-            <span>● $LAE <strong className="text-brand-400">$0.842</strong> +18.4%</span>
-            <span>● ETH Gas 12 gwei</span>
-            <span>● Holders 124,800+</span>
-            <span>● Rewards $4.2M paid</span>
-            <span>● CertiK Audited</span>
-            <span>● APY 21.6%</span>
+            <span>● $LAE <strong className="text-brand-400">$0.10</strong> launch</span>
+            <span>● Supply 500,000 LAE</span>
+            <span>● 90% community rewards</span>
+            <span>● 15-slot smart matrix</span>
+            <span>● BNB Chain</span>
+            <span>● 0.001 BTC / registration</span>
           </div>
         ))}
       </div>

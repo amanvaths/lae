@@ -4,15 +4,16 @@ import { motion } from "framer-motion";
 import { Check } from "lucide-react";
 import { Reveal } from "@/components/ui/Reveal";
 import { CoinFallback } from "@/components/three/CoinFallback";
+import { LAE_TOKENOMICS, LAE_DISTRIBUTION, fmtLae } from "@/lib/lae-content";
 import { RewardFlowGraphic } from "@/components/ui/RewardFlowGraphic";
 
 const points = [
-  "Network-to-earn on up to 7 levels",
-  "Instant settlement — no 30-day waits",
+  "15-slot smart matrix — auto progression",
+  "90% community reward allocation",
+  "0.001 BTC contribution per registration",
   "Self-custody — connect any Web3 wallet",
-  "On-chain referral & reward routing",
-  "CertiK audited smart contract",
-  "Cross-chain: ETH, BNB, Polygon, Arbitrum",
+  "Transparent smart-contract distribution",
+  "BNB Chain only — BEP-20 token",
 ];
 
 export function AboutLae() {
@@ -40,9 +41,11 @@ export function AboutLae() {
               transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
               className="absolute -right-2 bottom-8 border border-brand-500/30 bg-ink-950 px-4 py-3 text-center shadow-glow-gold"
             >
-              <p className="font-display text-2xl font-bold text-brand-400">1B</p>
+              <p className="font-display text-2xl font-bold text-brand-400">
+                {fmtLae(LAE_TOKENOMICS.totalSupply)}
+              </p>
               <p className="text-[0.65rem] uppercase tracking-wider text-slate-500">
-                Fixed Supply
+                Total Supply
               </p>
             </motion.div>
           </div>
@@ -55,13 +58,15 @@ export function AboutLae() {
               What is <span className="text-shimmer">$LAE?</span>
             </h2>
             <p className="leading-relaxed text-slate-400">
-              <strong className="text-slate-200">$LAE</strong> is a Web3 token
-              powering a transparent on-chain networking economy. The largest
-              allocation flows straight back to the people who grow the protocol.
+              <strong className="text-slate-200">$LAE</strong> powers the LAE Club
+              ecosystem on BNB Chain — a transparent, community-driven reward economy
+              with {fmtLae(LAE_TOKENOMICS.communityReward.amount)} LAE (
+              {LAE_TOKENOMICS.communityReward.pct}%) allocated to participants.
             </p>
             <p className="leading-relaxed text-slate-400">
-              Fixed at 1,000,000,000 tokens forever. A 1.5% burn on transactions
-              makes supply deflationary as the network grows.
+              Launch price {LAE_TOKENOMICS.launchPriceLabel} with a long-term ecosystem
+              target of {LAE_TOKENOMICS.ecosystemTarget}. Every registration contributes{" "}
+              {LAE_DISTRIBUTION.registrationBtc} BTC routed by smart contract.
             </p>
             <ul className="grid gap-2.5 sm:grid-cols-2">
               {points.map((p, i) => (

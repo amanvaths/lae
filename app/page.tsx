@@ -1,9 +1,12 @@
 import dynamic from "next/dynamic";
 import { Navbar } from "@/components/sections/Navbar";
 import { Hero } from "@/components/sections/Hero";
-import { Intro } from "@/components/sections/Intro";
+import { Vision } from "@/components/sections/Vision";
 import { AboutLae } from "@/components/sections/AboutLae";
 import { Features } from "@/components/sections/Features";
+import { CommunityDistribution } from "@/components/sections/CommunityDistribution";
+import { SmartMatrix } from "@/components/sections/SmartMatrix";
+import { CommunityGrowth } from "@/components/sections/CommunityGrowth";
 import { Footer } from "@/components/sections/Footer";
 import { ScrollProgress } from "@/components/ui/ScrollProgress";
 import { LiveTicker } from "@/components/ui/LiveTicker";
@@ -11,9 +14,6 @@ import { MobileDock } from "@/components/ui/MobileDock";
 import { PartnersStrip } from "@/components/ui/PartnersStrip";
 import { SectionDivider } from "@/components/ui/SectionDivider";
 
-const NetworkPlan = dynamic(
-  () => import("@/components/sections/NetworkPlan").then((m) => ({ default: m.NetworkPlan }))
-);
 const Tech = dynamic(
   () => import("@/components/sections/Tech").then((m) => ({ default: m.Tech }))
 );
@@ -41,16 +41,17 @@ export default function Home() {
       <Navbar />
       <Hero />
       <PartnersStrip />
-      <Intro />
+      <Vision />
       <SectionDivider />
       <AboutLae />
+      <Tokenomics />
+      <CommunityDistribution />
+      <SmartMatrix />
+      <CommunityGrowth />
       <SectionDivider />
       <Features />
-      <NetworkPlan />
       <Tech />
       <Stats />
-      <Tokenomics />
-      <SectionDivider />
       <Roadmap />
       <FAQ />
       <CTA />

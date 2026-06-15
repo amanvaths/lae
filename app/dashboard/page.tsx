@@ -48,22 +48,22 @@ export default function DashboardHome() {
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-7 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+        className="mb-5 flex flex-col gap-4 sm:mb-7 sm:flex-row sm:items-center sm:justify-between"
       >
-        <div>
-          <h1 className="font-display text-2xl font-bold text-white sm:text-3xl">
+        <div className="min-w-0">
+          <h1 className="font-display text-xl font-bold text-white sm:text-2xl md:text-3xl">
             Welcome back, <span className="text-gradient">@{user.username}</span>
           </h1>
-          <p className="mt-1 text-sm text-slate-400">
+          <p className="mt-1 text-sm leading-relaxed text-slate-400">
             Here&apos;s your Bitcoin co-matrix at a glance · Rank{" "}
             <Pill tone="gold">{user.rank}</Pill>
           </p>
         </div>
-        <div className="flex gap-2">
-          <Link href="/dashboard/deposit" className="btn-ghost !px-4 !py-2.5">
+        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
+          <Link href="/dashboard/deposit" className="btn-ghost justify-center !px-3 !py-2.5 sm:!px-4">
             <ArrowDownToLine className="h-4 w-4" /> Deposit
           </Link>
-          <Link href="/dashboard/withdraw" className="btn-primary !px-4 !py-2.5">
+          <Link href="/dashboard/withdraw" className="btn-primary justify-center !px-3 !py-2.5 sm:!px-4">
             <ArrowUpFromLine className="h-4 w-4" /> Withdraw
           </Link>
         </div>
@@ -73,7 +73,7 @@ export default function DashboardHome() {
       <CoinShowcase />
 
       {/* Stat cards */}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
         <StatCard
           label="Total Earned"
           value={fmtBtc(totalEarned, 4)}
@@ -109,21 +109,21 @@ export default function DashboardHome() {
       <div className="mt-4 grid gap-4 lg:grid-cols-3">
         {/* Earnings chart */}
         <Panel className="lg:col-span-2" title="Earnings — last 14 days" desc="Daily Bitcoin income across all active slots">
-          <div className="flex items-end justify-between">
-            <div>
-              <p className="font-display text-3xl font-bold text-white">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div className="min-w-0">
+              <p className="font-display text-2xl font-bold text-white sm:text-3xl">
                 {fmtBtc(earningsSeries.reduce((a, b) => a + b, 0), 4)}
               </p>
               <p className="mt-1 text-sm text-emerald-400">
                 ▲ {btcToUsd(earningsSeries.reduce((a, b) => a + b, 0))} earned
               </p>
             </div>
-            <Pill tone="brand">
+            <Pill tone="brand" className="w-fit shrink-0">
               <TrendingUp className="h-3.5 w-3.5" /> Auto-compounding
             </Pill>
           </div>
-          <div className="mt-4">
-            <Sparkline data={earningsSeries} width={680} height={120} stroke="#48bcff" />
+          <div className="mt-4 min-w-0">
+            <Sparkline data={earningsSeries} height={120} stroke="#48bcff" />
           </div>
         </Panel>
 
@@ -158,7 +158,7 @@ export default function DashboardHome() {
               <span className="font-semibold text-white">{fmtBtc(totalEarned, 4)}</span>{" "}
               of {fmtBtc(TOTAL_MATRIX_POTENTIAL)}
             </p>
-            <Link href="/dashboard/slot-engine" className="btn-ghost mt-4 !px-4 !py-2">
+            <Link href="/dashboard/slot-engine" className="btn-ghost mt-4 w-full justify-center !px-4 !py-2 sm:w-auto">
               <Gauge className="h-4 w-4" /> View slot engine
             </Link>
           </div>
@@ -168,16 +168,19 @@ export default function DashboardHome() {
       <div className="mt-4 grid gap-4 lg:grid-cols-3">
         {/* Income breakdown */}
         <Panel className="lg:col-span-2" title="Income breakdown" desc="By income type — B-Titan pays on every level">
-          <div className="flex flex-col gap-3.5">
+          <div className="flex flex-col gap-4">
             {incomeTypes.map((it) => (
-              <div key={it.key} className="flex items-center gap-4">
-                <div className="w-32 shrink-0">
+              <div key={it.key} className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+                <div className="flex items-center justify-between gap-2 sm:w-28 sm:shrink-0 md:w-32">
                   <p className="text-sm font-medium text-white">{it.label}</p>
+                  <p className="font-mono text-sm font-semibold text-white sm:hidden">
+                    {it.earned.toFixed(4)}
+                  </p>
                 </div>
-                <div className="flex-1">
+                <div className="min-w-0 flex-1">
                   <Progress value={(it.earned / maxIncome) * 100} />
                 </div>
-                <p className="w-24 shrink-0 text-right font-mono text-sm font-semibold text-white">
+                <p className="hidden shrink-0 text-right font-mono text-sm font-semibold text-white sm:block sm:w-20 md:w-24">
                   {it.earned.toFixed(4)}
                 </p>
               </div>
@@ -224,7 +227,7 @@ export default function DashboardHome() {
           Manage →
         </Link>
       }>
-        <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 lg:grid-cols-6">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-2.5 lg:grid-cols-6">
           {slots.map((s) => (
             <div
               key={s.id}
@@ -261,17 +264,17 @@ export default function DashboardHome() {
       }>
         <div className="flex flex-col divide-y divide-white/5">
           {transactions.slice(0, 5).map((tx) => (
-            <div key={tx.id} className="flex items-center justify-between py-3">
-              <div className="flex items-center gap-3">
-                <span className={`grid h-9 w-9 place-items-center rounded-lg ${tx.amount >= 0 ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"}`}>
+            <div key={tx.id} className="flex items-start justify-between gap-3 py-3 sm:items-center">
+              <div className="flex min-w-0 items-center gap-3">
+                <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${tx.amount >= 0 ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"}`}>
                   {tx.amount >= 0 ? <ArrowDownToLine className="h-4 w-4" /> : <ArrowUpFromLine className="h-4 w-4" />}
                 </span>
-                <div>
-                  <p className="text-sm font-medium text-white">{tx.label}</p>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-white">{tx.label}</p>
                   <p className="text-xs text-slate-500">{tx.date}</p>
                 </div>
               </div>
-              <div className="text-right">
+              <div className="shrink-0 text-right">
                 <p className={`font-mono text-sm font-semibold ${tx.amount >= 0 ? "text-emerald-400" : "text-red-300"}`}>
                   {tx.amount >= 0 ? "+" : ""}{tx.amount.toFixed(4)}
                 </p>
@@ -283,21 +286,21 @@ export default function DashboardHome() {
       </Panel>
 
       {/* Quick actions */}
-      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {[
           { href: "/dashboard/share", icon: Share2, label: "Share referral link", desc: "Grow your direct team" },
           { href: "/dashboard/slots", icon: Layers, label: "Activate next slot", desc: `Slot ${user.highestSlot + 1} · ${slots[user.highestSlot].price} BTC` },
           { href: "/dashboard/royal-pool", icon: Crown, label: "Royal Pool", desc: "Passive pool income" },
         ].map((a) => (
-          <Link key={a.href} href={a.href} className="glass glass-hover flex items-center gap-3 p-4">
-            <span className="grid h-10 w-10 place-items-center rounded-xl bg-white/[0.04] text-brand-300">
+          <Link key={a.href} href={a.href} className="glass glass-hover flex items-center gap-3 p-3.5 sm:p-4">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white/[0.04] text-brand-300 sm:h-10 sm:w-10">
               <a.icon className="h-5 w-5" />
             </span>
-            <div>
-              <p className="text-sm font-semibold text-white">{a.label}</p>
-              <p className="text-xs text-slate-500">{a.desc}</p>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-white">{a.label}</p>
+              <p className="truncate text-xs text-slate-500">{a.desc}</p>
             </div>
-            <ArrowUpRight className="ml-auto h-4 w-4 text-slate-500" />
+            <ArrowUpRight className="ml-1 h-4 w-4 shrink-0 text-slate-500" />
           </Link>
         ))}
       </div>

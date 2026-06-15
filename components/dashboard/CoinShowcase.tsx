@@ -20,14 +20,14 @@ export function CoinShowcase() {
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-      className="glass relative mb-4 overflow-hidden p-6 sm:p-7"
+      className="glass relative mb-4 overflow-hidden p-4 sm:mb-5 sm:p-6 md:p-7"
     >
       {/* glow accents */}
       <div className="pointer-events-none absolute -right-10 -top-16 h-56 w-56 rounded-full bg-gold-400/15 blur-3xl" />
       <div className="pointer-events-none absolute -left-10 bottom-0 h-40 w-40 rounded-full bg-brand-500/15 blur-3xl" />
 
-      <div className="relative grid items-center gap-4 sm:grid-cols-[1fr_auto]">
-        <div className="flex flex-col gap-4">
+      <div className="relative grid items-center gap-5 sm:grid-cols-[1fr_auto] sm:gap-4">
+        <div className="flex min-w-0 flex-col gap-3 sm:gap-4">
           <span className="chip w-fit">
             <Coins className="h-3.5 w-3.5 text-gold-400" /> $LAE Token
           </span>
@@ -37,7 +37,7 @@ export function CoinShowcase() {
               <p className="text-xs uppercase tracking-widest text-slate-500">
                 Your $LAE holdings
               </p>
-              <p className="font-display text-3xl font-bold text-white sm:text-4xl">
+              <p className="font-display text-2xl font-bold text-white sm:text-3xl md:text-4xl">
                 48,250{" "}
                 <span className="text-gradient-gold">LAE</span>
               </p>
@@ -53,20 +53,20 @@ export function CoinShowcase() {
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <Link href="/dashboard/deposit" className="btn-primary !px-5 !py-2.5">
+            <Link href="/dashboard/deposit" className="btn-primary w-full justify-center !px-5 !py-2.5 sm:w-auto">
               Buy $LAE
             </Link>
             <Link
               href="/dashboard/slots"
-              className="btn-ghost !px-5 !py-2.5"
+              className="btn-ghost w-full justify-center !px-5 !py-2.5 sm:w-auto"
             >
               Stake <ArrowUpRight className="h-4 w-4" />
             </Link>
           </div>
         </div>
 
-        {/* 3D coin */}
-        <div className="relative mx-auto h-44 w-44 shrink-0 sm:h-52 sm:w-52">
+        {/* 3D coin — hidden on very small screens for performance */}
+        <div className="relative mx-auto hidden h-40 w-40 shrink-0 min-[400px]:block sm:h-44 sm:w-44 md:h-52 md:w-52">
           <div className="absolute inset-0 rounded-full bg-gold-400/10 blur-2xl" />
           <LaeCoin radius={2.1} />
         </div>

@@ -50,7 +50,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       {/* Main */}
       <div className="lg:pl-[264px]">
         <Topbar onMenuClick={() => setOpen(true)} />
-        <main className="relative px-4 py-6 sm:px-6 lg:px-8">
+        <main className="relative overflow-x-hidden px-3 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:px-5 sm:py-6 md:px-6 lg:px-8">
           {/* ambient glow */}
           <div className="pointer-events-none fixed inset-0 -z-10">
             <div className="absolute left-1/3 top-0 h-72 w-[600px] -translate-x-1/2 rounded-full bg-brand-500/[0.07] blur-[120px]" />

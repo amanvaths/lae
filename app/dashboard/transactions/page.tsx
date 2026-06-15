@@ -39,13 +39,14 @@ export default function TransactionsPage() {
       />
 
       <Panel
+        title="All transactions"
         action={
-          <div className="flex flex-wrap gap-1.5">
+          <div className="-mx-1 flex gap-1.5 overflow-x-auto pb-1 no-scrollbar sm:flex-wrap sm:overflow-visible sm:pb-0">
             {filters.map((x) => (
               <button
                 key={x}
                 onClick={() => setF(x)}
-                className={`rounded-lg px-3 py-1.5 text-xs font-semibold capitalize transition-colors ${
+                className={`shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-semibold capitalize transition-colors sm:px-3 ${
                   f === x ? "bg-brand-500/20 text-brand-200" : "bg-white/[0.04] text-slate-400 hover:text-white"
                 }`}
               >
@@ -55,8 +56,44 @@ export default function TransactionsPage() {
           </div>
         }
       >
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[680px] text-sm">
+        {/* Mobile cards */}
+        <div className="flex flex-col gap-3 md:hidden">
+          {rows.map((tx: Tx) => {
+            const meta = typeMeta[tx.type] ?? typeMeta.income;
+            const Icon = meta.icon;
+            return (
+              <div
+                key={tx.id}
+                className="rounded-xl border border-white/8 bg-white/[0.02] p-3.5"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${meta.tone}`}>
+                      <Icon className="h-4 w-4" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-white">{tx.label}</p>
+                      <p className="font-mono text-xs text-slate-500">{tx.id}</p>
+                    </div>
+                  </div>
+                  <p className={`shrink-0 font-mono text-sm font-semibold ${tx.amount >= 0 ? "text-emerald-400" : "text-red-300"}`}>
+                    {tx.amount >= 0 ? "+" : ""}{tx.amount.toFixed(4)}
+                  </p>
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-white/5 pt-3">
+                  <Pill tone="slate">{tx.type}</Pill>
+                  <Pill tone={tx.status === "completed" ? "emerald" : "gold"}>{tx.status}</Pill>
+                  <span className="text-xs text-slate-500">{tx.date}</span>
+                </div>
+                <p className="mt-2 truncate font-mono text-xs text-brand-300">{tx.hash}</p>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Desktop table */}
+        <div className="hidden md:block">
+          <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-white/10 text-left text-xs uppercase tracking-wider text-slate-500">
                 <th className="py-3">Transaction</th>

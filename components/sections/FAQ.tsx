@@ -22,11 +22,11 @@ const faqs = [
   },
   {
     q: "Which wallets and chains are supported?",
-    a: "Any standard Web3 wallet (MetaMask, Rabby, WalletConnect-compatible apps). LAE is live on Ethereum with bridges to BNB Chain, Polygon and Arbitrum rolling out in Q3.",
+    a: "Any standard Web3 wallet (MetaMask, Trust Wallet, WalletConnect-compatible apps). $LAE is deployed on BNB Chain (BEP-20) — connect your wallet and switch to BNB Smart Chain to interact.",
   },
   {
     q: "How is supply controlled?",
-    a: "Supply is fixed at 1,000,000,000 $LAE — no minting, ever. A 1.5% burn on transactions makes the token deflationary as network activity grows.",
+    a: "Total supply is fixed at 500,000 $LAE on BNB Chain — 450,000 LAE (90%) for community rewards and 50,000 LAE (10%) for the liquidity pool. Launch price is $0.10 with a long-term ecosystem target of up to 1 BTC.",
   },
   {
     q: "Do I need to buy in to start earning?",

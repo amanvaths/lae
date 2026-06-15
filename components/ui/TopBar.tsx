@@ -3,7 +3,7 @@ export function TopBar() {
     <div className="hidden border-b border-white/5 bg-ink-900 md:block">
       <div className="container-edge flex h-10 items-center justify-between text-xs text-slate-500">
         <div className="flex items-center gap-6">
-          <span>Live on Ethereum · BNB · Polygon</span>
+          <span>Live on BNB Chain</span>
           <a href="mailto:support@lae.finance" className="transition-colors hover:text-brand-400">
             support@lae.finance
           </a>
