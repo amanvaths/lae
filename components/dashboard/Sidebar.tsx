@@ -6,6 +6,7 @@ import { Hexagon, LogOut, ChevronRight } from "lucide-react";
 import { navGroups, utilityItems } from "./nav";
 import { user } from "@/lib/dashboard-data";
 import { cn } from "@/lib/utils";
+import { withBasePath } from "@/lib/paths";
 
 function NavLink({
   href,
@@ -55,7 +56,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
     <div className="flex h-full flex-col bg-ink-900/80 backdrop-blur-xl">
       {/* Logo */}
       <div className="flex h-16 items-center gap-2.5 border-b border-white/5 px-5">
-        <Link href="/" className="flex items-center gap-2.5">
+        <Link href={withBasePath("/home")} className="flex items-center gap-2.5">
           <span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-brand-400 to-accent-600 shadow-glow">
             <Hexagon className="h-5 w-5 text-white" strokeWidth={2.4} />
           </span>

@@ -23,12 +23,12 @@ const ConnectWallet = dynamic(
 );
 
 const links = [
-  { label: "Home", href: "/#top" },
-  { label: "About", href: "/#about" },
-  { label: "Tokenomics", href: "/#tokenomics" },
-  { label: "Network", href: "/#network" },
-  { label: "Roadmap", href: "/#roadmap" },
-  { label: "FAQ", href: "/#faq" },
+  { label: "Home", href: "/home#top" },
+  { label: "About", href: "/home#about" },
+  { label: "Tokenomics", href: "/home#tokenomics" },
+  { label: "Network", href: "/home#network" },
+  { label: "Roadmap", href: "/home#roadmap" },
+  { label: "FAQ", href: "/home#faq" },
   { label: "P2P", href: "/p2p" },
 ].map((l) => ({ ...l, href: withBasePath(l.href) }));
 

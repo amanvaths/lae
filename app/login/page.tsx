@@ -6,6 +6,7 @@ import { useAccount } from "wagmi";
 import { Hexagon, ShieldCheck, ArrowRight, CheckCircle2 } from "lucide-react";
 import { ConnectWallet } from "@/components/web3/ConnectWallet";
 import { useWeb3Loaded } from "@/app/providers";
+import { withBasePath } from "@/lib/paths";
 
 const ease = [0.22, 1, 0.36, 1] as const;
 
@@ -52,7 +53,7 @@ export default function LoginPage() {
 
       {/* brand mark top-left */}
       <Link
-        href="/"
+        href={withBasePath("/home")}
         className="absolute left-6 top-6 flex items-center gap-2.5"
       >
         <span className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-brand-400 to-accent-600 shadow-glow">

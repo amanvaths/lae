@@ -2,25 +2,26 @@
 
 import Link from "next/link";
 import { BrandLogo } from "@/components/ui/BrandLogo";
+import { withBasePath } from "@/lib/paths";
 
 const cols = [
   {
     title: "Protocol",
     links: [
-      { label: "About", href: "/#about" },
-      { label: "Tokenomics", href: "/#tokenomics" },
-      { label: "Network", href: "/#network" },
-      { label: "Roadmap", href: "/#roadmap" },
-      { label: "Whitepaper", href: "/whitepaper" },
+      { label: "About", href: withBasePath("/home#about") },
+      { label: "Tokenomics", href: withBasePath("/home#tokenomics") },
+      { label: "Network", href: withBasePath("/home#network") },
+      { label: "Roadmap", href: withBasePath("/home#roadmap") },
+      { label: "Whitepaper", href: withBasePath("/whitepaper") },
     ],
   },
   {
     title: "Resource",
     links: [
-      { label: "Login", href: "/login" },
-      { label: "Dashboard", href: "/dashboard" },
-      { label: "P2P Market", href: "/p2p" },
-      { label: "FAQ", href: "/#faq" },
+      { label: "Login", href: withBasePath("/login") },
+      { label: "Dashboard", href: withBasePath("/dashboard") },
+      { label: "P2P Market", href: withBasePath("/p2p") },
+      { label: "FAQ", href: withBasePath("/home#faq") },
       { label: "Support", href: "mailto:support@lae.finance" },
     ],
   },
@@ -85,9 +86,9 @@ export function Footer() {
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-white/5 pt-8 text-sm text-slate-600 sm:flex-row">
           <p>© 2026 LAE Protocol. All rights reserved.</p>
           <div className="flex items-center gap-6">
-            <Link href="/privacy" className="hover:text-brand-400">Privacy</Link>
-            <Link href="/terms" className="hover:text-brand-400">Terms</Link>
-            <Link href="/disclaimer" className="hover:text-brand-400">Disclaimer</Link>
+            <Link href={withBasePath("/privacy")} className="hover:text-brand-400">Privacy</Link>
+            <Link href={withBasePath("/terms")} className="hover:text-brand-400">Terms</Link>
+            <Link href={withBasePath("/disclaimer")} className="hover:text-brand-400">Disclaimer</Link>
           </div>
         </div>
 

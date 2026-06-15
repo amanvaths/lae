@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
+import { GlobalSiteGate } from "@/components/layout/GlobalSiteGate";
 
 const Web3LoadedContext = createContext(false);
 
@@ -21,14 +22,16 @@ export function Providers({ children }: { children: React.ReactNode }) {
   if (!Web3) {
     return (
       <Web3LoadedContext.Provider value={false}>
-        {children}
+        <GlobalSiteGate>{children}</GlobalSiteGate>
       </Web3LoadedContext.Provider>
     );
   }
 
   return (
     <Web3LoadedContext.Provider value={true}>
-      <Web3>{children}</Web3>
+      <Web3>
+        <GlobalSiteGate>{children}</GlobalSiteGate>
+      </Web3>
     </Web3LoadedContext.Provider>
   );
 }
