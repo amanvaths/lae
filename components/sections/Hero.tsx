@@ -8,6 +8,8 @@ import { cn } from "@/lib/utils";
 import { withBasePath } from "@/lib/paths";
 import { CoinFallback } from "@/components/three/CoinFallback";
 import { useDeferredReady, useIsMobile, usePrefersReducedMotion } from "@/lib/useDeferredReady";
+import { useWeb3Loaded } from "@/app/providers";
+import { useAccount } from "wagmi";
 
 const NetworkCanvas = dynamic(
   () => import("@/components/ui/NetworkCanvas").then((m) => m.NetworkCanvas),
@@ -69,6 +71,62 @@ const slideVariants = {
   center: { opacity: 1, x: 0 },
   exit: { opacity: 0, x: -32 },
 };
+
+function HeroSlideActions({
+  slideIndex,
+  primary,
+  secondary,
+}: {
+  slideIndex: number;
+  primary: { href: string; label: string };
+  secondary: { href: string; label: string };
+}) {
+  const web3Ready = useWeb3Loaded();
+  const isConnectSlide = slideIndex === 1;
+
+  if (isConnectSlide && web3Ready) {
+    return <HeroConnectSlideActions secondary={secondary} />;
+  }
+
+  const href =
+    isConnectSlide && !web3Ready ? withBasePath("/login") : primary.href;
+  const label = isConnectSlide && !web3Ready ? "Connect Wallet" : primary.label;
+
+  return (
+    <div className="flex flex-wrap gap-3">
+      <a href={href} className="btn-primary group">
+        {label}
+        <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+      </a>
+      <a href={secondary.href} className="btn-ghost">
+        {secondary.label}
+      </a>
+    </div>
+  );
+}
+
+function HeroConnectSlideActions({
+  secondary,
+}: {
+  secondary: { href: string; label: string };
+}) {
+  const { isConnected } = useAccount();
+
+  return (
+    <div className="flex flex-wrap gap-3">
+      <a
+        href={withBasePath(isConnected ? "/dashboard" : "/login")}
+        className="btn-primary group"
+      >
+        {isConnected ? "Dashboard" : "Connect Wallet"}
+        <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+      </a>
+      <a href={secondary.href} className="btn-ghost">
+        {secondary.label}
+      </a>
+    </div>
+  );
+}
 
 function HeroCoin() {
   const deferred = useDeferredReady(2000);
@@ -175,15 +233,11 @@ export function Hero() {
               <p className="max-w-lg text-base leading-relaxed text-slate-400 sm:text-lg">
                 {slides[index].desc}
               </p>
-              <div className="flex flex-wrap gap-3">
-                <a href={slides[index].primary.href} className="btn-primary group">
-                  {slides[index].primary.label}
-                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                </a>
-                <a href={slides[index].secondary.href} className="btn-ghost">
-                  {slides[index].secondary.label}
-                </a>
-              </div>
+              <HeroSlideActions
+                slideIndex={index}
+                primary={slides[index].primary}
+                secondary={slides[index].secondary}
+              />
             </motion.div>
           </AnimatePresence>
 

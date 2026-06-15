@@ -1,20 +1,41 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Home, Network, ArrowLeftRight, Wallet, Star } from "lucide-react";
+import { Home, Network, ArrowLeftRight, Wallet, Star, LayoutDashboard } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { withBasePath } from "@/lib/paths";
 import { useScrollSpy, sectionFromHref } from "@/lib/useScrollSpy";
+import { useWeb3Loaded } from "@/app/providers";
+import { useAccount } from "wagmi";
 
-const links = [
+type DockLink = {
+  href: string;
+  label: string;
+  icon: typeof Home;
+};
+
+const staticLinks: DockLink[] = [
   { href: "#top", label: "Home", icon: Home },
   { href: "#network", label: "Network", icon: Network },
-  { href: "/p2p", label: "P2P", icon: ArrowLeftRight },
-  { href: "/login", label: "Connect", icon: Wallet },
+  { href: withBasePath("/p2p"), label: "P2P", icon: ArrowLeftRight },
   { href: "#cta", label: "Buy", icon: Star },
-].map((l) => ({ ...l, href: l.href.startsWith("#") ? l.href : withBasePath(l.href) }));
+];
 
-export function MobileDock() {
+function buildLinks(walletConnected: boolean): DockLink[] {
+  return [
+    staticLinks[0],
+    staticLinks[1],
+    staticLinks[2],
+    {
+      href: withBasePath(walletConnected ? "/dashboard" : "/login"),
+      label: walletConnected ? "Dashboard" : "Connect",
+      icon: walletConnected ? LayoutDashboard : Wallet,
+    },
+    staticLinks[3],
+  ];
+}
+
+function MobileDockNav({ links }: { links: DockLink[] }) {
   const active = useScrollSpy();
 
   return (
@@ -53,4 +74,17 @@ export function MobileDock() {
       })}
     </motion.nav>
   );
+}
+
+function MobileDockConnected() {
+  const { isConnected } = useAccount();
+  return <MobileDockNav links={buildLinks(isConnected)} />;
+}
+
+export function MobileDock() {
+  const web3Ready = useWeb3Loaded();
+  if (!web3Ready) {
+    return <MobileDockNav links={buildLinks(false)} />;
+  }
+  return <MobileDockConnected />;
 }
