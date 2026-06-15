@@ -25,7 +25,7 @@ export default function LiquidityPage() {
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Panel className="lg:col-span-2" title="NFT floor price growth" desc="Driven by continuous liquidity inflow">
-          <Sparkline data={priceSeries} width={640} height={150} stroke="#34d399" />
+          <Sparkline data={priceSeries} height={150} stroke="#34d399" />
           <div className="mt-2 flex justify-between text-xs text-slate-500">
             <span>mint</span>
             <span>now · {nft.currentPrice} BTC</span>

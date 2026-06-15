@@ -80,7 +80,7 @@ export default function IncomePage() {
       </div>
 
       <Panel className="mt-4" title="Earnings trend — 14 days">
-        <Sparkline data={earningsSeries} width={980} height={140} stroke="#48bcff" />
+        <Sparkline data={earningsSeries} height={140} stroke="#48bcff" />
         <div className="mt-2 flex justify-between text-xs text-slate-500">
           <span>14d ago</span>
           <span>today</span>
