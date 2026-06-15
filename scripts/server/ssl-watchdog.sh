@@ -4,7 +4,6 @@
 set -euo pipefail
 
 DOMAIN="laeclub.com"
-WWW="www.laeclub.com"
 EXPECTED_IP="168.144.23.172"
 CERT_PATH="/etc/letsencrypt/live/${DOMAIN}/fullchain.pem"
 CRON_MARKER="lae-ssl-watchdog"
@@ -62,7 +61,7 @@ ensure_nginx_domain() {
 server {
     listen 80 default_server;
     listen [::]:80 default_server;
-    server_name ${DOMAIN} ${WWW} _;
+    server_name ${DOMAIN} _;
 
     root /var/www/lae;
     index index.html;
@@ -99,7 +98,6 @@ issue_ssl() {
 
   certbot --nginx \
     -d "$DOMAIN" \
-    -d "$WWW" \
     --non-interactive \
     --agree-tos \
     --email "$CERTBOT_EMAIL" \
@@ -128,13 +126,7 @@ main() {
     exit 0
   fi
 
-  if ! dns_points_here "$WWW"; then
-    ip=$(resolve_ipv4 "$WWW" 2>/dev/null || echo "none")
-    log "DNS not ready: ${WWW} -> ${ip} (expected ${EXPECTED_IP})"
-    exit 0
-  fi
-
-  log "DNS OK for ${DOMAIN} and ${WWW}. Requesting SSL certificate..."
+  log "DNS OK for ${DOMAIN}. Requesting SSL certificate..."
   if issue_ssl; then
     log "SSL issued successfully for ${DOMAIN}."
     remove_cron
