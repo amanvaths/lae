@@ -1,106 +1,74 @@
 "use client";
 
-import { useState } from "react";
-import {
-  Share2,
-  Copy,
-  Check,
-  Twitter,
-  Send,
-  MessageCircle,
-  Users,
-  TrendingUp,
-} from "lucide-react";
-import { PageHeading, Panel, StatCard } from "@/components/dashboard/ui";
-import { user, teamStats, directReferrals, fmtBtc } from "@/lib/dashboard-data";
+import { useAccount } from "wagmi";
+import Link from "next/link";
+import { Panel } from "@/components/dashboard/ui";
+import { QueryLoading } from "@/components/dashboard/QueryState";
+import { useReferralsOnChain, useSensoUser } from "@/lib/contracts/hooks";
+import { referralLink } from "@/lib/contracts/services/utils";
+import { truncateAddress } from "@/lib/format";
 
 export default function SharePage() {
-  const [copied, setCopied] = useState<"link" | "code" | null>(null);
-  const copy = (val: string, which: "link" | "code") => {
-    navigator.clipboard?.writeText(val);
-    setCopied(which);
-    setTimeout(() => setCopied(null), 1600);
-  };
-  const directEarned = directReferrals.reduce((a, d) => a + d.earned, 0);
+  const { address } = useAccount();
+  const user = useSensoUser();
+  const referrals = useReferralsOnChain();
 
-  const share = [
-    { icon: Twitter, label: "Twitter / X", href: `https://twitter.com/intent/tweet?text=${encodeURIComponent("Join me on B-Titan — the smart side of Bitcoin! " + user.referralLink)}` },
-    { icon: Send, label: "Telegram", href: `https://t.me/share/url?url=${encodeURIComponent(user.referralLink)}` },
-    { icon: MessageCircle, label: "WhatsApp", href: `https://wa.me/?text=${encodeURIComponent("Join me on B-Titan: " + user.referralLink)}` },
-  ];
+  const link = address ? referralLink(address) : "";
 
   return (
     <div>
-      <PageHeading
-        icon={Share2}
-        title="Referral Link"
-        subtitle="Share your link to grow your direct team. Every member you bring strengthens your matrix and pays you on every level."
-      />
+      <h1 className="font-display text-2xl font-bold text-white">Share &amp; Refer</h1>
+      <p className="mt-1 text-sm text-slate-400">On-chain referral link — sponsor = your wallet</p>
 
-      <div className="mb-5 grid gap-4 sm:grid-cols-3">
-        <StatCard label="Total team" value={teamStats.total.toLocaleString()} icon={Users} accent="brand" />
-        <StatCard label="Direct referrals" value={directReferrals.length} accent="violet" />
-        <StatCard label="Referral earnings" value={fmtBtc(directEarned, 4)} icon={TrendingUp} accent="gold" />
-      </div>
+      <Panel className="mt-6" title="Your referral link">
+        <code className="block break-all rounded-lg bg-black/30 p-3 text-sm text-brand-200">
+          {link || "Connect wallet"}
+        </code>
+        <p className="mt-2 text-xs text-slate-500">
+          New users register with <code className="text-brand-200">register(yourAddress)</code>
+        </p>
+      </Panel>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Panel className="lg:col-span-2" title="Your referral link">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <code className="flex-1 truncate rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 font-mono text-sm text-brand-200">
-              {user.referralLink}
-            </code>
-            <button onClick={() => copy(user.referralLink, "link")} className="btn-primary shrink-0 !py-3">
-              {copied === "link" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-              {copied === "link" ? "Copied" : "Copy link"}
-            </button>
-          </div>
-
-          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
-            <div className="flex flex-1 items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
-              <div>
-                <p className="text-xs text-slate-500">Referral code</p>
-                <p className="font-mono text-sm font-semibold text-white">{user.referralCode}</p>
-              </div>
-              <button onClick={() => copy(user.referralCode, "code")} className="text-slate-400 hover:text-white">
-                {copied === "code" ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
-              </button>
-            </div>
-          </div>
-
-          <p className="mb-2 mt-6 text-xs uppercase tracking-wider text-slate-500">Share via</p>
-          <div className="flex flex-wrap gap-2">
-            {share.map((s) => (
-              <a
-                key={s.label}
-                href={s.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn-ghost !px-4 !py-2.5 text-sm"
-              >
-                <s.icon className="h-4 w-4" /> {s.label}
-              </a>
-            ))}
-          </div>
+      <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Panel title="Direct referrals">
+          {referrals.isLoading ? (
+            <QueryLoading />
+          ) : (
+            <p className="text-2xl font-bold text-white">{referrals.data?.direct.length ?? 0}</p>
+          )}
         </Panel>
-
-        <Panel title="Scan to join">
-          <div className="grid place-items-center rounded-xl border border-white/10 bg-white/[0.03] p-5">
-            <div className="grid grid-cols-9 gap-0.5">
-              {Array.from({ length: 81 }).map((_, i) => (
-                <span
-                  key={i}
-                  className={`h-3 w-3 rounded-[2px] ${
-                    (i * 3 + (i % 7) + (i % 4)) % 3 === 0 ? "bg-white" : "bg-transparent"
-                  }`}
-                />
-              ))}
-            </div>
-          </div>
-          <p className="mt-3 text-center text-xs text-slate-500">
-            Point a camera to open your referral link.
+        <Panel title="Qualified (Club L4+)">
+          <p className="text-2xl font-bold text-white">{referrals.data?.qualifiedClub ?? 0}</p>
+        </Panel>
+        <Panel title="Qualified (Pilot)">
+          <p className="text-2xl font-bold text-white">{referrals.data?.qualifiedPilot ?? 0}</p>
+        </Panel>
+        <Panel title="Your sponsor">
+          <p className="font-mono text-sm text-white">
+            {user.data?.registered ? truncateAddress(user.data.sponsor) : "—"}
           </p>
         </Panel>
       </div>
+
+      <Panel className="mt-4" title="Direct referral wallets">
+        {referrals.isLoading ? (
+          <QueryLoading />
+        ) : (referrals.data?.direct.length ?? 0) === 0 ? (
+          <p className="text-sm text-slate-500">No direct referrals yet</p>
+        ) : (
+          <div className="divide-y divide-white/5">
+            {referrals.data!.direct.map((addr) => (
+              <div key={addr} className="py-2 font-mono text-sm text-white">
+                {truncateAddress(addr)}
+              </div>
+            ))}
+          </div>
+        )}
+      </Panel>
+
+      <Link href="/dashboard/referrals" className="btn-ghost mt-4 inline-flex">
+        View all referrals
+      </Link>
     </div>
   );
 }

@@ -1,91 +1,111 @@
 "use client";
 
-import { TrendingUp } from "lucide-react";
-import { PageHeading, Panel, StatCard, Sparkline } from "@/components/dashboard/ui";
-import {
-  incomeTypes,
-  totalEarned,
-  earningsSeries,
-  btcToUsd,
-  fmtBtc,
-} from "@/lib/dashboard-data";
+import { Panel } from "@/components/dashboard/ui";
+import { QueryLoading, QueryError } from "@/components/dashboard/QueryState";
+import { useAnalyticsIncome } from "@/lib/hooks/useAnalytics";
+import { useUserEventsOnChain, useWalletOnChain } from "@/lib/contracts/hooks";
+import { fmtEther } from "@/lib/contracts/format";
+import { txUrl } from "@/lib/contracts/addresses";
+import { truncateAddress } from "@/lib/format";
 
-const COLORS = ["#1e9bff", "#8b5cf6", "#48bcff", "#a78bfa", "#f5c33b", "#34d399"];
+const INCOME_TYPES: Record<number, string> = {
+  0: "Direct",
+  1: "Cycle",
+  2: "Rebirth",
+  3: "Upgrade",
+  4: "Pilot Incentive",
+  5: "Sponsor Payment",
+  6: "First Line Bonus",
+  7: "Token Welcome",
+  8: "Token Direct",
+  9: "Withdraw",
+};
 
 export default function IncomePage() {
-  let acc = 0;
-  const segments = incomeTypes.map((it, i) => {
-    const pct = (it.earned / totalEarned) * 100;
-    const seg = { ...it, pct, offset: acc, color: COLORS[i % COLORS.length] };
-    acc += pct;
-    return seg;
-  });
+  const analytics = useAnalyticsIncome();
+  const events = useUserEventsOnChain();
+  const wallet = useWalletOnChain();
+
+  const useApi = analytics.isSuccess && analytics.data;
+  const loading = useApi ? analytics.isLoading : events.isLoading || wallet.isLoading;
+
+  if (loading) return <QueryLoading label="Loading income…" />;
+
+  if (analytics.isError && events.isError) {
+    return (
+      <QueryError
+        message="Could not load income (API or chain)"
+        onRetry={() => {
+          analytics.refetch();
+          events.refetch();
+        }}
+      />
+    );
+  }
+
+  const total = useApi
+    ? analytics.data!.reduce((s, r) => s + BigInt(r.amount.split(".")[0] ?? "0"), 0n)
+    : wallet.data?.totalEarnings ?? 0n;
 
   return (
     <div>
-      <PageHeading
-        icon={TrendingUp}
-        title="Income & Earnings"
-        subtitle="A full breakdown of your Bitcoin income. B-Titan pays on every level — downline, upline, recycle, spillover, Royal Pool and rank rewards."
-      />
+      <h1 className="font-display text-2xl font-bold text-white">Income</h1>
+      <p className="mt-1 text-sm text-slate-400">
+        Total DAI earned: {fmtEther(total)}
+        {useApi && <span className="ml-2 text-xs text-brand-300">· indexed</span>}
+      </p>
 
-      <div className="mb-5 grid gap-4 sm:grid-cols-3">
-        <StatCard label="Total earned" value={fmtBtc(totalEarned, 4)} sub={btcToUsd(totalEarned)} accent="gold" trend={{ value: "+12.4% wk", up: true }} />
-        <StatCard label="This week" value={fmtBtc(earningsSeries.reduce((a, b) => a + b, 0), 4)} accent="brand" />
-        <StatCard label="Income streams" value={incomeTypes.length} sub="all active" accent="emerald" />
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Panel title="Distribution" desc="By income type">
-          <div className="flex flex-col items-center">
-            <div className="relative h-44 w-44">
-              <svg viewBox="0 0 36 36" className="h-44 w-44 -rotate-90">
-                {segments.map((s) => (
-                  <circle
-                    key={s.key}
-                    cx="18" cy="18" r="15.9155" fill="none"
-                    stroke={s.color} strokeWidth="3.4"
-                    strokeDasharray={`${s.pct} ${100 - s.pct}`}
-                    strokeDashoffset={`${-s.offset}`}
-                  />
-                ))}
-              </svg>
-              <div className="absolute inset-0 grid place-items-center text-center">
-                <div>
-                  <p className="font-display text-lg font-bold text-white">{fmtBtc(totalEarned, 3)}</p>
-                  <p className="text-[10px] uppercase tracking-widest text-slate-500">total</p>
-                </div>
+      <Panel className="mt-6" title="Income history">
+        {useApi ? (
+          analytics.data!.length === 0 ? (
+            <p className="text-sm text-slate-500">No income yet</p>
+          ) : (
+            analytics.data!.map((row) => (
+              <div key={row.id} className="flex justify-between border-b border-white/5 py-3 text-sm">
+                <span className="text-slate-300">
+                  {INCOME_TYPES[row.incomeType] ?? `Type ${row.incomeType}`} · L{row.level}
+                </span>
+                <span className="text-emerald-400">+{fmtEther(BigInt(row.amount.split(".")[0] ?? "0"))}</span>
               </div>
-            </div>
-          </div>
-        </Panel>
-
-        <Panel className="lg:col-span-2" title="Income streams">
-          <div className="flex flex-col gap-3">
-            {segments.map((s) => (
-              <div key={s.key} className="flex items-center gap-3 rounded-xl bg-white/[0.03] p-3">
-                <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: s.color, boxShadow: `0 0 10px ${s.color}` }} />
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-white">{s.label}</p>
-                  <p className="truncate text-xs text-slate-500">{s.desc}</p>
-                </div>
-                <div className="text-right">
-                  <p className="font-mono text-sm font-semibold text-white">{s.earned.toFixed(4)}</p>
-                  <p className="text-xs text-slate-500">{s.pct.toFixed(1)}%</p>
-                </div>
+            ))
+          )
+        ) : (
+          (events.data ?? [])
+            .filter((e) => e.eventName === "IncomePaid")
+            .map((e) => (
+              <div key={e.id} className="flex justify-between border-b border-white/5 py-3 text-sm">
+                <span className="text-slate-300">
+                  {INCOME_TYPES[Number(e.args.incomeType)] ?? `Type ${e.args.incomeType}`} · L
+                  {String(e.args.level)}
+                </span>
+                <span className="text-emerald-400">
+                  +{fmtEther(BigInt(String(e.args.amount ?? 0)))}
+                </span>
               </div>
-            ))}
-          </div>
-        </Panel>
-      </div>
-
-      <Panel className="mt-4" title="Earnings trend — 14 days">
-        <Sparkline data={earningsSeries} height={140} stroke="#48bcff" />
-        <div className="mt-2 flex justify-between text-xs text-slate-500">
-          <span>14d ago</span>
-          <span>today</span>
-        </div>
+            ))
+        )}
       </Panel>
+
+      {!useApi && (
+        <Panel className="mt-4" title="SLT TokenReward (live chain)">
+          {(events.data ?? []).filter((e) => e.eventName === "TokenReward").length === 0 ? (
+            <p className="text-sm text-slate-500">No SLT rewards yet</p>
+          ) : (
+            (events.data ?? [])
+              .filter((e) => e.eventName === "TokenReward")
+              .map((e) => (
+                <div key={e.id} className="flex justify-between border-b border-white/5 py-3 text-sm">
+                  <a href={txUrl(e.transactionHash)} className="text-brand-300 hover:underline">
+                    {truncateAddress(e.transactionHash)}
+                  </a>
+                  <span className="text-brand-200">
+                    +{fmtEther(BigInt(String(e.args.sltAmount ?? 0)), 0)} SLT
+                  </span>
+                </div>
+              ))
+          )}
+        </Panel>
+      )}
     </div>
   );
 }

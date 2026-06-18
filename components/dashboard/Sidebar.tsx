@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useWalletSession } from "@/providers/WalletSessionProvider";
 import { Hexagon, LogOut, ChevronRight } from "lucide-react";
 import { navGroups, utilityItems } from "./nav";
-import { user } from "@/lib/dashboard-data";
 import { cn } from "@/lib/utils";
 import { withBasePath } from "@/lib/paths";
 
@@ -49,29 +49,33 @@ function NavLink({
 
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
+  const { disconnectWallet } = useWalletSession();
+
   const isActive = (href: string) =>
     href === "/dashboard" ? pathname === href : pathname.startsWith(href);
 
+  const handleLogout = () => {
+    disconnectWallet();
+  };
+
   return (
     <div className="flex h-full flex-col bg-ink-900/80 backdrop-blur-xl">
-      {/* Logo */}
       <div className="flex h-16 items-center gap-2.5 border-b border-white/5 px-5">
-        <Link href={withBasePath("/home")} className="flex items-center gap-2.5">
+        <Link href={withBasePath("/login")} className="flex items-center gap-2.5">
           <span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-brand-400 to-accent-600 shadow-glow">
             <Hexagon className="h-5 w-5 text-white" strokeWidth={2.4} />
           </span>
           <div className="leading-tight">
             <span className="block font-display text-base font-bold text-white">
-              B-TITAN
+              LAE
             </span>
             <span className="block text-[10px] uppercase tracking-widest text-brand-300/80">
-              Bitcoin Rush
+              Network
             </span>
           </div>
         </Link>
       </div>
 
-      {/* Nav */}
       <nav className="no-scrollbar flex-1 overflow-y-auto px-3 py-4">
         {navGroups.map((group) => (
           <div key={group.title} className="mb-5">
@@ -112,26 +116,15 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         </div>
       </nav>
 
-      {/* User card */}
       <div className="border-t border-white/5 p-3">
-        <div className="flex items-center gap-3 rounded-xl border border-white/5 bg-white/[0.03] p-3">
-          <span className="grid h-9 w-9 place-items-center rounded-full bg-gradient-to-br from-brand-400 to-accent-600 text-sm font-bold text-white">
-            {user.username.slice(0, 1).toUpperCase()}
-          </span>
-          <div className="min-w-0 flex-1 leading-tight">
-            <p className="truncate text-sm font-semibold text-white">
-              @{user.username}
-            </p>
-            <p className="truncate text-xs text-slate-500">{user.id}</p>
-          </div>
-          <Link
-            href="/login"
-            className="grid h-8 w-8 place-items-center rounded-lg text-slate-400 transition-colors hover:bg-white/5 hover:text-red-300"
-            title="Log out"
-          >
-            <LogOut className="h-4 w-4" />
-          </Link>
-        </div>
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 px-3 py-2.5 text-sm text-slate-300 transition-colors hover:border-red-500/30 hover:bg-red-500/5 hover:text-red-300"
+        >
+          <LogOut className="h-4 w-4" />
+          Disconnect
+        </button>
       </div>
     </div>
   );

@@ -5,10 +5,13 @@ export const LAUNCH_AT = new Date("2026-06-22T00:00:00").getTime();
 
 const PUBLIC_ROUTES = new Set([
   "/",
+  "/home",
+  "/login",
   "/coming-soon",
   "/privacy",
   "/terms",
   "/disclaimer",
+  "/p2p",
 ]);
 
 /** Strip deployment base path from a pathname (e.g. `/lae/home` → `/home`). */
@@ -22,6 +25,7 @@ export function stripBasePath(pathname: string): string {
 
 export function isPublicRoute(pathname: string): boolean {
   const path = stripBasePath(pathname).replace(/\/$/, "") || "/";
+  if (path.startsWith("/dashboard")) return true;
   return PUBLIC_ROUTES.has(path);
 }
 
@@ -40,6 +44,7 @@ export function hasSitePreview(): boolean {
 }
 
 export function canAccessFullSite(): boolean {
+  if (process.env.NODE_ENV === "development") return true;
   return isLaunchLive() || hasSitePreview();
 }
 

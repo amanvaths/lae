@@ -22,6 +22,8 @@ import {
   Megaphone,
   LifeBuoy,
   Settings,
+  Sparkles,
+  Lock,
   type LucideIcon,
 } from "lucide-react";
 
@@ -66,6 +68,8 @@ export const navGroups: NavGroup[] = [
       { label: "Welcome Pass NFT", href: `${base}/nft`, icon: Gem },
       { label: "NFT Liquidity", href: `${base}/liquidity`, icon: Droplets },
       { label: "Wallet", href: `${base}/wallet`, icon: Wallet },
+      { label: "Spin & Win", href: `${base}/spin`, icon: Sparkles },
+      { label: "SLT Staking", href: `${base}/staking`, icon: Lock },
     ],
   },
   {

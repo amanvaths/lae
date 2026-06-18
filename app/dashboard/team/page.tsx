@@ -1,109 +1,62 @@
 "use client";
 
-import { useState } from "react";
-import { Users, Search } from "lucide-react";
-import { PageHeading, Panel, Pill, StatCard } from "@/components/dashboard/ui";
-import { teamMembers, teamStats, fmtBtc } from "@/lib/dashboard-data";
-
-const legs = ["All", "Direct", "L1", "L2"] as const;
+import { Panel } from "@/components/dashboard/ui";
+import { QueryLoading } from "@/components/dashboard/QueryState";
+import { useAnalyticsTeam } from "@/lib/hooks/useAnalytics";
+import { useReferralsOnChain } from "@/lib/contracts/hooks";
+import { truncateAddress } from "@/lib/format";
 
 export default function TeamPage() {
-  const [leg, setLeg] = useState<(typeof legs)[number]>("All");
-  const [q, setQ] = useState("");
+  const analytics = useAnalyticsTeam();
+  const chain = useReferralsOnChain();
 
-  const rows = teamMembers.filter(
-    (m) =>
-      (leg === "All" || m.leg === leg) &&
-      m.username.toLowerCase().includes(q.toLowerCase())
-  );
+  const useApi = analytics.isSuccess && analytics.data;
+  const loading = useApi ? analytics.isLoading : chain.isLoading;
+
+  if (loading) return <QueryLoading label="Loading team…" />;
+
+  const direct = useApi
+    ? analytics.data!.direct.map((d) => d.referralAddress)
+    : chain.data?.direct ?? [];
+
+  const qualifiedClub = useApi
+    ? analytics.data!.qualifiedClub
+    : chain.data?.qualifiedClub ?? 0;
+  const qualifiedPilot = useApi
+    ? analytics.data!.qualifiedPilot
+    : chain.data?.qualifiedPilot ?? 0;
 
   return (
     <div>
-      <PageHeading
-        icon={Users}
-        title="My Team"
-        subtitle="Everyone in your network across all legs. Track slots, team size and earnings for each member."
-      />
+      <h1 className="font-display text-2xl font-bold text-white">My Team</h1>
+      <p className="mt-1 text-sm text-slate-400">
+        Direct referrals {useApi ? "from blockchain indexer" : "from on-chain mapping"}
+      </p>
 
-      <div className="mb-5 grid gap-4 sm:grid-cols-4">
-        <StatCard label="Total team" value={teamStats.total.toLocaleString()} accent="brand" />
-        <StatCard label="Active" value={teamStats.active} accent="emerald" />
-        <StatCard label="Idle" value={teamStats.idle} accent="gold" />
-        <StatCard label="Joined today" value={teamStats.todayJoins} accent="violet" />
+      <div className="mt-4 grid gap-4 sm:grid-cols-3">
+        <Panel title="Direct team">
+          <p className="text-2xl font-bold text-white">
+            {useApi ? analytics.data!.directCount : direct.length}
+          </p>
+        </Panel>
+        <Panel title="Qualified club">
+          <p className="text-2xl font-bold text-white">{qualifiedClub}</p>
+        </Panel>
+        <Panel title="Qualified pilot">
+          <p className="text-2xl font-bold text-white">{qualifiedPilot}</p>
+        </Panel>
       </div>
 
-      <Panel
-        title="Members"
-        action={
-          <div className="flex items-center gap-1.5">
-            {legs.map((l) => (
-              <button
-                key={l}
-                onClick={() => setLeg(l)}
-                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
-                  leg === l ? "bg-brand-500/20 text-brand-200" : "bg-white/[0.04] text-slate-400 hover:text-white"
-                }`}
-              >
-                {l}
-              </button>
-            ))}
-          </div>
-        }
-      >
-        <div className="relative mb-4">
-          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Search members…"
-            className="w-full rounded-xl border border-white/10 bg-white/[0.03] py-2.5 pl-10 pr-4 text-sm text-white outline-none placeholder:text-slate-600 focus:border-brand-500/50"
-          />
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[640px] text-sm">
-            <thead>
-              <tr className="border-b border-white/10 text-left text-xs uppercase tracking-wider text-slate-500">
-                <th className="py-3">Member</th>
-                <th className="py-3">ID</th>
-                <th className="py-3">Leg</th>
-                <th className="py-3">Slot</th>
-                <th className="py-3">Team</th>
-                <th className="py-3">Earned</th>
-                <th className="py-3 text-right">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((m) => (
-                <tr key={m.id} className="border-b border-white/5 hover:bg-white/[0.02]">
-                  <td className="py-3">
-                    <div className="flex items-center gap-2.5">
-                      <span className="grid h-8 w-8 place-items-center rounded-full bg-white/10 text-xs font-bold text-white">
-                        {m.username.slice(0, 1).toUpperCase()}
-                      </span>
-                      <span className="font-medium text-white">@{m.username}</span>
-                    </div>
-                  </td>
-                  <td className="py-3 font-mono text-xs text-slate-500">{m.id}</td>
-                  <td className="py-3"><Pill tone={m.leg === "Direct" ? "brand" : "slate"}>{m.leg}</Pill></td>
-                  <td className="py-3 font-mono text-slate-300">#{m.slot}</td>
-                  <td className="py-3 text-slate-300">{m.team}</td>
-                  <td className="py-3 font-mono font-semibold text-gradient">{fmtBtc(m.earned, 3)}</td>
-                  <td className="py-3 text-right">
-                    <Pill tone={m.status === "active" ? "emerald" : "gold"}>{m.status}</Pill>
-                  </td>
-                </tr>
-              ))}
-              {!rows.length && (
-                <tr>
-                  <td colSpan={7} className="py-8 text-center text-sm text-slate-500">
-                    No members found.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+      <Panel className="mt-6" title="Team members">
+        {direct.length === 0 ? (
+          <p className="text-sm text-slate-500">No team members yet</p>
+        ) : (
+          direct.map((addr) => (
+            <div key={addr} className="border-b border-white/5 py-3 font-mono text-sm text-white">
+              {truncateAddress(addr)}
+            </div>
+          ))
+        )}
       </Panel>
     </div>
   );

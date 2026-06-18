@@ -1,8 +1,6 @@
 "use client";
 
-import { useState } from "react";
 import { WagmiProvider } from "wagmi";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   RainbowKitProvider,
   darkTheme,
@@ -10,6 +8,10 @@ import {
 } from "@rainbow-me/rainbowkit";
 import "@rainbow-me/rainbowkit/styles.css";
 import { wagmiConfig } from "@/lib/wagmi";
+import { ToastProvider } from "@/providers/ToastProvider";
+import { ContractEventsProvider } from "@/providers/ContractEventsProvider";
+import { WalletSessionProvider } from "@/providers/WalletSessionProvider";
+import { GlobalSiteGate } from "@/components/layout/GlobalSiteGate";
 
 const laeTheme: Theme = darkTheme({
   accentColor: "#ffc31a",
@@ -20,15 +22,19 @@ const laeTheme: Theme = darkTheme({
 });
 
 export function Web3Providers({ children }: { children: React.ReactNode }) {
-  const [queryClient] = useState(() => new QueryClient());
-
   return (
     <WagmiProvider config={wagmiConfig}>
-      <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider theme={laeTheme} modalSize="compact">
-          {children}
-        </RainbowKitProvider>
-      </QueryClientProvider>
+      <ToastProvider>
+        <WalletSessionProvider>
+          <ContractEventsProvider>
+            <GlobalSiteGate>
+              <RainbowKitProvider theme={laeTheme} modalSize="compact">
+                {children}
+              </RainbowKitProvider>
+            </GlobalSiteGate>
+          </ContractEventsProvider>
+        </WalletSessionProvider>
+      </ToastProvider>
     </WagmiProvider>
   );
 }

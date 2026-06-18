@@ -1,123 +1,97 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { LayoutGrid, Lock, Check, Zap, RefreshCw } from "lucide-react";
-import { PageHeading, Panel, Pill, StatCard } from "@/components/dashboard/ui";
-import { slots, user, btcToUsd, fmtBtc } from "@/lib/dashboard-data";
+import { Panel, Pill } from "@/components/dashboard/ui";
+import { QueryLoading } from "@/components/dashboard/QueryState";
+import {
+  useClubMatricesOnChain,
+  useClubPackagesOnChain,
+  useUserEventsOnChain,
+} from "@/lib/contracts/hooks";
+import { CLUB_SLOTS } from "@/lib/contracts/abis";
+import { truncateAddress } from "@/lib/format";
 
-const activeCount = slots.filter((s) => s.active).length;
-const invested = slots.filter((s) => s.active).reduce((a, s) => a + s.price, 0);
-const earned = slots.filter((s) => s.active).reduce((a, s) => a + s.income * s.cycles, 0);
+export default function ClubSlotsPage() {
+  const matrices = useClubMatricesOnChain();
+  const packages = useClubPackagesOnChain();
+  const events = useUserEventsOnChain();
 
-export default function SlotsPage() {
+  if (matrices.isLoading || packages.isLoading) {
+    return <QueryLoading label="Loading club matrices from chain…" />;
+  }
+
+  const rebirthCount = (events.data ?? []).filter((e) => e.eventName === "ClubRebirthCreated").length;
+  const autoUpgrades = (events.data ?? []).filter((e) => e.eventName === "AutoUpgrade");
+
   return (
     <div>
-      <PageHeading
-        icon={LayoutGrid}
-        title="My Slots"
-        subtitle="The 12-Slot Power System. Each slot doubles the entry and unlocks higher earning capacity with unlimited recycling."
-      />
+      <h1 className="font-display text-2xl font-bold text-white">Club Matrices</h1>
+      <p className="mt-1 text-sm text-slate-400">On-chain Club slots · {CLUB_SLOTS} positions per matrix</p>
 
-      <div className="mb-5 grid gap-4 sm:grid-cols-3">
-        <StatCard label="Active Slots" value={`${activeCount} / 12`} icon={Check} accent="brand" />
-        <StatCard label="Total Invested" value={fmtBtc(invested, 3)} sub={btcToUsd(invested)} icon={Zap} accent="violet" />
-        <StatCard label="Earned from slots" value={fmtBtc(earned, 4)} sub={btcToUsd(earned)} icon={RefreshCw} accent="gold" />
+      <div className="mt-4 grid gap-4 sm:grid-cols-3">
+        <Panel title="Packages owned">
+          <p className="text-2xl font-bold text-white">{packages.data?.length ?? 0}</p>
+        </Panel>
+        <Panel title="Rebirths">
+          <p className="text-2xl font-bold text-white">{rebirthCount}</p>
+        </Panel>
+        <Panel title="Auto upgrades">
+          <p className="text-2xl font-bold text-white">{autoUpgrades.length}</p>
+        </Panel>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {slots.map((s, i) => {
-          const next = !s.active && s.id === user.highestSlot + 1;
+      <div className="mt-6 space-y-4">
+        {(matrices.data ?? []).length === 0 && (
+          <Panel title="No active matrices">
+            <p className="text-sm text-slate-500">Purchase a Club package to create a matrix.</p>
+          </Panel>
+        )}
+        {(matrices.data ?? []).map((m) => {
+          const pkg = packages.data?.find((p) => p.level === m.level);
           return (
-            <motion.div
-              key={s.id}
-              initial={{ opacity: 0, y: 18 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.03 }}
-              className={`glass relative overflow-hidden p-5 ${
-                s.active ? "border-brand-500/30" : "opacity-95"
-              }`}
+            <Panel
+              key={String(m.matrixId)}
+              title={`Matrix #${String(m.matrixId)} — Level ${m.level}`}
             >
-              {s.active && (
-                <div className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-brand-500/20 blur-2xl" />
-              )}
-              <div className="relative flex items-center justify-between">
-                <span className="font-display text-lg font-bold text-white">
-                  Slot {s.id}
-                </span>
-                {s.active ? (
-                  <Pill tone="emerald">
-                    <Check className="h-3 w-3" /> Active
-                  </Pill>
-                ) : (
-                  <Pill tone="slate">
-                    <Lock className="h-3 w-3" /> Locked
-                  </Pill>
-                )}
+              <div className="mb-3 flex flex-wrap gap-2">
+                <Pill tone={m.active ? "emerald" : "slate"}>{m.active ? "Active" : "Inactive"}</Pill>
+                {m.cycleCompleted && <Pill tone="gold">Cycle complete</Pill>}
+                {m.isRebirth && <Pill tone="violet">Rebirth</Pill>}
+                {pkg && !pkg.isManual && <Pill tone="brand">Auto-upgrade</Pill>}
               </div>
-
-              <div className="relative mt-4 flex items-end justify-between">
-                <div>
-                  <p className="text-xs text-slate-500">Entry price</p>
-                  <p className="font-mono text-2xl font-bold text-white">{s.price}</p>
-                  <p className="text-xs text-slate-500">BTC · {btcToUsd(s.price)}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs text-slate-500">Income / cycle</p>
-                  <p className="font-mono text-lg font-bold text-gradient">{s.income}</p>
-                  <p className="text-xs text-slate-500">BTC</p>
-                </div>
+              <div className="grid gap-2 text-sm sm:grid-cols-2">
+                <p className="text-slate-400">
+                  Slots:{" "}
+                  <span className="text-white">
+                    {m.slotsFilled}/{CLUB_SLOTS}
+                  </span>
+                </p>
+                <p className="text-slate-400">
+                  Cycles: <span className="text-white">{pkg?.cyclesCompleted ?? m.cycleNumber}</span>
+                </p>
+                <p className="text-slate-400">
+                  Cycle #: <span className="text-white">{m.cycleNumber}</span>
+                </p>
+                <p className="text-slate-400">
+                  Parent matrix: <span className="text-white">{String(m.parentMatrixId)}</span>
+                </p>
               </div>
-
-              <div className="relative mt-4 grid grid-cols-3 gap-2 text-center">
-                <div className="rounded-lg bg-white/[0.03] py-2">
-                  <p className="font-mono text-sm font-semibold text-white">{s.cycles}</p>
-                  <p className="text-[10px] text-slate-500">Recycles</p>
-                </div>
-                <div className="rounded-lg bg-white/[0.03] py-2">
-                  <p className="font-mono text-sm font-semibold text-white">{s.members}/14</p>
-                  <p className="text-[10px] text-slate-500">Members</p>
-                </div>
-                <div className="rounded-lg bg-white/[0.03] py-2">
-                  <p className="font-mono text-sm font-semibold text-white">{s.multiplier}×</p>
-                  <p className="text-[10px] text-slate-500">Potential</p>
-                </div>
+              <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {m.slots.map((slot, i) => (
+                  <div
+                    key={i}
+                    className="rounded-lg border border-white/10 p-2 text-center text-xs"
+                  >
+                    <p className="text-slate-500">Slot {i}</p>
+                    <p className="mt-1 font-mono text-white">
+                      {slot.startsWith("0x0000") ? "Empty" : truncateAddress(slot)}
+                    </p>
+                  </div>
+                ))}
               </div>
-
-              <div className="relative mt-4">
-                {s.active ? (
-                  <button className="btn-ghost w-full justify-center !py-2 text-sm">
-                    Auto-recycling
-                  </button>
-                ) : next ? (
-                  <button className="btn-primary w-full justify-center !py-2 text-sm">
-                    <Zap className="h-4 w-4" /> Activate · {s.price} BTC
-                  </button>
-                ) : (
-                  <button disabled className="w-full cursor-not-allowed rounded-full border border-white/8 py-2 text-sm text-slate-600">
-                    Unlock Slot {s.id - 1} first
-                  </button>
-                )}
-              </div>
-            </motion.div>
+            </Panel>
           );
         })}
       </div>
-
-      <Panel className="mt-5" title="How slots work">
-        <ul className="grid gap-3 text-sm text-slate-400 sm:grid-cols-2">
-          {[
-            "Start with just 0.001 BTC and the engine auto-upgrades your position slot by slot.",
-            "Each slot pays 7× its price per completed cycle (Slot 12 pays 9×).",
-            "Every slot supports unlimited recycles — income never stops.",
-            "Slot upgrades and recycles are funded automatically from your matrix flow.",
-          ].map((t) => (
-            <li key={t} className="flex items-start gap-2">
-              <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-400" />
-              {t}
-            </li>
-          ))}
-        </ul>
-      </Panel>
     </div>
   );
 }

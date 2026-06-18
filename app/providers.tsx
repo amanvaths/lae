@@ -1,37 +1,32 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
-import { GlobalSiteGate } from "@/components/layout/GlobalSiteGate";
+import { createContext, useContext, useState } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { RETRY } from "@/lib/api/query-keys";
+import { Web3Providers } from "./web3-providers";
 
-const Web3LoadedContext = createContext(false);
+const Web3LoadedContext = createContext(true);
 
 export function useWeb3Loaded() {
   return useContext(Web3LoadedContext);
 }
 
-/** Loads Wagmi/RainbowKit in a separate chunk after first paint. */
+function makeQueryClient() {
+  return new QueryClient({
+    defaultOptions: {
+      queries: { retry: RETRY, staleTime: 30_000, refetchOnWindowFocus: true },
+    },
+  });
+}
+
 export function Providers({ children }: { children: React.ReactNode }) {
-  const [Web3, setWeb3] = useState<
-    React.ComponentType<{ children: React.ReactNode }> | null
-  >(null);
-
-  useEffect(() => {
-    import("./web3-providers").then((m) => setWeb3(() => m.Web3Providers));
-  }, []);
-
-  if (!Web3) {
-    return (
-      <Web3LoadedContext.Provider value={false}>
-        <GlobalSiteGate>{children}</GlobalSiteGate>
-      </Web3LoadedContext.Provider>
-    );
-  }
+  const [queryClient] = useState(() => makeQueryClient());
 
   return (
-    <Web3LoadedContext.Provider value={true}>
-      <Web3>
-        <GlobalSiteGate>{children}</GlobalSiteGate>
-      </Web3>
-    </Web3LoadedContext.Provider>
+    <QueryClientProvider client={queryClient}>
+      <Web3LoadedContext.Provider value={true}>
+        <Web3Providers>{children}</Web3Providers>
+      </Web3LoadedContext.Provider>
+    </QueryClientProvider>
   );
 }

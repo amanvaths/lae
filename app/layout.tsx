@@ -37,8 +37,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="dark">
-      <body className={`${poppins.variable} grain`}>
+    <html lang="en" className="dark" suppressHydrationWarning>
+      <body className={`${poppins.variable} grain`} suppressHydrationWarning>
         <Providers>{children}</Providers>
       </body>
     </html>

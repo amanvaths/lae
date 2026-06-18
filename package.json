@@ -3,8 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "clean": "node scripts/clean-next.mjs",
+    "dev": "node scripts/dev.mjs",
+    "dev:fast": "next dev",
+    "build": "node scripts/clean-next.mjs && next build",
     "start": "next start",
     "lint": "next lint"
   },
@@ -23,6 +25,7 @@
     "postprocessing": "^6.39.1",
     "react": "19.0.0",
     "react-dom": "19.0.0",
+    "socket.io-client": "^4.8.3",
     "tailwind-merge": "2.6.0",
     "three": "0.171.0",
     "viem": "^2.52.2",

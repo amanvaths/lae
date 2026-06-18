@@ -1,99 +1,112 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowUpFromLine, Bitcoin, Zap, ShieldCheck } from "lucide-react";
-import { PageHeading, Panel, Pill, StatCard, InfoNote } from "@/components/dashboard/ui";
-import { wallet, transactions, fmtBtc, btcToUsd } from "@/lib/dashboard-data";
+import { Panel } from "@/components/dashboard/ui";
+import { QueryLoading } from "@/components/dashboard/QueryState";
+import { useWalletOnChain, useUserEventsOnChain } from "@/lib/contracts/hooks";
+import { useWithdrawOnChain } from "@/lib/contracts/hooks/useWrites";
+import { fmtEther } from "@/lib/contracts/format";
+import { truncateAddress } from "@/lib/format";
+import { parseEther, formatEther } from "viem";
+import { txUrl } from "@/lib/contracts/addresses";
 
 export default function WithdrawPage() {
   const [amount, setAmount] = useState("");
-  const [addr, setAddr] = useState("");
-  const amt = parseFloat(amount) || 0;
-  const valid = amt > 0 && amt <= wallet.available && addr.length > 6;
+  const [pending, setPending] = useState(false);
+  const wallet = useWalletOnChain();
+  const events = useUserEventsOnChain();
+  const withdraw = useWithdrawOnChain();
+
+  if (wallet.isLoading) return <QueryLoading label="Loading on-chain balance…" />;
+
+  const max = wallet.data?.daiInternal ?? 0n;
+
+  const withdrawEvents = (events.data ?? []).filter((e) => e.eventName === "Withdraw");
 
   return (
     <div>
-      <PageHeading
-        icon={ArrowUpFromLine}
-        title="Withdraw"
-        subtitle="Automatic and instant withdrawals — no withdrawal charges, no hidden fees, no admin approval."
-        action={<Pill tone="emerald"><Zap className="h-3.5 w-3.5" /> Instant settlement</Pill>}
-      />
+      <h1 className="font-display text-2xl font-bold text-white">Withdraw</h1>
+      <p className="mt-1 text-sm text-slate-400">
+        Internal balance: {fmtEther(max)} mDAI (from LAE matrix contract)
+      </p>
 
-      <div className="mb-5 grid gap-4 sm:grid-cols-3">
-        <StatCard label="Available" value={fmtBtc(wallet.available, 4)} sub={btcToUsd(wallet.available)} icon={Bitcoin} accent="emerald" />
-        <StatCard label="Withdrawal fee" value="0 BTC" sub="No charges ever" accent="brand" />
-        <StatCard label="Total withdrawn" value={fmtBtc(wallet.totalWithdrawn, 4)} accent="violet" />
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Panel title="Request withdrawal">
-          <label className="block">
-            <span className="mb-1.5 block text-sm font-medium text-slate-300">Amount (BTC)</span>
-            <div className="relative">
-              <Bitcoin className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gold-400" />
-              <input
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="0.0000"
-                className="w-full rounded-xl border border-white/10 bg-white/[0.03] py-3 pl-10 pr-16 font-mono text-sm text-white outline-none focus:border-brand-500/50"
-              />
-              <button
-                onClick={() => setAmount(wallet.available.toString())}
-                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md bg-white/[0.06] px-2 py-1 text-xs font-medium text-brand-300 hover:bg-white/10"
-              >
-                MAX
-              </button>
-            </div>
-            <p className="mt-1.5 text-xs text-slate-500">
-              ≈ {btcToUsd(amt)} · Available {wallet.available.toFixed(4)} BTC
-            </p>
-          </label>
-
-          <label className="mt-4 block">
-            <span className="mb-1.5 block text-sm font-medium text-slate-300">Destination address</span>
-            <input
-              value={addr}
-              onChange={(e) => setAddr(e.target.value)}
-              placeholder="bc1q…"
-              className="w-full rounded-xl border border-white/10 bg-white/[0.03] py-3 px-4 font-mono text-sm text-white outline-none focus:border-brand-500/50"
-            />
-          </label>
-
-          {amt > wallet.available && (
-            <p className="mt-2 text-xs text-red-400">Amount exceeds available balance.</p>
-          )}
-
+      <Panel className="mt-6" title="Withdraw on-chain">
+        <p className="mb-3 text-sm text-slate-400">
+          Calls <code className="text-brand-200">withdraw(amount, withdrawRef)</code> — unique ref
+          generated automatically.
+        </p>
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <input
+            type="number"
+            min={0}
+            step="0.01"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="Amount in mDAI"
+            className="flex-1 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-white outline-none focus:border-brand-500/50"
+          />
           <button
-            disabled={!valid}
-            className={`mt-5 w-full justify-center ${valid ? "btn-primary" : "cursor-not-allowed rounded-full border border-white/8 py-3 text-sm text-slate-600 inline-flex items-center gap-2"}`}
+            type="button"
+            disabled={
+              pending ||
+              !amount ||
+              (() => {
+                try {
+                  return parseEther(amount) > max;
+                } catch {
+                  return true;
+                }
+              })()
+            }
+            onClick={async () => {
+              setPending(true);
+              try {
+                await withdraw(amount);
+                setAmount("");
+              } finally {
+                setPending(false);
+              }
+            }}
+            className="btn-primary disabled:opacity-50"
           >
-            <ArrowUpFromLine className="h-4 w-4" /> Withdraw {amt > 0 ? `${amt.toFixed(4)} BTC` : ""}
+            {pending ? "Withdrawing…" : "Withdraw"}
           </button>
+        </div>
+        <button
+          type="button"
+          className="mt-2 text-xs text-brand-300"
+          onClick={() => setAmount(formatEther(max))}
+        >
+          Max: {fmtEther(max)}
+        </button>
+      </Panel>
 
-          <InfoNote>
-            <ShieldCheck className="mr-1 inline h-4 w-4" />
-            Withdrawals are executed by smart contract and confirm in under a second.
-          </InfoNote>
-        </Panel>
-
-        <Panel title="Recent withdrawals">
-          <div className="flex flex-col divide-y divide-white/5">
-            {transactions.filter((t) => t.type === "withdraw").map((tx) => (
-              <div key={tx.id} className="flex items-center justify-between py-3">
+      <Panel className="mt-4" title="Withdrawal history (on-chain events)">
+        {events.isLoading ? (
+          <QueryLoading />
+        ) : withdrawEvents.length === 0 ? (
+          <p className="text-sm text-slate-500">No withdrawals yet</p>
+        ) : (
+          <div className="divide-y divide-white/5">
+            {withdrawEvents.map((w) => (
+              <div key={w.id} className="flex justify-between py-3 text-sm">
                 <div>
-                  <p className="text-sm font-medium text-white">{tx.label}</p>
-                  <p className="text-xs text-slate-500">{tx.date} · {tx.hash}</p>
+                  <p className="text-white">{fmtEther(BigInt(String(w.args.amount ?? 0)))} mDAI</p>
+                  <a
+                    href={txUrl(w.transactionHash)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs text-brand-300 hover:underline"
+                  >
+                    {truncateAddress(w.transactionHash)}
+                  </a>
                 </div>
-                <div className="text-right">
-                  <p className="font-mono text-sm font-semibold text-red-300">{tx.amount.toFixed(4)}</p>
-                  <Pill tone={tx.status === "completed" ? "emerald" : "gold"}>{tx.status}</Pill>
-                </div>
+                <span className="text-emerald-400">Confirmed</span>
               </div>
             ))}
           </div>
-        </Panel>
-      </div>
+        )}
+      </Panel>
     </div>
   );
 }
