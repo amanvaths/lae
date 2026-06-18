@@ -15,6 +15,31 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Verify required GitHub Secrets
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PASSWORD: ${{ secrets.VPS_PASSWORD }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+          NEXT_PUBLIC_WC_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_WC_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          missing=()
+          for key in VPS_HOST VPS_USER NEXT_PUBLIC_API_URL; do
+            eval "val=\${$key:-}"
+            if [ -z "$val" ]; then missing+=("$key"); fi
+          done
+          if [ -z "${VPS_PASSWORD:-}" ] && [ -z "${VPS_SSH_KEY:-}" ]; then
+            missing+=("VPS_PASSWORD or VPS_SSH_KEY")
+          fi
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "Missing required secrets:"
+            printf '  - %s\n' "${missing[@]}"
+            exit 1
+          fi
+          echo "Required frontend secrets present"
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -25,6 +50,16 @@ jobs:
 
       - name: Build static site
         run: npm run build
+        env:
+          NEXT_STATIC_EXPORT: "true"
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+          NEXT_PUBLIC_WC_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_WC_PROJECT_ID }}
+          NEXT_PUBLIC_CHAIN_ID: ${{ secrets.NEXT_PUBLIC_CHAIN_ID }}
+          NEXT_PUBLIC_SENSO_CONTRACT: ${{ secrets.NEXT_PUBLIC_SENSO_CONTRACT }}
+          NEXT_PUBLIC_DAI_CONTRACT: ${{ secrets.NEXT_PUBLIC_DAI_CONTRACT }}
+          NEXT_PUBLIC_SLT_CONTRACT: ${{ secrets.NEXT_PUBLIC_SLT_CONTRACT }}
+          NEXT_PUBLIC_SPIN_CONTRACT: ${{ secrets.NEXT_PUBLIC_SPIN_CONTRACT }}
+          NEXT_PUBLIC_STAKING_CONTRACT: ${{ secrets.NEXT_PUBLIC_STAKING_CONTRACT }}
 
       - name: Pack build artifact
         run: tar -czf site.tar.gz -C out .
@@ -35,6 +70,7 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           password: ${{ secrets.VPS_PASSWORD }}
+          key: ${{ secrets.VPS_SSH_KEY }}
           port: 22
           source: site.tar.gz
           target: /tmp/
@@ -45,6 +81,7 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           password: ${{ secrets.VPS_PASSWORD }}
+          key: ${{ secrets.VPS_SSH_KEY }}
           port: 22
           script_stop: true
           script: |
