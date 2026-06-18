@@ -59,5 +59,12 @@ jobs:
             tar -xzf /tmp/site.tar.gz -C /var/www/lae
             rm -f /tmp/site.tar.gz
             chown -R www-data:www-data /var/www/lae
+            # Prevent stale HTML/JS gate logic after deploys
+            NGINX_SITE="/etc/nginx/sites-available/lae"
+            if [ -f "$NGINX_SITE" ]; then
+              if ! grep -q "no-cache, no-store, must-revalidate" "$NGINX_SITE"; then
+                sed -i '/location \\/ {/a\        add_header Cache-Control "no-cache, no-store, must-revalidate" always;' "$NGINX_SITE"
+              fi
+            fi
             nginx -t
             systemctl reload nginx

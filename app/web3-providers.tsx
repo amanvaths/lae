@@ -11,7 +11,6 @@ import { wagmiConfig } from "@/lib/wagmi";
 import { ToastProvider } from "@/providers/ToastProvider";
 import { ContractEventsProvider } from "@/providers/ContractEventsProvider";
 import { WalletSessionProvider } from "@/providers/WalletSessionProvider";
-import { GlobalSiteGate } from "@/components/layout/GlobalSiteGate";
 
 const laeTheme: Theme = darkTheme({
   accentColor: "#ffc31a",
@@ -27,11 +26,9 @@ export function Web3Providers({ children }: { children: React.ReactNode }) {
       <ToastProvider>
         <WalletSessionProvider>
           <ContractEventsProvider>
-            <GlobalSiteGate>
-              <RainbowKitProvider theme={laeTheme} modalSize="compact">
-                {children}
-              </RainbowKitProvider>
-            </GlobalSiteGate>
+            <RainbowKitProvider theme={laeTheme} modalSize="compact">
+              {children}
+            </RainbowKitProvider>
           </ContractEventsProvider>
         </WalletSessionProvider>
       </ToastProvider>

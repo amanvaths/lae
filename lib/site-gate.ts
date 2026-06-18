@@ -3,19 +3,6 @@ import { basePath } from "@/lib/paths";
 export const SITE_PREVIEW_KEY = "lae_site_preview";
 export const LAUNCH_AT = new Date("2026-06-22T00:00:00").getTime();
 
-/** Routes that must never redirect to /coming-soon. */
-const ALWAYS_OPEN_PREFIXES = [
-  "/login",
-  "/dashboard",
-  "/coming-soon",
-  "/p2p",
-  "/privacy",
-  "/terms",
-  "/disclaimer",
-  "/whitepaper",
-  "/home",
-] as const;
-
 /** Strip deployment base path from a pathname (e.g. `/lae/home` → `/home`). */
 export function stripBasePath(pathname: string): string {
   if (basePath && pathname.startsWith(basePath)) {
@@ -28,20 +15,6 @@ export function stripBasePath(pathname: string): string {
 export function normalizePath(pathname: string | null | undefined): string {
   if (!pathname) return "/";
   return stripBasePath(pathname).replace(/\/$/, "") || "/";
-}
-
-export function isAlwaysOpenRoute(pathname: string | null | undefined): boolean {
-  const path = normalizePath(pathname);
-  return ALWAYS_OPEN_PREFIXES.some(
-    (prefix) => path === prefix || path.startsWith(`${prefix}/`)
-  );
-}
-
-/** @deprecated Prefer shouldRedirectToComingSoon — kept for callers that check "public". */
-export function isPublicRoute(pathname: string | null | undefined): boolean {
-  const path = normalizePath(pathname);
-  if (isAlwaysOpenRoute(path)) return true;
-  return path === "/";
 }
 
 export function isLaunchLive(): boolean {
@@ -64,16 +37,14 @@ export function canAccessFullSite(): boolean {
   return isLaunchLive() || hasSitePreview();
 }
 
-/**
- * Pre-launch gate: only the marketing landing paths redirect to /coming-soon.
- * App routes (/login, /dashboard, …) always load directly.
- */
-export function shouldRedirectToComingSoon(pathname: string | null | undefined): boolean {
-  if (canAccessFullSite()) return false;
-  if (isAlwaysOpenRoute(pathname)) return false;
+/** Gate disabled — every route is accessible by URL. */
+export function shouldRedirectToComingSoon(_pathname?: string | null): boolean {
+  return false;
+}
 
-  const path = normalizePath(pathname);
-  return path === "/" || path === "/home";
+/** @deprecated Gate removed — all routes are open. */
+export function isPublicRoute(_pathname?: string | null): boolean {
+  return true;
 }
 
 export function enableSitePreview(): void {
