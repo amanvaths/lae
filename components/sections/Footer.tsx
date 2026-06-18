@@ -8,10 +8,10 @@ const cols = [
   {
     title: "Protocol",
     links: [
-      { label: "About", href: withBasePath("/home#about") },
-      { label: "Tokenomics", href: withBasePath("/home#tokenomics") },
-      { label: "Network", href: withBasePath("/home#network") },
-      { label: "Roadmap", href: withBasePath("/home#roadmap") },
+      { label: "About", href: withBasePath("/#about") },
+      { label: "Tokenomics", href: withBasePath("/#tokenomics") },
+      { label: "Network", href: withBasePath("/#network") },
+      { label: "Roadmap", href: withBasePath("/#roadmap") },
       { label: "Whitepaper", href: withBasePath("/whitepaper") },
     ],
   },
@@ -21,7 +21,7 @@ const cols = [
       { label: "Login", href: withBasePath("/login") },
       { label: "Dashboard", href: withBasePath("/dashboard") },
       { label: "P2P Market", href: withBasePath("/p2p") },
-      { label: "FAQ", href: withBasePath("/home#faq") },
+      { label: "FAQ", href: withBasePath("/#faq") },
       { label: "Support", href: "mailto:support@lae.finance" },
     ],
   },

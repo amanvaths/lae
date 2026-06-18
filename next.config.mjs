@@ -7,6 +7,16 @@ const basePath = isGithubPages ? "/lae" : "";
 const nextConfig = {
   // Static export for GitHub Pages and VPS nginx deploy — not during `next dev`
   ...(isStaticExport ? { output: "export", trailingSlash: true } : {}),
+  ...(isStaticExport && !isGithubPages
+    ? {
+        async redirects() {
+          return [
+            { source: "/home", destination: "/", permanent: true },
+            { source: "/home/", destination: "/", permanent: true },
+          ];
+        },
+      }
+    : {}),
   devIndicators: false,
   basePath,
   assetPrefix: isGithubPages ? "/lae/" : "",

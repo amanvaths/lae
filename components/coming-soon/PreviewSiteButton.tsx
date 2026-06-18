@@ -7,7 +7,7 @@ import { enableSitePreview } from "@/lib/site-gate";
 export function PreviewSiteButton() {
   const enterSite = () => {
     enableSitePreview();
-    window.location.href = withBasePath("/home");
+    window.location.href = withBasePath("/");
   };
 
   return (

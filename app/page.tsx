@@ -1,21 +1,12 @@
-"use client";
+import type { Metadata } from "next";
+import HomePage from "./home/home-page";
 
-import { useEffect } from "react";
-import { BrandLogo } from "@/components/ui/BrandLogo";
-import { withBasePath } from "@/lib/paths";
+export const metadata: Metadata = {
+  title: "LAE — The Decentralized Network Token",
+  description:
+    "LAE turns the power of networking into a transparent, on-chain rewards economy. Build your network, earn in $LAE, own your growth.",
+};
 
-/** App entry — go straight to wallet login (skip LAE marketing home). */
-export default function RootGatePage() {
-  useEffect(() => {
-    window.location.replace(withBasePath("/login"));
-  }, []);
-
-  return (
-    <main className="grid min-h-[100dvh] place-items-center bg-ink-950 px-5">
-      <div className="flex flex-col items-center gap-4">
-        <BrandLogo size={64} />
-        <p className="text-sm text-slate-500">Opening LAE dashboard…</p>
-      </div>
-    </main>
-  );
+export default function RootPage() {
+  return <HomePage />;
 }
