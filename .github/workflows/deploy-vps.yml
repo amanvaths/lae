@@ -15,35 +15,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Verify required GitHub Secrets
-        env:
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_USER: ${{ secrets.VPS_USER }}
-          VPS_PASSWORD: ${{ secrets.VPS_PASSWORD }}
-          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
-          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
-        run: |
-          set -euo pipefail
-          echo "This workflow deploys the FRONTEND to your VPS (nginx /var/www/lae)."
-          echo "It is NOT GitHub Pages. GitHub Pages is a separate workflow."
-          echo ""
-          missing=()
-          for key in VPS_HOST VPS_USER NEXT_PUBLIC_API_URL; do
-            eval "val=\${$key:-}"
-            if [ -z "$val" ]; then missing+=("$key"); fi
-          done
-          if [ -z "${VPS_PASSWORD:-}" ] && [ -z "${VPS_SSH_KEY:-}" ]; then
-            missing+=("VPS_PASSWORD or VPS_SSH_KEY")
-          fi
-          if [ ${#missing[@]} -gt 0 ]; then
-            echo "::error::VPS deploy blocked — add these GitHub Secrets (Settings → Secrets → Actions):"
-            printf '  - %s\n' "${missing[@]}"
-            echo ""
-            echo "See docs/VPS_PRODUCTION_SECRETS.md for full list."
-            exit 1
-          fi
-          echo "Required secrets OK. Deploying to ${VPS_HOST} as ${VPS_USER}"
-
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -52,45 +23,33 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build static site for VPS
+      - name: Build static site
         run: npm run build
         env:
           NEXT_STATIC_EXPORT: "true"
           NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
           NEXT_PUBLIC_WC_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_WC_PROJECT_ID }}
-          NEXT_PUBLIC_CHAIN_ID: "97"
-          NEXT_PUBLIC_SENSO_CONTRACT: "0x74Ddbe4bcb6000bD9AA357E02B874C3D0e0248D5"
-          NEXT_PUBLIC_DAI_CONTRACT: "0xf8E556996042b34cc706F040c59955abB678995e"
-          NEXT_PUBLIC_SLT_CONTRACT: "0x7a509cb5cF853BaE4C4A76B7e37037cf8ec2A146"
-          NEXT_PUBLIC_SPIN_CONTRACT: "0xE5BD47a1bA6D742c147b74c54Ca6CFd95cACD50D"
-          NEXT_PUBLIC_STAKING_CONTRACT: "0xDAB2Ef2396b53D64cf22Fe58fE0275fDdb0fe5D8"
 
       - name: Pack build artifact
-        run: |
-          test -d out || { echo "::error::Build did not produce out/ — check npm run build"; exit 1; }
-          tar -czf site.tar.gz -C out .
+        run: tar -czf site.tar.gz -C out .
 
       - name: Upload to VPS
         uses: appleboy/scp-action@v1.0.0
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
           password: ${{ secrets.VPS_PASSWORD }}
           port: 22
           source: site.tar.gz
           target: /tmp/
-          timeout: 120s
 
       - name: Extract and reload nginx
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
           password: ${{ secrets.VPS_PASSWORD }}
           port: 22
-          timeout: 120s
           script_stop: true
           script: |
             set -e
@@ -98,7 +57,6 @@ jobs:
             find /var/www/lae -mindepth 1 -delete
             tar -xzf /tmp/site.tar.gz -C /var/www/lae
             rm -f /tmp/site.tar.gz
-            chown -R www-data:www-data /var/www/lae 2>/dev/null || chown -R nginx:nginx /var/www/lae 2>/dev/null || true
+            chown -R www-data:www-data /var/www/lae
             nginx -t
             systemctl reload nginx
-            echo "Frontend live on VPS nginx root /var/www/lae"
