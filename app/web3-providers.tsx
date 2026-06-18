@@ -8,6 +8,7 @@ import {
 } from "@rainbow-me/rainbowkit";
 import "@rainbow-me/rainbowkit/styles.css";
 import { wagmiConfig } from "@/lib/wagmi";
+import { bscTestnet } from "wagmi/chains";
 import { ToastProvider } from "@/providers/ToastProvider";
 import { ContractEventsProvider } from "@/providers/ContractEventsProvider";
 import { WalletSessionProvider } from "@/providers/WalletSessionProvider";
@@ -26,7 +27,15 @@ export function Web3Providers({ children }: { children: React.ReactNode }) {
       <ToastProvider>
         <WalletSessionProvider>
           <ContractEventsProvider>
-            <RainbowKitProvider theme={laeTheme} modalSize="compact">
+            <RainbowKitProvider
+              theme={laeTheme}
+              modalSize="wide"
+              initialChain={bscTestnet}
+              appInfo={{
+                appName: "LAE",
+                learnMoreUrl: "https://laeclub.com",
+              }}
+            >
               {children}
             </RainbowKitProvider>
           </ContractEventsProvider>

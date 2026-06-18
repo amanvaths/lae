@@ -31,7 +31,7 @@ Public URL of the backend API (must be reachable from browsers)
 Example Value: `https://api.laeclub.com`
 
 **NEXT_PUBLIC_WC_PROJECT_ID**  
-WalletConnect Cloud project ID (optional for MetaMask-only; required for WalletConnect)  
+WalletConnect Cloud project ID — **required for WalletConnect on mobile browsers**. MetaMask/Trust deep links work without it; get a free id at [cloud.walletconnect.com](https://cloud.walletconnect.com).  
 Example Value: `a1b2c3d4e5f6789012345678901234ab`
 
 **NEXT_PUBLIC_CHAIN_ID**  

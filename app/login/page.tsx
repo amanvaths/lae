@@ -2,40 +2,49 @@
 
 import Link from "next/link";
 import { Hexagon, ShieldCheck } from "lucide-react";
-import { ConnectWallet } from "@/components/web3/ConnectWallet";
+import { LoginConnectPanel } from "@/components/web3/LoginConnectPanel";
 import { LoginGate } from "@/components/auth/LoginGate";
 import { withBasePath } from "@/lib/paths";
 
 export default function LoginPage() {
   return (
-    <main className="relative grid min-h-screen place-items-center overflow-hidden px-5 py-12">
+    <main className="relative grid min-h-[100dvh] min-h-[100svh] place-items-center overflow-x-hidden px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))] pt-[calc(4.75rem+env(safe-area-inset-top))] sm:px-5 sm:py-12">
       <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute left-1/2 top-1/4 h-[460px] w-[680px] -translate-x-1/2 rounded-full bg-brand-500/15 blur-[130px]" />
+        <div className="absolute left-1/2 top-1/4 h-[320px] w-[min(680px,100vw)] -translate-x-1/2 rounded-full bg-brand-500/15 blur-[100px] sm:h-[460px] sm:blur-[130px]" />
       </div>
 
-      <Link href={withBasePath("/")} className="absolute left-6 top-6 flex items-center gap-2.5">
-        <span className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-brand-400 to-accent-600 shadow-glow">
-          <Hexagon className="h-5 w-5 text-white" strokeWidth={2.4} />
+      <Link
+        href={withBasePath("/")}
+        className="absolute left-4 top-[calc(0.75rem+env(safe-area-inset-top))] flex items-center gap-2 sm:left-6 sm:top-6 sm:gap-2.5"
+      >
+        <span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-brand-400 to-accent-600 shadow-glow sm:h-10 sm:w-10">
+          <Hexagon className="h-4 w-4 text-white sm:h-5 sm:w-5" strokeWidth={2.4} />
         </span>
-        <span className="font-display text-xl font-bold text-white">LAE</span>
+        <span className="font-display text-lg font-bold text-white sm:text-xl">LAE</span>
       </Link>
 
-      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-white/[0.03] p-8 backdrop-blur">
-        <div className="mb-6 text-center">
-          <ShieldCheck className="mx-auto h-10 w-10 text-brand-400" />
-          <h1 className="mt-3 font-display text-2xl font-bold text-white">Connect Wallet</h1>
-          <p className="mt-2 text-sm text-slate-400">
-            MetaMask · Trust Wallet · WalletConnect on BSC Testnet
+      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-white/[0.03] p-5 backdrop-blur sm:p-8">
+        <div className="mb-5 text-center sm:mb-6">
+          <ShieldCheck className="mx-auto h-9 w-9 text-brand-400 sm:h-10 sm:w-10" />
+          <h1 className="mt-3 font-display text-xl font-bold text-white sm:text-2xl">
+            Connect Wallet
+          </h1>
+          <p className="mt-2 text-xs leading-relaxed text-slate-400 sm:text-sm">
+            MetaMask · Trust Wallet · WalletConnect
+            <br className="sm:hidden" />
+            <span className="hidden sm:inline"> · </span>
+            BSC Testnet
           </p>
         </div>
 
         <LoginGate>
-          <ConnectWallet full variant="primary" />
+          <LoginConnectPanel />
         </LoginGate>
 
-        <p className="mt-6 text-center text-xs text-slate-500">
-          Referral link? Use <code className="text-brand-200">?sponsor=0x…</code> to set on-chain
-          sponsor at registration.
+        <p className="mt-5 text-center text-[0.65rem] leading-relaxed text-slate-500 sm:mt-6 sm:text-xs">
+          Referral link? Use{" "}
+          <code className="text-brand-200">?sponsor=0x…</code> to set on-chain sponsor at
+          registration.
         </p>
       </div>
     </main>
