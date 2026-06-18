@@ -2,11 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAccount } from "wagmi";
 import { useWalletSession } from "@/providers/WalletSessionProvider";
 import { Hexagon, LogOut, ChevronRight } from "lucide-react";
 import { navGroups, utilityItems } from "./nav";
 import { cn } from "@/lib/utils";
 import { withBasePath } from "@/lib/paths";
+import { truncateAddress } from "@/lib/format";
 
 function NavLink({
   href,
@@ -49,26 +51,26 @@ function NavLink({
 
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
+  const { address } = useAccount();
   const { disconnectWallet } = useWalletSession();
 
   const isActive = (href: string) =>
-    href === "/dashboard" ? pathname === href : pathname.startsWith(href);
+    href === "/dashboard"
+      ? pathname === href || pathname === `${href}/`
+      : pathname.startsWith(href);
 
-  const handleLogout = () => {
-    disconnectWallet();
-  };
+  const display = address ? truncateAddress(address, 6, 4) : "Not connected";
+  const initial = address ? address.slice(2, 3).toUpperCase() : "?";
 
   return (
     <div className="flex h-full flex-col bg-ink-900/80 backdrop-blur-xl">
       <div className="flex h-16 items-center gap-2.5 border-b border-white/5 px-5">
-        <Link href={withBasePath("/login")} className="flex items-center gap-2.5">
+        <Link href={withBasePath("/")} className="flex items-center gap-2.5">
           <span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-brand-400 to-accent-600 shadow-glow">
             <Hexagon className="h-5 w-5 text-white" strokeWidth={2.4} />
           </span>
           <div className="leading-tight">
-            <span className="block font-display text-base font-bold text-white">
-              LAE
-            </span>
+            <span className="block font-display text-base font-bold text-white">LAE</span>
             <span className="block text-[10px] uppercase tracking-widest text-brand-300/80">
               Network
             </span>
@@ -86,7 +88,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
               {group.items.map((it) => (
                 <NavLink
                   key={it.href}
-                  href={it.href}
+                  href={withBasePath(it.href)}
                   label={it.label}
                   icon={it.icon}
                   active={isActive(it.href)}
@@ -105,7 +107,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
             {utilityItems.map((it) => (
               <NavLink
                 key={it.href}
-                href={it.href}
+                href={withBasePath(it.href)}
                 label={it.label}
                 icon={it.icon}
                 active={isActive(it.href)}
@@ -117,9 +119,18 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       </nav>
 
       <div className="border-t border-white/5 p-3">
+        <div className="mb-2 flex items-center gap-3 rounded-xl border border-white/5 bg-white/[0.03] p-3">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-to-br from-brand-400 to-accent-600 text-sm font-bold text-white">
+            {initial}
+          </span>
+          <div className="min-w-0 flex-1 leading-tight">
+            <p className="truncate font-mono text-sm font-semibold text-white">{display}</p>
+            <p className="truncate text-xs text-slate-500">BSC Testnet</p>
+          </div>
+        </div>
         <button
           type="button"
-          onClick={handleLogout}
+          onClick={disconnectWallet}
           className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 px-3 py-2.5 text-sm text-slate-300 transition-colors hover:border-red-500/30 hover:bg-red-500/5 hover:text-red-300"
         >
           <LogOut className="h-4 w-4" />

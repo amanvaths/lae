@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
+import { NetworkBanner } from "@/components/web3/NetworkBanner";
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
@@ -56,7 +57,10 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             <div className="absolute left-1/3 top-0 h-72 w-[600px] -translate-x-1/2 rounded-full bg-brand-500/[0.07] blur-[120px]" />
             <div className="absolute right-0 top-40 h-64 w-64 rounded-full bg-accent-500/[0.06] blur-[100px]" />
           </div>
-          <div className="mx-auto max-w-7xl">{children}</div>
+          <div className="mx-auto max-w-7xl">
+            <NetworkBanner />
+            {children}
+          </div>
         </main>
       </div>
     </div>

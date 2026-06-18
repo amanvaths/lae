@@ -15,6 +15,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useClientMounted } from "@/lib/useClientMounted";
 import { contractKeys } from "@/lib/contracts/query-keys";
 import { CHAIN_ID } from "@/lib/contracts/config";
+import { withBasePath } from "@/lib/paths";
 
 interface WalletSessionContextValue {
   address: `0x${string}` | undefined;
@@ -45,7 +46,7 @@ export function WalletSessionProvider({ children }: { children: ReactNode }) {
   const disconnectWallet = useCallback(() => {
     clearSession();
     disconnect();
-    router.replace("/login");
+    router.replace(withBasePath("/login"));
   }, [clearSession, disconnect, router]);
 
   const prevAddress = useRef<string | undefined>(undefined);
