@@ -3,16 +3,18 @@ import { basePath } from "@/lib/paths";
 export const SITE_PREVIEW_KEY = "lae_site_preview";
 export const LAUNCH_AT = new Date("2026-06-22T00:00:00").getTime();
 
-const PUBLIC_ROUTES = new Set([
-  "/",
-  "/home",
+/** Routes that must never redirect to /coming-soon. */
+const ALWAYS_OPEN_PREFIXES = [
   "/login",
+  "/dashboard",
   "/coming-soon",
+  "/p2p",
   "/privacy",
   "/terms",
   "/disclaimer",
-  "/p2p",
-]);
+  "/whitepaper",
+  "/home",
+] as const;
 
 /** Strip deployment base path from a pathname (e.g. `/lae/home` → `/home`). */
 export function stripBasePath(pathname: string): string {
@@ -23,10 +25,23 @@ export function stripBasePath(pathname: string): string {
   return pathname;
 }
 
-export function isPublicRoute(pathname: string): boolean {
-  const path = stripBasePath(pathname).replace(/\/$/, "") || "/";
-  if (path.startsWith("/dashboard")) return true;
-  return PUBLIC_ROUTES.has(path);
+export function normalizePath(pathname: string | null | undefined): string {
+  if (!pathname) return "/";
+  return stripBasePath(pathname).replace(/\/$/, "") || "/";
+}
+
+export function isAlwaysOpenRoute(pathname: string | null | undefined): boolean {
+  const path = normalizePath(pathname);
+  return ALWAYS_OPEN_PREFIXES.some(
+    (prefix) => path === prefix || path.startsWith(`${prefix}/`)
+  );
+}
+
+/** @deprecated Prefer shouldRedirectToComingSoon — kept for callers that check "public". */
+export function isPublicRoute(pathname: string | null | undefined): boolean {
+  const path = normalizePath(pathname);
+  if (isAlwaysOpenRoute(path)) return true;
+  return path === "/";
 }
 
 export function isLaunchLive(): boolean {
@@ -45,7 +60,20 @@ export function hasSitePreview(): boolean {
 
 export function canAccessFullSite(): boolean {
   if (process.env.NODE_ENV === "development") return true;
+  if (process.env.NEXT_PUBLIC_SITE_LIVE === "true") return true;
   return isLaunchLive() || hasSitePreview();
+}
+
+/**
+ * Pre-launch gate: only the marketing landing paths redirect to /coming-soon.
+ * App routes (/login, /dashboard, …) always load directly.
+ */
+export function shouldRedirectToComingSoon(pathname: string | null | undefined): boolean {
+  if (canAccessFullSite()) return false;
+  if (isAlwaysOpenRoute(pathname)) return false;
+
+  const path = normalizePath(pathname);
+  return path === "/" || path === "/home";
 }
 
 export function enableSitePreview(): void {

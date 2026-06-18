@@ -4,17 +4,17 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { BrandLogo } from "@/components/ui/BrandLogo";
 import { withBasePath } from "@/lib/paths";
-import { canAccessFullSite, isPublicRoute } from "@/lib/site-gate";
+import { shouldRedirectToComingSoon } from "@/lib/site-gate";
 
 export function GlobalSiteGate({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [allowed, setAllowed] = useState(() => {
     if (typeof window === "undefined") return true;
-    return isPublicRoute(pathname) || canAccessFullSite();
+    return !shouldRedirectToComingSoon(pathname);
   });
 
   useEffect(() => {
-    if (isPublicRoute(pathname) || canAccessFullSite()) {
+    if (!shouldRedirectToComingSoon(pathname)) {
       setAllowed(true);
       return;
     }
