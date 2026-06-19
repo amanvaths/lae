@@ -85,31 +85,44 @@ export async function apiRequest<T>(
     headers.Authorization = `Bearer ${accessToken}`;
   }
 
-  const res = await fetch(`${API_BASE_URL}${path}`, {
-    ...rest,
-    headers,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 12_000);
 
-  if (res.status === 401 && auth && refreshToken) {
-    if (!refreshPromise) {
-      refreshPromise = refreshAccessToken().finally(() => {
-        refreshPromise = null;
-      });
+  try {
+    const res = await fetch(`${API_BASE_URL}${path}`, {
+      ...rest,
+      headers,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+      signal: controller.signal,
+    });
+
+    if (res.status === 401 && auth && refreshToken) {
+      if (!refreshPromise) {
+        refreshPromise = refreshAccessToken().finally(() => {
+          refreshPromise = null;
+        });
+      }
+      const newToken = await refreshPromise;
+      if (newToken) {
+        return apiRequest<T>(path, options);
+      }
     }
-    const newToken = await refreshPromise;
-    if (newToken) {
-      return apiRequest<T>(path, options);
+
+    if (!res.ok) {
+      const err = (await res.json().catch(() => ({}))) as { error?: string; code?: string };
+      throw new ApiError(res.status, err.error ?? res.statusText, err.code);
     }
-  }
 
-  if (!res.ok) {
-    const err = (await res.json().catch(() => ({}))) as { error?: string; code?: string };
-    throw new ApiError(res.status, err.error ?? res.statusText, err.code);
+    if (res.status === 204) return undefined as T;
+    return res.json() as Promise<T>;
+  } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") {
+      throw new ApiError(408, "Request timed out");
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeout);
   }
-
-  if (res.status === 204) return undefined as T;
-  return res.json() as Promise<T>;
 }
 
 export const api = {

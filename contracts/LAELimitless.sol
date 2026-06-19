@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.20;
 
+// Remix: upload LAEToken.sol in the SAME folder before compile (see contracts/REMIX_DEPLOY.md)
 import "./LAEToken.sol";
 
 /**

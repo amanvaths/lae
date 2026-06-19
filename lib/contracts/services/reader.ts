@@ -425,28 +425,50 @@ export async function readUserEvents(
   const fromBlock = await getEventFromBlock(client);
   const user = getAddress(address);
 
-  for (const name of eventNames) {
-    let logs;
+  function indexedArgs(
+    name: (typeof eventNames)[number]
+  ): Record<string, Address> | undefined {
+    switch (name) {
+      case "UserRegistered":
+      case "ClubPurchased":
+      case "PilotPurchased":
+      case "ClubPlacement":
+      case "PilotPlacement":
+      case "AutoUpgrade":
+      case "Withdraw":
+        return { user };
+      case "ClubCycleCompleted":
+      case "PilotCycleCompleted":
+      case "ClubRebirthCreated":
+      case "PilotRebirthCreated":
+        return { owner: user };
+      case "IncomePaid":
+      case "TokenReward":
+        return { recipient: user };
+      default:
+        return undefined;
+    }
+  }
+
+  async function fetchLogs(name: (typeof eventNames)[number], args?: Record<string, Address>) {
     try {
-      logs = await client.getContractEvents({
+      return await client.getContractEvents({
         abi: sensoLimitlessAbi,
         address: CONTRACTS.senso,
         eventName: name,
+        args,
         fromBlock,
         toBlock: "latest",
       });
     } catch {
-      continue;
+      return [];
     }
+  }
 
+  for (const name of eventNames) {
+    const logs = await fetchLogs(name, indexedArgs(name));
     for (const log of logs) {
       const args = log.args as Record<string, unknown>;
-      const involves =
-        sameAddr(args.user, user) ||
-        sameAddr(args.owner, user) ||
-        sameAddr(args.recipient, user) ||
-        sameAddr(args.sponsor, user);
-      if (!involves) continue;
       rows.push({
         id: `${log.transactionHash}-${log.logIndex}`,
         eventName: name,
@@ -455,6 +477,20 @@ export async function readUserEvents(
         args: serializeArgs(args),
       });
     }
+  }
+
+  // Referrals where this wallet is sponsor (not covered by user filter above).
+  const sponsorRegs = await fetchLogs("UserRegistered", { sponsor: user });
+  for (const log of sponsorRegs) {
+    const args = log.args as Record<string, unknown>;
+    if (sameAddr(args.user, user)) continue;
+    rows.push({
+      id: `${log.transactionHash}-${log.logIndex}`,
+      eventName: "UserRegistered",
+      blockNumber: log.blockNumber ?? 0n,
+      transactionHash: log.transactionHash ?? "",
+      args: serializeArgs(args),
+    });
   }
 
   rows.sort((a, b) => Number(b.blockNumber - a.blockNumber));

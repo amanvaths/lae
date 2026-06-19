@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Home, Network, ArrowLeftRight, Wallet, Star, LayoutDashboard } from "lucide-react";
+import { Home, Network, Wallet, Star, LayoutDashboard } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { withBasePath } from "@/lib/paths";
 import { useScrollSpy, sectionFromHref } from "@/lib/useScrollSpy";
@@ -17,7 +17,7 @@ type DockLink = {
 const staticLinks: DockLink[] = [
   { href: "#top", label: "Home", icon: Home },
   { href: "#network", label: "Network", icon: Network },
-  { href: withBasePath("/p2p"), label: "P2P", icon: ArrowLeftRight },
+  // { href: withBasePath("/p2p"), label: "P2P", icon: ArrowLeftRight }, // hidden for now
   { href: "#cta", label: "Buy", icon: Star },
 ];
 
@@ -25,13 +25,12 @@ function buildLinks(walletConnected: boolean): DockLink[] {
   return [
     staticLinks[0],
     staticLinks[1],
-    staticLinks[2],
     {
       href: withBasePath(walletConnected ? "/dashboard" : "/login"),
       label: walletConnected ? "Dashboard" : "Connect",
       icon: walletConnected ? LayoutDashboard : Wallet,
     },
-    staticLinks[3],
+    staticLinks[2],
   ];
 }
 

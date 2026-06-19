@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { useAccount } from "wagmi";
 import { Loader2 } from "lucide-react";
 import { useClientMounted } from "@/lib/useClientMounted";
@@ -9,22 +9,14 @@ import { useWalletSession } from "@/providers/WalletSessionProvider";
 import { useSensoUser } from "@/lib/contracts/hooks";
 import { withBasePath } from "@/lib/paths";
 
-const WALLET_CHECK_MS = 2_500;
-
-/** Connect screen — registered wallets go to dashboard; others go to registration. */
-export function LoginGate({ children }: { children: ReactNode }) {
+/** Registration screen — requires connected, unregistered wallet. */
+export function RegisterGate({ children }: { children: ReactNode }) {
   const router = useRouter();
   const mounted = useClientMounted();
   const redirecting = useRef(false);
   const { status, address } = useAccount();
   const { isReady, isWrongNetwork } = useWalletSession();
   const user = useSensoUser();
-  const [showForm, setShowForm] = useState(false);
-
-  useEffect(() => {
-    const t = setTimeout(() => setShowForm(true), WALLET_CHECK_MS);
-    return () => clearTimeout(t);
-  }, []);
 
   useEffect(() => {
     redirecting.current = false;
@@ -32,14 +24,18 @@ export function LoginGate({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!mounted || !isReady || redirecting.current) return;
-    if (status !== "connected" || !address || isWrongNetwork) return;
+
+    if (status !== "connected" || !address || isWrongNetwork) {
+      redirecting.current = true;
+      router.replace(withBasePath("/login"));
+      return;
+    }
+
     if (user.isLoading || user.isFetching) return;
 
-    redirecting.current = true;
     if (user.data?.registered) {
+      redirecting.current = true;
       router.replace(withBasePath("/dashboard"));
-    } else {
-      router.replace(withBasePath("/login/register"));
     }
   }, [
     mounted,
@@ -53,16 +49,25 @@ export function LoginGate({ children }: { children: ReactNode }) {
     router,
   ]);
 
-  if (!mounted) {
+  if (!mounted || !isReady || status === "connecting" || status === "reconnecting") {
     return (
       <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3 text-slate-400">
         <Loader2 className="h-8 w-8 animate-spin text-brand-400" />
-        <p className="text-sm">Loading…</p>
+        <p className="text-sm">Connecting wallet…</p>
       </div>
     );
   }
 
-  if (status === "connected" && address && !isWrongNetwork) {
+  if (status !== "connected" || !address) {
+    return (
+      <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3 text-slate-400">
+        <Loader2 className="h-8 w-8 animate-spin text-brand-400" />
+        <p className="text-sm">Redirecting to login…</p>
+      </div>
+    );
+  }
+
+  if (user.isLoading || user.isFetching) {
     return (
       <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3 text-slate-400">
         <Loader2 className="h-8 w-8 animate-spin text-brand-400" />
@@ -71,11 +76,11 @@ export function LoginGate({ children }: { children: ReactNode }) {
     );
   }
 
-  if ((status === "connecting" || status === "reconnecting") && !showForm) {
+  if (user.data?.registered) {
     return (
       <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3 text-slate-400">
         <Loader2 className="h-8 w-8 animate-spin text-brand-400" />
-        <p className="text-sm">Checking wallet…</p>
+        <p className="text-sm">Opening dashboard…</p>
       </div>
     );
   }

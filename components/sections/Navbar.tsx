@@ -29,7 +29,7 @@ const links = [
   { label: "Network", href: "/#network" },
   { label: "Roadmap", href: "/#roadmap" },
   { label: "FAQ", href: "/#faq" },
-  { label: "P2P", href: "/p2p" },
+  // { label: "P2P", href: "/p2p" }, // hidden for now
 ].map((l) => ({ ...l, href: withBasePath(l.href) }));
 
 function NavItem({ href, label, active }: { href: string; label: string; active: boolean }) {

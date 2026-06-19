@@ -19,4 +19,4 @@ export const MAX_UINT256 =
   0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffn;
 
 /** How many blocks back to scan for events on BSC testnet RPCs */
-export const LOG_LOOKBACK_BLOCKS = 500_000n;
+export const LOG_LOOKBACK_BLOCKS = 30_000n;

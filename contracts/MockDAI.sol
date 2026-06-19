@@ -17,7 +17,7 @@ contract MockDAI {
     event Transfer(address indexed from, address indexed to, uint256 value);
     event Approval(address indexed owner, address indexed spender, uint256 value);
 
-    function mint(address to, uint256 amount) external {
+    function mint(address to, uint256 amount) public {
         totalSupply += amount;
         balanceOf[to] += amount;
         emit Transfer(address(0), to, amount);

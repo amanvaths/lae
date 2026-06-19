@@ -13,15 +13,16 @@ import { useRouter } from "next/navigation";
 import { useAccount, useDisconnect, useChainId } from "wagmi";
 import { useQueryClient } from "@tanstack/react-query";
 import { useClientMounted } from "@/lib/useClientMounted";
-import { contractKeys } from "@/lib/contracts/query-keys";
 import { CHAIN_ID } from "@/lib/contracts/config";
 import { withBasePath } from "@/lib/paths";
+import { clearWalletSession } from "@/lib/wallet/clear-session";
 
 interface WalletSessionContextValue {
   address: `0x${string}` | undefined;
   isConnected: boolean;
   isReady: boolean;
   isWrongNetwork: boolean;
+  resetSession: () => void;
   disconnectWallet: () => void;
 }
 
@@ -38,32 +39,48 @@ export function WalletSessionProvider({ children }: { children: ReactNode }) {
   const isReady = mounted && !isConnecting && !isReconnecting;
   const isWrongNetwork = isConnected && chainId !== CHAIN_ID;
 
-  const clearSession = useCallback(() => {
-    qc.removeQueries({ queryKey: contractKeys.all });
-    qc.clear();
+  const resetSession = useCallback(() => {
+    clearWalletSession(qc);
   }, [qc]);
 
   const disconnectWallet = useCallback(() => {
-    clearSession();
+    resetSession();
     disconnect();
     router.replace(withBasePath("/login"));
-  }, [clearSession, disconnect, router]);
+  }, [resetSession, disconnect, router]);
 
   const prevAddress = useRef<string | undefined>(undefined);
+  const prevChainId = useRef<number | undefined>(undefined);
 
-  /** Clear cached reads when the wallet account changes or disconnects externally. */
   useEffect(() => {
     if (!isReady) return;
 
     const next = address?.toLowerCase();
-    if (prevAddress.current && next && prevAddress.current !== next) {
-      clearSession();
+    const prev = prevAddress.current;
+
+    if (prev && next && prev !== next) {
+      resetSession();
     }
-    if (!isConnected) {
-      clearSession();
+
+    if (prev && !isConnected) {
+      resetSession();
+      router.replace(withBasePath("/login"));
     }
-    prevAddress.current = next;
-  }, [address, isConnected, isReady, clearSession]);
+
+    if (isConnected && next) {
+      prevAddress.current = next;
+    } else if (!isConnected) {
+      prevAddress.current = undefined;
+    }
+  }, [address, isConnected, isReady, resetSession, router]);
+
+  useEffect(() => {
+    if (!isReady || !isConnected) return;
+    if (prevChainId.current !== undefined && prevChainId.current !== chainId) {
+      resetSession();
+    }
+    prevChainId.current = chainId;
+  }, [chainId, isConnected, isReady, resetSession]);
 
   const value = useMemo(
     () => ({
@@ -71,9 +88,10 @@ export function WalletSessionProvider({ children }: { children: ReactNode }) {
       isConnected: !!isConnected,
       isReady,
       isWrongNetwork,
+      resetSession,
       disconnectWallet,
     }),
-    [address, isConnected, isReady, isWrongNetwork, disconnectWallet]
+    [address, isConnected, isReady, isWrongNetwork, resetSession, disconnectWallet]
   );
 
   return (
@@ -89,6 +107,7 @@ export function useWalletSession() {
       isConnected: false,
       isReady: false,
       isWrongNetwork: false,
+      resetSession: () => {},
       disconnectWallet: () => {},
     };
   }

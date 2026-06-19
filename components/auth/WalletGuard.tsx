@@ -3,45 +3,68 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, type ReactNode } from "react";
 import { useAccount } from "wagmi";
-import { useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { useClientMounted } from "@/lib/useClientMounted";
-import { contractKeys } from "@/lib/contracts/query-keys";
+import { useWalletSession } from "@/providers/WalletSessionProvider";
+import { useSensoUser } from "@/lib/contracts/hooks";
 import { withBasePath } from "@/lib/paths";
 
-/** Dashboard access requires a connected wallet (on-chain mode). */
+/** Dashboard access: connected wallet, correct network, on-chain registration. */
 export function WalletGuard({ children }: { children: ReactNode }) {
   const router = useRouter();
-  const qc = useQueryClient();
   const mounted = useClientMounted();
-  const redirectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const { status } = useAccount();
+  const redirecting = useRef(false);
+  const { isReady, isWrongNetwork } = useWalletSession();
+  const { status, address } = useAccount();
+  const user = useSensoUser();
 
   useEffect(() => {
-    if (!mounted) return;
+    redirecting.current = false;
+  }, [address]);
 
-    if (redirectTimer.current) {
-      clearTimeout(redirectTimer.current);
-      redirectTimer.current = null;
-    }
+  useEffect(() => {
+    if (!mounted || !isReady || redirecting.current) return;
 
-    if (status === "connected" || status === "connecting" || status === "reconnecting") {
+    if (status !== "connected" || !address) {
+      redirecting.current = true;
+      router.replace(withBasePath("/login"));
       return;
     }
 
-    if (status === "disconnected") {
-      redirectTimer.current = setTimeout(() => {
-        qc.removeQueries({ queryKey: contractKeys.all });
-        router.replace(withBasePath("/login"));
-      }, 600);
+    if (isWrongNetwork) {
+      redirecting.current = true;
+      router.replace(withBasePath("/login"));
+      return;
     }
 
-    return () => {
-      if (redirectTimer.current) clearTimeout(redirectTimer.current);
-    };
-  }, [mounted, status, router, qc]);
+    if (user.isLoading || user.isFetching) return;
 
-  if (!mounted || status === "connecting" || status === "reconnecting") {
+    if (!user.data?.registered) {
+      redirecting.current = true;
+      router.replace(withBasePath("/login/register"));
+    }
+  }, [
+    mounted,
+    isReady,
+    status,
+    address,
+    isWrongNetwork,
+    user.isLoading,
+    user.isFetching,
+    user.data?.registered,
+    router,
+  ]);
+
+  if (!mounted) {
+    return (
+      <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 text-slate-400">
+        <Loader2 className="h-8 w-8 animate-spin text-brand-400" />
+        <p className="text-sm">Loading…</p>
+      </div>
+    );
+  }
+
+  if (!isReady || status === "connecting" || status === "reconnecting") {
     return (
       <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 text-slate-400">
         <Loader2 className="h-8 w-8 animate-spin text-brand-400" />
@@ -50,11 +73,29 @@ export function WalletGuard({ children }: { children: ReactNode }) {
     );
   }
 
-  if (status !== "connected") {
+  if (status !== "connected" || !address || isWrongNetwork) {
     return (
       <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 text-slate-400">
         <Loader2 className="h-8 w-8 animate-spin text-brand-400" />
         <p className="text-sm">Redirecting to login…</p>
+      </div>
+    );
+  }
+
+  if (user.isLoading || user.isFetching) {
+    return (
+      <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 text-slate-400">
+        <Loader2 className="h-8 w-8 animate-spin text-brand-400" />
+        <p className="text-sm">Verifying registration…</p>
+      </div>
+    );
+  }
+
+  if (!user.data?.registered) {
+    return (
+      <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 text-slate-400">
+        <Loader2 className="h-8 w-8 animate-spin text-brand-400" />
+        <p className="text-sm">Redirecting to registration…</p>
       </div>
     );
   }

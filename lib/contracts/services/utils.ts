@@ -1,4 +1,5 @@
 import { keccak256, toBytes, type Address } from "viem";
+import { withBasePath } from "@/lib/paths";
 
 export function makeWithdrawRef(address: Address): `0x${string}` {
   return keccak256(toBytes(`${address}-${Date.now()}-${Math.random()}`));
@@ -16,5 +17,5 @@ export function getSponsorFromUrl(): Address | undefined {
 
 export function referralLink(address: Address): string {
   if (typeof window === "undefined") return "";
-  return `${window.location.origin}/login?sponsor=${address}`;
+  return `${window.location.origin}${withBasePath("/login/register")}?sponsor=${address}`;
 }

@@ -20,7 +20,7 @@ const cols = [
     links: [
       { label: "Login", href: withBasePath("/login") },
       { label: "Dashboard", href: withBasePath("/dashboard") },
-      { label: "P2P Market", href: withBasePath("/p2p") },
+      // { label: "P2P Market", href: withBasePath("/p2p") }, // hidden for now
       { label: "FAQ", href: withBasePath("/#faq") },
       { label: "Support", href: "mailto:support@lae.finance" },
     ],

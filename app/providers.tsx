@@ -14,7 +14,7 @@ export function useWeb3Loaded() {
 function makeQueryClient() {
   return new QueryClient({
     defaultOptions: {
-      queries: { retry: RETRY, staleTime: 30_000, refetchOnWindowFocus: true },
+      queries: { retry: RETRY, staleTime: 30_000, refetchOnWindowFocus: false },
     },
   });
 }

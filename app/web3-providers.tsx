@@ -29,7 +29,7 @@ export function Web3Providers({ children }: { children: React.ReactNode }) {
           <ContractEventsProvider>
             <RainbowKitProvider
               theme={laeTheme}
-              modalSize="wide"
+              modalSize="compact"
               initialChain={bscTestnet}
               appInfo={{
                 appName: "LAE",

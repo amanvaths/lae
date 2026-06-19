@@ -32,6 +32,7 @@ export function useInvalidateOnChain() {
   const { address } = useAccount();
   return () => {
     qc.invalidateQueries({ queryKey: contractKeys.all });
+    qc.invalidateQueries({ queryKey: ["analytics"] });
     if (address) {
       qc.invalidateQueries({ queryKey: contractKeys.user(address) });
       qc.invalidateQueries({ queryKey: contractKeys.wallet(address) });
@@ -47,22 +48,25 @@ export function useInvalidateOnChain() {
 }
 
 /** Watch all LAELimitless events and refresh queries */
-export function useSensoEventWatcher() {
+export function useSensoEventWatcher(enabled = true) {
   const invalidate = useInvalidateOnChain();
   useWatchContractEvent({
     address: CONTRACTS.senso,
     abi: sensoLimitlessAbi,
+    enabled,
     onLogs: () => invalidate(),
   });
 }
 
 export function useProtocolStatus() {
   const client = usePublicClient();
+  const { isConnected } = useAccount();
   return useQuery({
     queryKey: [...contractKeys.all, "protocol"],
     queryFn: () => readProtocolStatus(client!),
-    enabled: !!client,
-    refetchInterval: 15_000,
+    enabled: !!client && isConnected,
+    staleTime: 30_000,
+    refetchInterval: 30_000,
   });
 }
 
@@ -74,6 +78,8 @@ export function useSensoUser() {
     queryFn: () => readSensoUser(client!, address!),
     enabled: enabled && !!client,
     retry: 2,
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 }
 
@@ -140,7 +146,8 @@ export function useWalletOnChain() {
     queryFn: () => readWalletSnapshot(client!, address!),
     enabled: enabled && !!client,
     retry: 2,
-    refetchInterval: 20_000,
+    staleTime: 20_000,
+    refetchInterval: 30_000,
   });
 }
 
@@ -151,7 +158,8 @@ export function useUserEventsOnChain() {
     queryKey: contractKeys.events(address),
     queryFn: () => readUserEvents(client!, address!),
     enabled: enabled && !!client,
-    retry: 2,
+    retry: 1,
+    staleTime: 60_000,
   });
 }
 
@@ -168,11 +176,13 @@ export function usePackagePricesOnChain() {
 
 export function usePendingQueue() {
   const client = usePublicClient();
+  const { isConnected } = useAccount();
   return useQuery({
     queryKey: contractKeys.pending(),
     queryFn: () => readPendingLength(client!),
-    enabled: !!client,
-    refetchInterval: 5_000,
+    enabled: !!client && isConnected,
+    staleTime: 10_000,
+    refetchInterval: 15_000,
     retry: 2,
   });
 }
