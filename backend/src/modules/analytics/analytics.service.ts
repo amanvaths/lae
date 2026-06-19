@@ -194,5 +194,17 @@ export async function getLeaderboard(limit = 50) {
 export async function getIndexerStatus() {
   const state = await prisma.indexerState.findUnique({ where: { id: "main" } });
   const eventCount = await prisma.chainEvent.count();
-  return { state, eventCount, mode: "indexer-only" };
+  return {
+    state: state
+      ? {
+          id: state.id,
+          chainId: state.chainId,
+          lastBlock: state.lastBlock.toString(),
+          lastBlockHash: state.lastBlockHash,
+          updatedAt: state.updatedAt.toISOString(),
+        }
+      : null,
+    eventCount,
+    mode: "indexer-only",
+  };
 }
