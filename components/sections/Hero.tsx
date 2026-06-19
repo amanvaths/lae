@@ -10,6 +10,7 @@ import { CoinFallback } from "@/components/three/CoinFallback";
 import { useDeferredReady, useIsMobile, usePrefersReducedMotion } from "@/lib/useDeferredReady";
 import { useWeb3Loaded } from "@/app/providers";
 import { useAccount } from "wagmi";
+import { useSensoUser } from "@/lib/contracts/hooks";
 
 const NetworkCanvas = dynamic(
   () => import("@/components/ui/NetworkCanvas").then((m) => m.NetworkCanvas),
@@ -111,18 +112,45 @@ function HeroConnectSlideActions({
   secondary: { href: string; label: string };
 }) {
   const { isConnected } = useAccount();
+  const user = useSensoUser();
+  const registered = user.data?.registered;
+
+  if (isConnected && registered) {
+    return (
+      <div className="flex flex-wrap gap-3">
+        <a href={withBasePath("/dashboard")} className="btn-primary group">
+          Go To Dashboard
+          <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+        </a>
+        <a href={secondary.href} className="btn-ghost">
+          {secondary.label}
+        </a>
+      </div>
+    );
+  }
+
+  if (isConnected && !registered) {
+    return (
+      <div className="flex flex-wrap gap-3">
+        <a href={withBasePath("/register")} className="btn-primary group">
+          Complete Registration
+          <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+        </a>
+        <a href={withBasePath("/dashboard")} className="btn-ghost">
+          Dashboard
+        </a>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-wrap gap-3">
-      <a
-        href={withBasePath(isConnected ? "/dashboard" : "/login")}
-        className="btn-primary group"
-      >
-        {isConnected ? "Dashboard" : "Connect Wallet"}
+      <a href={withBasePath("/login")} className="btn-primary group">
+        Login
         <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
       </a>
-      <a href={secondary.href} className="btn-ghost">
-        {secondary.label}
+      <a href={withBasePath("/register")} className="btn-ghost">
+        Register
       </a>
     </div>
   );

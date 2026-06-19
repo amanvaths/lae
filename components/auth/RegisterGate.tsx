@@ -39,7 +39,13 @@ export function RegisterGate({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!mounted || !isReady || redirecting.current) return;
 
-    if (status !== "connected" || !address || isWrongNetwork) {
+    if (status !== "connected" || !address) {
+      redirecting.current = true;
+      router.replace(withBasePath("/login"));
+      return;
+    }
+
+    if (isWrongNetwork) {
       redirecting.current = true;
       router.replace(withBasePath("/login"));
       return;

@@ -1,6 +1,5 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { useState } from "react";
 import { motion, AnimatePresence, useMotionValueEvent, useScroll } from "framer-motion";
 import { Menu, X } from "lucide-react";
@@ -12,17 +11,7 @@ import { useWeb3Loaded } from "@/app/providers";
 // import { TopBar } from "@/components/ui/TopBar";
 import { BrandLogo } from "@/components/ui/BrandLogo";
 
-const ConnectWallet = dynamic(
-  () => import("@/components/web3/ConnectWallet").then((m) => m.ConnectWallet),
-  {
-    ssr: false,
-    loading: () => (
-      <span className="inline-flex h-10 items-center rounded-sm border border-white/10 px-4 text-xs text-slate-400">
-        Connect
-      </span>
-    ),
-  }
-);
+// ConnectWallet removed — using Login/Register buttons instead
 
 const links = [
   { label: "Home", href: "/#top" },
@@ -95,7 +84,7 @@ export function Navbar() {
           </nav>
 
           <div className="hidden items-center gap-3 lg:flex">
-            {showDashboard && (
+            {showDashboard ? (
               <motion.a
                 href={withBasePath("/dashboard")}
                 className="btn-primary !px-5 !py-2.5 !text-xs"
@@ -104,8 +93,26 @@ export function Navbar() {
               >
                 Dashboard
               </motion.a>
+            ) : (
+              <>
+                <motion.a
+                  href={withBasePath("/login")}
+                  className="btn-ghost !px-5 !py-2.5 !text-xs"
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                >
+                  Login
+                </motion.a>
+                <motion.a
+                  href={withBasePath("/register")}
+                  className="btn-primary !px-5 !py-2.5 !text-xs"
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                >
+                  Register
+                </motion.a>
+              </>
             )}
-            <ConnectWallet preferLoginPage={!showDashboard} />
             <motion.a
               href="#cta"
               className="btn-ghost !px-5 !py-2.5 !text-xs"
@@ -152,7 +159,7 @@ export function Navbar() {
                   </motion.a>
                 ))}
                 <div className="mt-3 border-t border-white/5 pt-3">
-                  {showDashboard && (
+                  {showDashboard ? (
                     <a
                       href={withBasePath("/dashboard")}
                       onClick={() => setOpen(false)}
@@ -160,8 +167,24 @@ export function Navbar() {
                     >
                       Dashboard
                     </a>
+                  ) : (
+                    <>
+                      <a
+                        href={withBasePath("/login")}
+                        onClick={() => setOpen(false)}
+                        className="btn-ghost mb-2 w-full"
+                      >
+                        Login
+                      </a>
+                      <a
+                        href={withBasePath("/register")}
+                        onClick={() => setOpen(false)}
+                        className="btn-primary mb-3 w-full"
+                      >
+                        Register
+                      </a>
+                    </>
                   )}
-                  <ConnectWallet full preferLoginPage={!showDashboard} />
                   <a href="#cta" onClick={() => setOpen(false)} className="btn-ghost mt-3 w-full">
                     Buy $LAE
                   </a>

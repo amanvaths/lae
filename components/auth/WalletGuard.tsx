@@ -57,7 +57,7 @@ export function WalletGuard({ children }: { children: ReactNode }) {
 
     if (!user.data?.registered) {
       redirecting.current = true;
-      router.replace(withBasePath("/login/register"));
+      router.replace(withBasePath("/register"));
     }
   }, [
     mounted,

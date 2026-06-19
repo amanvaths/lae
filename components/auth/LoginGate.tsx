@@ -42,7 +42,7 @@ export function LoginGate({ children }: { children: ReactNode }) {
     if (user.data?.registered) {
       router.replace(withBasePath("/dashboard"));
     } else {
-      router.replace(withBasePath("/login/register"));
+      router.replace(withBasePath("/register"));
     }
   }, [
     mounted,
