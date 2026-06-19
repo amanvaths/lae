@@ -21,7 +21,8 @@ chmod +x scripts/check-production-env.sh
 bash scripts/check-production-env.sh .env
 
 echo "==> Installing dependencies..."
-npm ci
+# .env sets NODE_ENV=production; still need devDependencies for build + Prisma CLI
+npm ci --include=dev
 
 echo "==> Prisma generate..."
 npx prisma generate
