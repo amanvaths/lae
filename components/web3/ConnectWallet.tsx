@@ -2,6 +2,7 @@
 
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { Wallet } from "lucide-react";
+import { useAccount } from "wagmi";
 import { cn } from "@/lib/utils";
 import { useWeb3Loaded } from "@/app/providers";
 import { withBasePath } from "@/lib/paths";
@@ -11,12 +12,30 @@ import { truncateAddress } from "@/lib/format";
 export function ConnectWallet({
   full = false,
   variant = "ghost",
+  preferLoginPage = false,
 }: {
   full?: boolean;
   variant?: "ghost" | "primary";
+  /** Marketing nav: send users to /login for connect + auto dashboard routing */
+  preferLoginPage?: boolean;
 }) {
   const web3Ready = useWeb3Loaded();
   const mounted = useClientMounted();
+  const { isConnected } = useAccount();
+
+  const connectLink = (
+    <a
+      href={withBasePath("/login")}
+      className={cn(
+        variant === "primary" ? "btn-primary" : "btn-ghost",
+        full && "w-full justify-center",
+        "inline-flex items-center gap-2"
+      )}
+    >
+      <Wallet className="h-4 w-4" />
+      {variant === "primary" ? "Connect Wallet" : "Connect"}
+    </a>
+  );
 
   if (!mounted) {
     return (
@@ -33,20 +52,8 @@ export function ConnectWallet({
     );
   }
 
-  if (!web3Ready) {
-    return (
-      <a
-        href={withBasePath("/login")}
-        className={cn(
-          variant === "primary" ? "btn-primary" : "btn-ghost",
-          full && "w-full justify-center",
-          "inline-flex items-center gap-2"
-        )}
-      >
-        <Wallet className="h-4 w-4" />
-        {variant === "primary" ? "Connect Wallet" : "Connect"}
-      </a>
-    );
+  if (!web3Ready || (preferLoginPage && !isConnected)) {
+    return connectLink;
   }
 
   return (

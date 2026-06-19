@@ -30,6 +30,15 @@ export default function StakingPage() {
   const released = (stakes.data ?? []).filter((s) => s.released);
   const lockedTotal = active.reduce((sum, s) => sum + s.amount, 0n);
 
+  const stakeAmountValid = (() => {
+    if (!amount) return false;
+    try {
+      return parseEther(amount) > 0n;
+    } catch {
+      return false;
+    }
+  })();
+
   return (
     <div>
       <h1 className="font-display text-2xl font-bold text-white">LAE Staking</h1>
@@ -63,12 +72,12 @@ export default function StakingPage() {
           />
           <button
             type="button"
-            disabled={busy !== null || !amount}
+            disabled={busy !== null || !stakeAmountValid}
             className="btn-primary disabled:opacity-50"
             onClick={async () => {
               setBusy("stake");
               try {
-                const wei = parseEther(amount || "0");
+                const wei = parseEther(amount);
                 const allowed = allowance.data ?? 0n;
                 if (allowed < wei) await approve();
                 await stake(amount);

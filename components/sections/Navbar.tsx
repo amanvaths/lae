@@ -4,9 +4,11 @@ import dynamic from "next/dynamic";
 import { useState } from "react";
 import { motion, AnimatePresence, useMotionValueEvent, useScroll } from "framer-motion";
 import { Menu, X } from "lucide-react";
+import { useAccount } from "wagmi";
 import { cn } from "@/lib/utils";
 import { withBasePath } from "@/lib/paths";
 import { useScrollSpy, sectionFromHref } from "@/lib/useScrollSpy";
+import { useWeb3Loaded } from "@/app/providers";
 // import { TopBar } from "@/components/ui/TopBar";
 import { BrandLogo } from "@/components/ui/BrandLogo";
 
@@ -58,6 +60,9 @@ export function Navbar() {
   const { scrollY } = useScroll();
   const active = useScrollSpy();
   const linkActive = (href: string) => sectionFromHref(href) === active;
+  const web3Ready = useWeb3Loaded();
+  const { isConnected } = useAccount();
+  const showDashboard = web3Ready && isConnected;
 
   useMotionValueEvent(scrollY, "change", (y) => setScrolled(y > 20));
 
@@ -90,10 +95,20 @@ export function Navbar() {
           </nav>
 
           <div className="hidden items-center gap-3 lg:flex">
-            <ConnectWallet />
+            {showDashboard && (
+              <motion.a
+                href={withBasePath("/dashboard")}
+                className="btn-primary !px-5 !py-2.5 !text-xs"
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+              >
+                Dashboard
+              </motion.a>
+            )}
+            <ConnectWallet preferLoginPage={!showDashboard} />
             <motion.a
               href="#cta"
-              className="btn-primary !px-5 !py-2.5 !text-xs"
+              className="btn-ghost !px-5 !py-2.5 !text-xs"
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
             >
@@ -137,8 +152,17 @@ export function Navbar() {
                   </motion.a>
                 ))}
                 <div className="mt-3 border-t border-white/5 pt-3">
-                  <ConnectWallet full />
-                  <a href="#cta" onClick={() => setOpen(false)} className="btn-primary mt-3 w-full">
+                  {showDashboard && (
+                    <a
+                      href={withBasePath("/dashboard")}
+                      onClick={() => setOpen(false)}
+                      className="btn-primary mb-3 w-full"
+                    >
+                      Dashboard
+                    </a>
+                  )}
+                  <ConnectWallet full preferLoginPage={!showDashboard} />
+                  <a href="#cta" onClick={() => setOpen(false)} className="btn-ghost mt-3 w-full">
                     Buy $LAE
                   </a>
                 </div>

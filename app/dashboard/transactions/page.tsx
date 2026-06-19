@@ -30,38 +30,38 @@ export default function TransactionsPage() {
           <p className="text-sm text-slate-500">No events yet</p>
         ) : (
           <div className="divide-y divide-white/5">
-            {useApi
-              ? analytics.data!.map((e) => (
-                  <div key={e.id} className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm">
-                    <div>
-                      <Pill tone="brand">{e.eventName}</Pill>
-                      <a
-                        href={txUrl(e.txHash)}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="mt-1 block font-mono text-xs text-brand-300 hover:underline"
-                      >
-                        {truncateAddress(e.txHash)}
-                      </a>
-                    </div>
-                    <span className="text-xs text-slate-500">block {String(e.blockNumber)}</span>
+            {rows.map((e) =>
+              useApi ? (
+                <div key={e.id} className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm">
+                  <div>
+                    <Pill tone="brand">{e.eventName}</Pill>
+                    <a
+                      href={txUrl(e.txHash)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-1 block font-mono text-xs text-brand-300 hover:underline"
+                    >
+                      {truncateAddress(e.txHash)}
+                    </a>
                   </div>
-                ))
-              : chain.data!.map((e) => (
-                  <div key={e.id} className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm">
-                    <div>
-                      <Pill tone="brand">{e.eventName}</Pill>
-                      <a
-                        href={txUrl(e.transactionHash)}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="mt-1 block font-mono text-xs text-brand-300 hover:underline"
-                      >
-                        {truncateAddress(e.transactionHash)}
-                      </a>
-                    </div>
+                  <span className="text-xs text-slate-500">block {String(e.blockNumber)}</span>
+                </div>
+              ) : (
+                <div key={e.id} className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm">
+                  <div>
+                    <Pill tone="brand">{e.eventName}</Pill>
+                    <a
+                      href={txUrl(e.transactionHash)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-1 block font-mono text-xs text-brand-300 hover:underline"
+                    >
+                      {truncateAddress(e.transactionHash)}
+                    </a>
                   </div>
-                ))}
+                </div>
+              )
+            )}
           </div>
         )}
       </Panel>

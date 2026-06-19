@@ -1,4 +1,5 @@
 import { prisma } from "../../lib/prisma.js";
+import { serializeForJson } from "../../lib/serialize.js";
 import { ethers } from "ethers";
 import { CHAIN, CONTRACTS } from "../../config/chains.js";
 
@@ -52,7 +53,7 @@ export async function getDashboard(wallet: string) {
       prisma.indexedPilotMatrix.count({ where: { ownerAddress: w } }),
     ]);
 
-  return {
+  return serializeForJson({
     wallet: w,
     registered: !!user,
     sponsor: user?.sponsorAddress ?? null,
@@ -63,7 +64,7 @@ export async function getDashboard(wallet: string) {
     directReferrals: directCount,
     clubEvents: clubCount,
     pilotEvents: pilotCount,
-  };
+  });
 }
 
 export async function getWalletAnalytics(wallet: string) {
@@ -85,15 +86,17 @@ export async function getWalletAnalytics(wallet: string) {
       take: 50,
     }),
   ]);
-  return { wallet: w, incomes, withdrawals, tokenRewards: tokens };
+  return serializeForJson({ wallet: w, incomes, withdrawals, tokenRewards: tokens });
 }
 
 export async function getReferrals(wallet: string) {
   const w = normalizeWallet(wallet);
-  return prisma.indexedReferral.findMany({
-    where: { sponsorAddress: w },
-    orderBy: { blockNumber: "desc" },
-  });
+  return serializeForJson(
+    await prisma.indexedReferral.findMany({
+      where: { sponsorAddress: w },
+      orderBy: { blockNumber: "desc" },
+    })
+  );
 }
 
 export async function getTeamStats(wallet: string) {
@@ -108,14 +111,14 @@ export async function getTeamStats(wallet: string) {
   const registeredTeam = await prisma.indexedUser.count({
     where: { walletAddress: { in: teamWallets } },
   });
-  return {
+  return serializeForJson({
     wallet: w,
     directCount: direct.length,
     registeredDirect: registeredTeam,
     qualifiedClub: qualified.qualifiedClub,
     qualifiedPilot: qualified.qualifiedPilot,
     direct,
-  };
+  });
 }
 
 export async function getMatrices(wallet: string) {
@@ -130,51 +133,61 @@ export async function getMatrices(wallet: string) {
       orderBy: { blockNumber: "desc" },
     }),
   ]);
-  return { club, pilot };
+  return serializeForJson({ club, pilot });
 }
 
 export async function getIncomeHistory(wallet: string, limit = 100) {
   const w = normalizeWallet(wallet);
-  return prisma.indexedIncome.findMany({
-    where: { recipientAddress: w },
-    orderBy: { blockNumber: "desc" },
-    take: limit,
-  });
+  return serializeForJson(
+    await prisma.indexedIncome.findMany({
+      where: { recipientAddress: w },
+      orderBy: { blockNumber: "desc" },
+      take: limit,
+    })
+  );
 }
 
 export async function getRewardHistory(wallet: string, limit = 100) {
   const w = normalizeWallet(wallet);
-  return prisma.indexedTokenReward.findMany({
-    where: { recipientAddress: w },
-    orderBy: { blockNumber: "desc" },
-    take: limit,
-  });
+  return serializeForJson(
+    await prisma.indexedTokenReward.findMany({
+      where: { recipientAddress: w },
+      orderBy: { blockNumber: "desc" },
+      take: limit,
+    })
+  );
 }
 
 export async function getTransactions(wallet: string, limit = 100) {
   const w = normalizeWallet(wallet);
-  return prisma.indexedTransaction.findMany({
-    where: { walletAddress: w },
-    orderBy: { blockNumber: "desc" },
-    take: limit,
-  });
+  return serializeForJson(
+    await prisma.indexedTransaction.findMany({
+      where: { walletAddress: w },
+      orderBy: { blockNumber: "desc" },
+      take: limit,
+    })
+  );
 }
 
 export async function getSpins(wallet: string, limit = 50) {
   const w = normalizeWallet(wallet);
-  return prisma.indexedSpin.findMany({
-    where: { walletAddress: w },
-    orderBy: { blockNumber: "desc" },
-    take: limit,
-  });
+  return serializeForJson(
+    await prisma.indexedSpin.findMany({
+      where: { walletAddress: w },
+      orderBy: { blockNumber: "desc" },
+      take: limit,
+    })
+  );
 }
 
 export async function getStakes(wallet: string) {
   const w = normalizeWallet(wallet);
-  return prisma.indexedStake.findMany({
-    where: { walletAddress: w },
-    orderBy: { blockNumber: "desc" },
-  });
+  return serializeForJson(
+    await prisma.indexedStake.findMany({
+      where: { walletAddress: w },
+      orderBy: { blockNumber: "desc" },
+    })
+  );
 }
 
 export async function getLeaderboard(limit = 50) {

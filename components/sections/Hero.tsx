@@ -128,6 +128,23 @@ function HeroConnectSlideActions({
   );
 }
 
+/** After wallet connect on landing, show the dashboard slide and scroll to hero. */
+function useHeroConnectFocus(goTo: (index: number) => void) {
+  const { isConnected } = useAccount();
+  const prevConnected = useRef(isConnected);
+
+  useEffect(() => {
+    if (isConnected && !prevConnected.current) {
+      goTo(1);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      if (window.location.hash && window.location.hash !== "#top") {
+        window.history.replaceState(null, "", withBasePath("/#top"));
+      }
+    }
+    prevConnected.current = isConnected;
+  }, [isConnected, goTo]);
+}
+
 function HeroCoin() {
   const deferred = useDeferredReady(2000);
   const mobile = useIsMobile();
@@ -157,6 +174,8 @@ export function Hero() {
     setIndex((i + slides.length) % slides.length);
     setProgress(0);
   }, []);
+
+  useHeroConnectFocus(goTo);
 
   useEffect(() => {
     if (paused || reduced) return;
