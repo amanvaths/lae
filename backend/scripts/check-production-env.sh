@@ -9,6 +9,22 @@ if [[ ! -f "${ENV_FILE}" ]]; then
   exit 1
 fi
 
+invalid_lines=""
+line_no=0
+while IFS= read -r line || [[ -n "${line}" ]]; do
+  line_no=$((line_no + 1))
+  [[ -z "${line}" || "${line}" =~ ^# ]] && continue
+  if [[ ! "${line}" =~ ^[A-Za-z_][A-Za-z0-9_]*= ]]; then
+    invalid_lines+="${line_no}:${line}"$'\n'
+  fi
+done < "${ENV_FILE}"
+
+if [[ -n "${invalid_lines}" ]]; then
+  echo "ERROR: ${ENV_FILE} has malformed lines (expected KEY=value):"
+  printf '%s' "${invalid_lines}"
+  exit 1
+fi
+
 (
   set -a
   # shellcheck disable=SC1090

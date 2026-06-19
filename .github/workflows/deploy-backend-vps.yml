@@ -128,27 +128,31 @@ jobs:
             tar -xzf /tmp/backend.tar.gz -C "${DEPLOY_ROOT}"
             rm -f /tmp/backend.tar.gz
 
-            {
-              echo "NODE_ENV=production"
-              echo "PORT=4000"
-              echo "HOST=0.0.0.0"
-              echo "DATABASE_URL=${DATABASE_URL}"
-              echo "BSC_RPC_URL=${BSC_RPC_URL:-https://bsc-testnet.publicnode.com}"
-              echo "CHAIN_ID=${CHAIN_ID:-97}"
-              echo "INDEXER_START_BLOCK=${INDEXER_START_BLOCK:-114231493}"
-              echo "INDEXER_BATCH_SIZE=300"
-              echo "INDEXER_POLL_MS=8000"
-              echo "INDEXER_REORG_DEPTH=12"
-              echo "SENSO_CONTRACT_ADDRESS=0x6521619C38fe4be6B800263CC783d9524ED4F7BA"
-              echo "SLT_CONTRACT_ADDRESS=0xc842c083E703ecf82496813cc3BFe6d36c0A49b0"
-              echo "SPIN_CONTRACT_ADDRESS=0xF9bdE4a2Ca487b18DA8546124b63Ec9e938ea1aE"
-              echo "STAKING_CONTRACT_ADDRESS=0xdb25Af21346aD358D5e52835934AF5f326169984"
-              echo "DAI_CONTRACT_ADDRESS=0xf8E556996042b34cc706F040c59955abB678995e"
-              echo "INDEXER_ADMIN_API_KEY=${INDEXER_ADMIN_API_KEY}"
-              echo "JWT_SECRET=${JWT_SECRET}"
-              echo "CORS_ORIGIN=${CORS_ORIGIN}"
-              echo "ADMIN_WALLET_ADDRESSES=${ADMIN_WALLET_ADDRESSES:-0xef9594fC5145404BfC7B5640296C3864319e3d86}"
-            } > "${DEPLOY_ROOT}/backend/.env"
+            sanitize() {
+              printf '%s' "$1" | tr -d '\r\n\t'
+            }
+
+            ENV_FILE="${DEPLOY_ROOT}/backend/.env"
+            : > "${ENV_FILE}"
+            printf '%s=%s\n' NODE_ENV production >> "${ENV_FILE}"
+            printf '%s=%s\n' PORT 4000 >> "${ENV_FILE}"
+            printf '%s=%s\n' HOST 0.0.0.0 >> "${ENV_FILE}"
+            printf '%s=%s\n' DATABASE_URL "$(sanitize "${DATABASE_URL}")" >> "${ENV_FILE}"
+            printf '%s=%s\n' BSC_RPC_URL "$(sanitize "${BSC_RPC_URL:-https://bsc-testnet.publicnode.com}")" >> "${ENV_FILE}"
+            printf '%s=%s\n' CHAIN_ID "$(sanitize "${CHAIN_ID:-97}")" >> "${ENV_FILE}"
+            printf '%s=%s\n' INDEXER_START_BLOCK "$(sanitize "${INDEXER_START_BLOCK:-114231493}")" >> "${ENV_FILE}"
+            printf '%s=%s\n' INDEXER_BATCH_SIZE 300 >> "${ENV_FILE}"
+            printf '%s=%s\n' INDEXER_POLL_MS 8000 >> "${ENV_FILE}"
+            printf '%s=%s\n' INDEXER_REORG_DEPTH 12 >> "${ENV_FILE}"
+            printf '%s=%s\n' SENSO_CONTRACT_ADDRESS 0x6521619C38fe4be6B800263CC783d9524ED4F7BA >> "${ENV_FILE}"
+            printf '%s=%s\n' SLT_CONTRACT_ADDRESS 0xc842c083E703ecf82496813cc3BFe6d36c0A49b0 >> "${ENV_FILE}"
+            printf '%s=%s\n' SPIN_CONTRACT_ADDRESS 0xF9bdE4a2Ca487b18DA8546124b63Ec9e938ea1aE >> "${ENV_FILE}"
+            printf '%s=%s\n' STAKING_CONTRACT_ADDRESS 0xdb25Af21346aD358D5e52835934AF5f326169984 >> "${ENV_FILE}"
+            printf '%s=%s\n' DAI_CONTRACT_ADDRESS 0xf8E556996042b34cc706F040c59955abB678995e >> "${ENV_FILE}"
+            printf '%s=%s\n' INDEXER_ADMIN_API_KEY "$(sanitize "${INDEXER_ADMIN_API_KEY}")" >> "${ENV_FILE}"
+            printf '%s=%s\n' JWT_SECRET "$(sanitize "${JWT_SECRET}")" >> "${ENV_FILE}"
+            printf '%s=%s\n' CORS_ORIGIN "$(sanitize "${CORS_ORIGIN}")" >> "${ENV_FILE}"
+            printf '%s=%s\n' ADMIN_WALLET_ADDRESSES "$(sanitize "${ADMIN_WALLET_ADDRESSES:-0xef9594fC5145404BfC7B5640296C3864319e3d86}")" >> "${ENV_FILE}"
 
             chmod +x "${DEPLOY_ROOT}/backend/scripts/"*.sh
             bash "${DEPLOY_ROOT}/backend/scripts/vps-deploy.sh"
