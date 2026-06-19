@@ -39,7 +39,7 @@ BSC Testnet chain ID
 Example Value: `97`
 
 **NEXT_PUBLIC_SENSO_CONTRACT**  
-SensoLimitless contract address  
+LAELimitless (core matrix) contract address  
 Example Value: `0x74Ddbe4bcb6000bD9AA357E02B874C3D0e0248D5`
 
 **NEXT_PUBLIC_DAI_CONTRACT**  
@@ -47,15 +47,15 @@ MockDAI contract address
 Example Value: `0xf8E556996042b34cc706F040c59955abB678995e`
 
 **NEXT_PUBLIC_SLT_CONTRACT**  
-SLTToken contract address  
+LAEToken contract address (env key kept for compatibility)  
 Example Value: `0x7a509cb5cF853BaE4C4A76B7e37037cf8ec2A146`
 
 **NEXT_PUBLIC_SPIN_CONTRACT**  
-SensoSpin contract address  
+LAESpin contract address  
 Example Value: `0xE5BD47a1bA6D742c147b74c54Ca6CFd95cACD50D`
 
 **NEXT_PUBLIC_STAKING_CONTRACT**  
-SensoStaking contract address  
+LAEStaking contract address  
 Example Value: `0xDAB2Ef2396b53D64cf22Fe58fE0275fDdb0fe5D8`
 
 ---
@@ -95,19 +95,19 @@ Allowed frontend origin for API CORS
 Example Value: `https://laeclub.com`
 
 **SENSO_CONTRACT_ADDRESS**  
-SensoLimitless contract  
+LAELimitless contract (env key kept for compatibility)  
 Example Value: `0x74Ddbe4bcb6000bD9AA357E02B874C3D0e0248D5`
 
 **SLT_CONTRACT_ADDRESS**  
-SLTToken contract  
+LAEToken contract (env key kept for compatibility)  
 Example Value: `0x7a509cb5cF853BaE4C4A76B7e37037cf8ec2A146`
 
 **SPIN_CONTRACT_ADDRESS**  
-SensoSpin contract  
+LAESpin contract  
 Example Value: `0xE5BD47a1bA6D742c147b74c54Ca6CFd95cACD50D`
 
 **STAKING_CONTRACT_ADDRESS**  
-SensoStaking contract  
+LAEStaking contract  
 Example Value: `0xDAB2Ef2396b53D64cf22Fe58fE0275fDdb0fe5D8`
 
 **DAI_CONTRACT_ADDRESS**  

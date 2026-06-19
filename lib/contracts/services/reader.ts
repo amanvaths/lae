@@ -518,7 +518,9 @@ export async function readSpinHistory(client: PublicClient, address: Address) {
       .map((log) => ({
         id: `${log.transactionHash}-${log.logIndex}`,
         tier: Number((log.args as { tier?: number }).tier ?? 0),
-        sltAmount: (log.args as { sltAmount?: bigint }).sltAmount ?? 0n,
+        sltAmount: (log.args as { laeAmount?: bigint; sltAmount?: bigint }).laeAmount
+          ?? (log.args as { sltAmount?: bigint }).sltAmount
+          ?? 0n,
         nonce: (log.args as { nonce?: bigint }).nonce ?? 0n,
         transactionHash: log.transactionHash ?? "",
         blockNumber: log.blockNumber ?? 0n,

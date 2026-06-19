@@ -167,14 +167,14 @@ export function useApproveSlt() {
 
   return useCallback(
     async (spender: Address = CONTRACTS.staking) => {
-      toast.onSubmit("SLT approve");
+      toast.onSubmit("LAE approve");
       const hash = await writeContractAsync({
         address: CONTRACTS.slt,
         abi: erc20Abi,
         functionName: "approve",
         args: [spender, MAX_UINT256],
       });
-      toast.onSuccess("SLT approved");
+      toast.onSuccess("LAE approved");
       invalidate();
       return hash;
     },
@@ -346,7 +346,7 @@ export function useStakeOnChain() {
 
   return useCallback(
     async (amountEth: string) => {
-      toast.onSubmit("Stake SLT");
+      toast.onSubmit("Stake LAE");
       const hash = await writeContractAsync({
         address: CONTRACTS.staking,
         abi: sensoStakingAbi,

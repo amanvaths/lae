@@ -8,7 +8,7 @@ All dashboard data and writes go through this module — **no backend mock data*
 lib/contracts/
   addresses.ts      # BSC Testnet contract addresses + explorer URLs
   config.ts         # CHAIN_ID, CONTRACTS env overrides
-  abis/             # SensoLimitless, ERC20, Spin, Staking ABIs + events
+  abis/             # LAELimitless, ERC20, Spin, Staking ABIs + events
   services/
     reader.ts       # Viem read helpers (matrices, wallet, events, referrals)
     utils.ts        # withdrawRef, referral links, sponsor from URL
@@ -26,10 +26,10 @@ Import via `@/lib/contracts` or `@/contracts/*` (tsconfig alias).
 | Contract | Address |
 |----------|---------|
 | MockDAI | `0xf8E556996042b34cc706F040c59955abB678995e` |
-| SLTToken | `0x7a509cb5cF853BaE4C4A76B7e37037cf8ec2A146` |
-| SensoLimitless | `0x74Ddbe4bcb6000bD9AA357E02B874C3D0e0248D5` |
-| SensoSpin | `0xE5BD47a1bA6D742c147b74c54Ca6CFd95cACD50D` |
-| SensoStaking | `0xDAB2Ef2396b53D64cf22Fe58fE0275fDdb0fe5D8` |
+| LAEToken | `0x7a509cb5cF853BaE4C4A76B7e37037cf8ec2A146` |
+| LAELimitless | `0x74Ddbe4bcb6000bD9AA357E02B874C3D0e0248D5` |
+| LAESpin | `0xE5BD47a1bA6D742c147b74c54Ca6CFd95cACD50D` |
+| LAEStaking | `0xDAB2Ef2396b53D64cf22Fe58fE0275fDdb0fe5D8` |
 
 ## Run locally
 
@@ -49,4 +49,4 @@ Connect wallet on **BSC Testnet (97)** → `/login` → `/dashboard`.
 4. **Process queue** — `processPending()` until empty
 5. **Withdraw / Spin / Stake** — dedicated pages
 
-Events auto-refresh UI via `useWatchContractEvent` on SensoLimitless.
+Events auto-refresh UI via `useWatchContractEvent` on LAELimitless.

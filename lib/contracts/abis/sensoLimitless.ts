@@ -356,7 +356,7 @@ export const sensoLimitlessAbi = [
       { name: "rewardType", type: "uint8", indexed: false },
       { name: "matrixType", type: "uint8", indexed: false },
       { name: "level", type: "uint8", indexed: false },
-      { name: "sltAmount", type: "uint256", indexed: false },
+      { name: "laeAmount", type: "uint256", indexed: false },
     ],
   },
   {

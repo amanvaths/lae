@@ -16,7 +16,7 @@ const EVENT_LABELS: Record<string, string> = {
   PilotRebirthCreated: "Pilot rebirth",
   AutoUpgrade: "Auto upgrade",
   IncomePaid: "Income paid",
-  TokenReward: "SLT reward",
+  TokenReward: "LAE reward",
   Withdraw: "Withdraw",
   PendingProcessed: "Queue processed",
 };

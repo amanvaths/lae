@@ -27,7 +27,7 @@ export default function WalletPage() {
         {[
           { label: "Wallet mDAI", value: fmtEther(w.daiWallet) },
           { label: "Internal mDAI", value: fmtEther(w.daiInternal) },
-          { label: "SLT Balance", value: fmtEther(w.sltBalance, 2) },
+          { label: "LAE Balance", value: fmtEther(w.sltBalance, 2) },
           { label: "Total Earnings", value: fmtEther(w.totalEarnings) },
           { label: "Total Withdrawals", value: fmtEther(w.totalWithdrawals) },
         ].map((item) => (

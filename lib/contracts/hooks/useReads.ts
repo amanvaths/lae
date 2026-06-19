@@ -46,7 +46,7 @@ export function useInvalidateOnChain() {
   };
 }
 
-/** Watch all SensoLimitless events and refresh queries */
+/** Watch all LAELimitless events and refresh queries */
 export function useSensoEventWatcher() {
   const invalidate = useInvalidateOnChain();
   useWatchContractEvent({

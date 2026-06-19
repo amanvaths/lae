@@ -85,7 +85,7 @@ export default function SpinPage() {
                       {truncateAddress(s.transactionHash)}
                     </a>
                   </div>
-                  <p className="text-emerald-400">{fmtEther(s.sltAmount, 0)} SLT</p>
+                  <p className="text-emerald-400">{fmtEther(s.sltAmount, 0)} LAE</p>
                 </div>
               ))}
             </div>

@@ -42,7 +42,7 @@ export default function SettingsPage() {
               <dd className="text-white">{fmtEther(wallet.data?.daiInternal ?? 0n)}</dd>
             </div>
             <div>
-              <dt className="text-slate-500">SLT balance</dt>
+              <dt className="text-slate-500">LAE balance</dt>
               <dd className="text-white">{fmtEther(wallet.data?.sltBalance ?? 0n, 0)}</dd>
             </div>
             {isWrongNetwork && (

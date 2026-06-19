@@ -65,7 +65,7 @@ export default function LeaderboardPage() {
         <p className="text-2xl font-bold text-emerald-400">
           {fmtEther(wallet.data?.totalEarnings ?? 0n)} mDAI
         </p>
-        <p className="mt-1 text-xs text-slate-500">Live total from SensoLimitless contract</p>
+        <p className="mt-1 text-xs text-slate-500">Live total from LAELimitless contract</p>
       </Panel>
     </div>
   );

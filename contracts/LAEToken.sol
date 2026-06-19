@@ -2,11 +2,11 @@
 pragma solidity 0.8.20;
 
 /**
- * @title SLTToken — SENSO Limitless reward token (ERC20)
+ * @title LAEToken — LAE Protocol reward token (ERC20)
  */
-contract SLTToken {
-    string public constant name = "SENSO Limitless Token";
-    string public constant symbol = "SLT";
+contract LAEToken {
+    string public constant name = "LAE Token";
+    string public constant symbol = "LAE";
     uint8 public constant decimals = 18;
 
     uint256 public immutable maxSupply;

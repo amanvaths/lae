@@ -69,7 +69,7 @@ export const navGroups: NavGroup[] = [
       { label: "NFT Liquidity", href: `${base}/liquidity`, icon: Droplets },
       { label: "Wallet", href: `${base}/wallet`, icon: Wallet },
       { label: "Spin & Win", href: `${base}/spin`, icon: Sparkles },
-      { label: "SLT Staking", href: `${base}/staking`, icon: Lock },
+      { label: "LAE Staking", href: `${base}/staking`, icon: Lock },
     ],
   },
   {

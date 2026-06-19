@@ -41,11 +41,11 @@ export function CoinShowcase() {
           <div className="flex flex-wrap items-end gap-x-6 gap-y-2">
             <div>
               <p className="text-xs uppercase tracking-widest text-slate-500">
-                Your SLT balance
+                Your LAE balance
               </p>
               <p className="font-display text-2xl font-bold text-white sm:text-3xl md:text-4xl">
                 {wallet.isLoading ? "…" : fmtEther(slt, 0)}{" "}
-                <span className="text-gradient-gold">SLT</span>
+                <span className="text-gradient-gold">LAE</span>
               </p>
               <p className="mt-1 text-sm text-slate-400">
                 Internal mDAI: {wallet.isLoading ? "…" : fmtEther(mdai)}

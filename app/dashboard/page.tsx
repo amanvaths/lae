@@ -125,7 +125,7 @@ export default function DashboardHome() {
             <StatCard
               label="Wallet Balance"
               value={fmtEther(w.daiInternal)}
-              sub={`${fmtEther(w.sltBalance, 0)} SLT · wallet ${fmtEther(w.daiWallet)} mDAI`}
+              sub={`${fmtEther(w.sltBalance, 0)} LAE · wallet ${fmtEther(w.daiWallet)} mDAI`}
               icon={Wallet}
               accent="emerald"
             />
@@ -230,7 +230,7 @@ export default function DashboardHome() {
                 href: "/dashboard/spin",
                 icon: Gauge,
                 label: "Spin & Win",
-                desc: "SLT rewards from referrals",
+                desc: "LAE rewards from referrals",
               },
             ].map((a) => (
               <Link

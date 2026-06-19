@@ -11,12 +11,12 @@ export const SENSO_LIMITLESS_EVENTS = [
   "event PilotRebirthCreated(uint256 indexed matrixId, address indexed owner, uint8 level, uint256 parentMatrixId, uint32 cycleNumber)",
   "event AutoUpgrade(address indexed user, uint8 matrixType, uint8 fromLevel, uint8 toLevel, bytes32 idempotencyKey)",
   "event IncomePaid(address indexed recipient, address indexed payer, uint8 incomeType, uint8 matrixType, uint8 level, uint256 amount)",
-  "event TokenReward(address indexed recipient, address indexed source, uint8 rewardType, uint8 matrixType, uint8 level, uint256 sltAmount)",
+  "event TokenReward(address indexed recipient, address indexed source, uint8 rewardType, uint8 matrixType, uint8 level, uint256 laeAmount)",
   "event Withdraw(address indexed user, uint256 amount, bytes32 withdrawRef)",
 ] as const;
 
 export const SPIN_EVENTS = [
-  "event SpinExecuted(address indexed user, uint8 tier, uint256 sltAmount, uint256 nonce)",
+  "event SpinExecuted(address indexed user, uint8 tier, uint256 laeAmount, uint256 nonce)",
 ] as const;
 
 export const STAKING_EVENTS = [

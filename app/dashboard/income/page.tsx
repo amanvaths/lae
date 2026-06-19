@@ -87,9 +87,9 @@ export default function IncomePage() {
       </Panel>
 
       {!useApi && (
-        <Panel className="mt-4" title="SLT TokenReward (live chain)">
+        <Panel className="mt-4" title="LAE TokenReward (live chain)">
           {(events.data ?? []).filter((e) => e.eventName === "TokenReward").length === 0 ? (
-            <p className="text-sm text-slate-500">No SLT rewards yet</p>
+            <p className="text-sm text-slate-500">No LAE rewards yet</p>
           ) : (
             (events.data ?? [])
               .filter((e) => e.eventName === "TokenReward")
@@ -99,7 +99,7 @@ export default function IncomePage() {
                     {truncateAddress(e.transactionHash)}
                   </a>
                   <span className="text-brand-200">
-                    +{fmtEther(BigInt(String(e.args.sltAmount ?? 0)), 0)} SLT
+                    +{fmtEther(BigInt(String(e.args.laeAmount ?? e.args.sltAmount ?? 0)), 0)} LAE
                   </span>
                 </div>
               ))

@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.20;
 
-import "./SLTToken.sol";
+import "./LAEToken.sol";
 
 /**
- * @title SensoLimitless — on-chain Club + Pilot matrix protocol
+ * @title LAELimitless — on-chain Club + Pilot matrix protocol
  * @dev Remix: Compiler 0.8.20 | Optimization 200 | Enable via IR ON
  */
 interface IERC20 {
@@ -13,11 +13,11 @@ interface IERC20 {
     function balanceOf(address account) external view returns (uint256);
 }
 
-interface ISensoSpin {
+interface ILAESpin {
     function creditCoupons(address user, uint256 count) external;
 }
 
-contract SensoLimitless {
+contract LAELimitless {
     error ZeroAddress();
     error NotRoot();
     error PausedErr();
@@ -137,7 +137,7 @@ contract SensoLimitless {
     uint256[8] public pilotSltDirect;
 
     IERC20 public immutable dai;
-    SLTToken public immutable slt;
+    LAEToken public immutable laeToken;
     address public immutable rootSponsor;
 
     address public treasury;
@@ -270,7 +270,7 @@ contract SensoLimitless {
         IncomeType rewardType,
         MatrixType matrixType,
         uint8 level,
-        uint256 sltAmount
+        uint256 laeAmount
     );
 
     event SpinCouponsGranted(address indexed sponsor, address indexed referral, uint256 coupons);
@@ -311,11 +311,11 @@ contract SensoLimitless {
         _locked = 0;
     }
 
-    constructor(address _dai, address _slt, address _rootSponsor, address _treasury) {
-        if (_dai == address(0) || _slt == address(0) || _rootSponsor == address(0)) revert ZeroAddress();
+    constructor(address _dai, address _laeToken, address _rootSponsor, address _treasury) {
+        if (_dai == address(0) || _laeToken == address(0) || _rootSponsor == address(0)) revert ZeroAddress();
 
         dai = IERC20(_dai);
-        slt = SLTToken(_slt);
+        laeToken = LAEToken(_laeToken);
         rootSponsor = _rootSponsor;
         treasury = _treasury != address(0) ? _treasury : _rootSponsor;
         incentivePool = _rootSponsor;
@@ -355,7 +355,7 @@ contract SensoLimitless {
 
     function activate() external onlyRoot {
         if (spinContract == address(0)) revert SpinUnset();
-        if (!slt.minters(address(this))) revert NotMinter();
+        if (!laeToken.minters(address(this))) revert NotMinter();
         activated = true;
         emit Activated(true);
     }
@@ -501,7 +501,7 @@ contract SensoLimitless {
     }
 
     function getSltBalance(address user) external view returns (uint256) {
-        return slt.balanceOf(user);
+        return laeToken.balanceOf(user);
     }
 
     function countQualifiedDirectReferrals(address user, MatrixType matrixType) public view returns (uint256) {
@@ -583,7 +583,7 @@ contract SensoLimitless {
         address source
     ) internal {
         if (amount == 0) return;
-        slt.mint(user, amount);
+        laeToken.mint(user, amount);
         emit TokenReward(user, source, t, mt, level, amount);
     }
 
@@ -980,7 +980,7 @@ contract SensoLimitless {
     }
 
     function _grantWelcomeSlt(address user, uint8 level, MatrixType matrixType) internal {
-        bytes32 key = keccak256(abi.encodePacked("slt-welcome", user, level, uint8(matrixType)));
+        bytes32 key = keccak256(abi.encodePacked("lae-welcome", user, level, uint8(matrixType)));
         if (!_idempotent(key)) return;
 
         uint256 amount = matrixType == MatrixType.CLUB ? clubSltWelcome[level - 1] : pilotSltWelcome[level - 1];
@@ -989,7 +989,7 @@ contract SensoLimitless {
 
     function _grantDirectSlt(address sponsor, address referral, uint8 level, MatrixType matrixType) internal {
         if (sponsor == address(0)) return;
-        bytes32 key = keccak256(abi.encodePacked("slt-direct", sponsor, referral, level, uint8(matrixType)));
+        bytes32 key = keccak256(abi.encodePacked("lae-direct", sponsor, referral, level, uint8(matrixType)));
         if (!_idempotent(key)) return;
 
         uint256 amount = matrixType == MatrixType.CLUB ? clubSltDirect[level - 1] : pilotSltDirect[level - 1];
@@ -1002,7 +1002,7 @@ contract SensoLimitless {
         bytes32 key = keccak256(abi.encodePacked("spin", sponsor, referral, level));
         if (!_idempotent(key)) return;
 
-        ISensoSpin(spinContract).creditCoupons(sponsor, SPIN_COUPONS_PER_QUALIFIED);
+        ILAESpin(spinContract).creditCoupons(sponsor, SPIN_COUPONS_PER_QUALIFIED);
         emit SpinCouponsGranted(sponsor, referral, SPIN_COUPONS_PER_QUALIFIED);
     }
 

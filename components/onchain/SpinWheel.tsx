@@ -5,11 +5,11 @@ import { useMemo } from "react";
 
 const SEGMENTS = [
   { label: "Try Again", color: "#64748b", weight: 50 },
-  { label: "10 SLT", color: "#22c55e", weight: 25 },
-  { label: "200 SLT", color: "#3b82f6", weight: 15 },
-  { label: "2K SLT", color: "#a855f7", weight: 7 },
-  { label: "10K SLT", color: "#f59e0b", weight: 2 },
-  { label: "100K SLT", color: "#ef4444", weight: 1 },
+  { label: "10 LAE", color: "#22c55e", weight: 25 },
+  { label: "200 LAE", color: "#3b82f6", weight: 15 },
+  { label: "2K LAE", color: "#a855f7", weight: 7 },
+  { label: "10K LAE", color: "#f59e0b", weight: 2 },
+  { label: "100K LAE", color: "#ef4444", weight: 1 },
 ];
 
 export function SpinWheel({ spinning, resultTier }: { spinning: boolean; resultTier?: number }) {

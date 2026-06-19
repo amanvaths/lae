@@ -31,13 +31,13 @@ export default function StakingPage() {
 
   return (
     <div>
-      <h1 className="font-display text-2xl font-bold text-white">SLT Staking</h1>
+      <h1 className="font-display text-2xl font-bold text-white">LAE Staking</h1>
       <p className="mt-1 text-sm text-slate-400">
-        365-day lock · Club L10+ or 5M SLT minimum eligibility
+        365-day lock · Club L10+ or 5M LAE minimum eligibility
       </p>
 
       <div className="mt-4 grid gap-4 sm:grid-cols-3">
-        <Panel title="SLT balance">
+        <Panel title="LAE balance">
           <p className="text-2xl font-bold text-white">
             {fmtEther(wallet.data?.sltBalance ?? 0n, 0)}
           </p>
@@ -50,14 +50,14 @@ export default function StakingPage() {
         </Panel>
       </div>
 
-      <Panel className="mt-6" title="Stake SLT">
+      <Panel className="mt-6" title="Stake LAE">
         <div className="flex flex-col gap-3 sm:flex-row">
           <input
             type="number"
             min={0}
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
-            placeholder="SLT amount"
+            placeholder="LAE amount"
             className="flex-1 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-white outline-none"
           />
           <button
@@ -90,7 +90,7 @@ export default function StakingPage() {
             }
           }}
         >
-          Approve SLT for staking contract
+          Approve LAE for staking contract
         </button>
       </Panel>
 
@@ -108,7 +108,7 @@ export default function StakingPage() {
                   className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white/10 p-3 text-sm"
                 >
                   <div>
-                    <p className="font-medium text-white">{fmtEther(s.amount, 0)} SLT</p>
+                    <p className="font-medium text-white">{fmtEther(s.amount, 0)} LAE</p>
                     <p className="text-xs text-slate-500">
                       Unlock: {formatDate(unlock.toISOString())}
                     </p>
@@ -143,7 +143,7 @@ export default function StakingPage() {
         <Panel className="mt-4" title="Released stakes">
           {released.map((s) => (
             <div key={s.index} className="py-2 text-sm text-slate-400">
-              #{s.index} · {fmtEther(s.amount, 0)} SLT · released
+              #{s.index} · {fmtEther(s.amount, 0)} LAE · released
             </div>
           ))}
         </Panel>

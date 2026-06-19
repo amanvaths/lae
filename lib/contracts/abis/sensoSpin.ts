@@ -22,7 +22,7 @@ export const sensoSpinAbi = [
     inputs: [
       { name: "user", type: "address", indexed: true },
       { name: "tier", type: "uint8", indexed: false },
-      { name: "sltAmount", type: "uint256", indexed: false },
+      { name: "laeAmount", type: "uint256", indexed: false },
       { name: "nonce", type: "uint256", indexed: false },
     ],
   },

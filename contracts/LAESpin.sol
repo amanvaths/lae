@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.20;
 
-import "./SLTToken.sol";
+import "./LAEToken.sol";
 
 /**
- * @title SensoSpin — on-chain spin rewards (PDF weighted table)
+ * @title LAESpin — on-chain spin rewards (PDF weighted table)
  */
-contract SensoSpin {
-    SLTToken public immutable slt;
-    address public immutable sensoCore;
+contract LAESpin {
+    LAEToken public immutable laeToken;
+    address public immutable laeCore;
 
     mapping(address => uint256) public spinCoupons;
     uint256 private _spinNonce;
@@ -16,22 +16,22 @@ contract SensoSpin {
     uint256[6] public spinAmounts;
     uint16[6] public spinWeightsBps;
 
-    event SpinExecuted(address indexed user, uint8 tier, uint256 sltAmount, uint256 nonce);
+    event SpinExecuted(address indexed user, uint8 tier, uint256 laeAmount, uint256 nonce);
 
-    modifier onlySenso() {
-        require(msg.sender == sensoCore, "Not senso");
+    modifier onlyLaeCore() {
+        require(msg.sender == laeCore, "Not LAE core");
         _;
     }
 
-    constructor(address _slt, address _sensoCore) {
-        require(_slt != address(0) && _sensoCore != address(0), "Zero addr");
-        slt = SLTToken(_slt);
-        sensoCore = _sensoCore;
+    constructor(address _laeToken, address _laeCore) {
+        require(_laeToken != address(0) && _laeCore != address(0), "Zero addr");
+        laeToken = LAEToken(_laeToken);
+        laeCore = _laeCore;
         spinAmounts = [0, 10 ether, 200 ether, 2000 ether, 10000 ether, 100000 ether];
         spinWeightsBps = [5000, 2500, 1500, 700, 200, 100];
     }
 
-    function creditCoupons(address user, uint256 count) external onlySenso {
+    function creditCoupons(address user, uint256 count) external onlyLaeCore {
         require(user != address(0), "Zero user");
         spinCoupons[user] += count;
     }
@@ -61,7 +61,7 @@ contract SensoSpin {
                 tier = i;
                 amount = spinAmounts[i];
                 if (amount > 0) {
-                    slt.mint(msg.sender, amount);
+                    laeToken.mint(msg.sender, amount);
                 }
                 emit SpinExecuted(msg.sender, tier, amount, nonce);
                 return (amount, tier);

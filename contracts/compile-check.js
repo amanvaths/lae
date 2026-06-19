@@ -3,7 +3,7 @@ const fs = require("fs");
 const path = require("path");
 
 const dir = __dirname;
-const files = ["SensoLimitless.sol", "SLTToken.sol", "SensoSpin.sol", "SensoStaking.sol"];
+const files = ["LAELimitless.sol", "LAEToken.sol", "LAESpin.sol", "LAEStaking.sol"];
 const sources = {};
 for (const f of files) {
   sources[f] = { content: fs.readFileSync(path.join(dir, f), "utf8") };

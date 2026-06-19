@@ -1,4 +1,4 @@
-# SENSO Limitless — Smart Contracts (Production)
+# LAE Protocol — Smart Contracts (Production)
 
 All matrix business logic on-chain. Backend indexes events only.
 
@@ -6,10 +6,10 @@ All matrix business logic on-chain. Backend indexes events only.
 
 | File | Role |
 |------|------|
-| `SLTToken.sol` | ERC20 reward token (capped supply, multi-minter) |
-| `SensoLimitless.sol` | Club + Pilot matrices, async pending queue |
-| `SensoSpin.sol` | PDF weighted spin execution |
-| `SensoStaking.sol` | 365-day SLT lock (level 10+ or 5M SLT) |
+| `LAEToken.sol` | ERC20 **LAE Token** (capped supply, multi-minter) |
+| `LAELimitless.sol` | Club + Pilot matrices, async pending queue |
+| `LAESpin.sol` | PDF weighted spin execution |
+| `LAEStaking.sol` | 365-day LAE lock (level 10+ or 5M LAE) |
 | `MockDAI.sol` | Testnet DAI only |
 
 ## Architecture (post gap-fix)
@@ -18,20 +18,20 @@ All matrix business logic on-chain. Backend indexes events only.
 - **GAP-07:** `totalDaiLiabilities` enforced on every `_creditDai`
 - **GAP-01:** BFS spillover via persistent `_bfsQueues` + 32 nodes/step (unbounded across TXs)
 - **GAP-02:** No global FIFO fallback — reverts if no sponsor-tree matrix exists
-- **GAP-04:** SLT minted via `SLTToken` ERC20 (not internal mapping)
+- **GAP-04:** LAE minted via `LAEToken` ERC20 (not internal mapping)
 - **GAP-09:** Pilot slot-2 pays matrix owner when upline is zero
 
 ## Remix Deploy Order
 
 ```
 1. MockDAI (testnet) OR use Polygon DAI
-2. SLTToken(maxSupply)          e.g. 1_000_000_000 ether
-3. SensoLimitless(dai, slt, rootSponsor, treasury)
-4. SensoSpin(slt, sensoAddress)
-5. SensoStaking(slt, sensoAddress)
-6. SLTToken.setMinter(senso, true)
-7. SLTToken.setMinter(spin, true)
-8. SensoLimitless.setSpinContract(spinAddress)
+2. LAEToken(maxSupply)          e.g. 1_000_000_000 ether
+3. LAELimitless(dai, laeToken, rootSponsor, treasury)
+4. LAESpin(laeToken, laeCoreAddress)
+5. LAEStaking(laeToken, laeCoreAddress)
+6. LAEToken.setMinter(laeCore, true)
+7. LAEToken.setMinter(spin, true)
+8. LAELimitless.setSpinContract(spinAddress)
 9. (optional) setSponsorPayments(true, 500, 500)  // max 5% each
 ```
 
@@ -41,12 +41,12 @@ All matrix business logic on-chain. Backend indexes events only.
 
 ```
 register(sponsor)
-dai.approve(senso, amount)
+dai.approve(laeCore, amount)
 purchaseClub(level) / purchasePilot(level)
 processPending(10)   // repeat until pendingLength() == 0
 withdraw(amount, uniqueRef)
-spin(seed)           // on SensoSpin contract
-stake(amount)        // on SensoStaking contract
+spin()               // on LAESpin contract
+stake(amount)        // on LAEStaking contract
 ```
 
 ## Polygon Addresses
@@ -59,10 +59,11 @@ stake(amount)        // on SensoStaking contract
 ## Backend
 
 ```bash
-SENSO_CONTRACT_ADDRESS=0x...
+SENSO_CONTRACT_ADDRESS=0x...   # LAELimitless deploy address
+SLT_CONTRACT_ADDRESS=0x...     # LAEToken deploy address
 ```
 
-Indexer: all `SensoLimitless` events + `SLTToken` Transfer from zero address (mints).
+Indexer: all `LAELimitless` events + `LAEToken` Transfer from zero address (mints).
 
 ## Compile locally
 
