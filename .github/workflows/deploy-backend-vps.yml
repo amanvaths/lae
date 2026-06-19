@@ -93,7 +93,6 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           password: ${{ secrets.VPS_PASSWORD }}
-          key: ${{ secrets.VPS_SSH_KEY }}
           port: 22
           source: backend.tar.gz
           target: /tmp/
@@ -119,7 +118,6 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           password: ${{ secrets.VPS_PASSWORD }}
-          key: ${{ secrets.VPS_SSH_KEY }}
           port: 22
           envs: DEPLOY_ROOT,DATABASE_URL,BSC_RPC_URL,CHAIN_ID,INDEXER_START_BLOCK,INDEXER_ADMIN_API_KEY,JWT_SECRET,CORS_ORIGIN,SENSO_CONTRACT_ADDRESS,SLT_CONTRACT_ADDRESS,SPIN_CONTRACT_ADDRESS,STAKING_CONTRACT_ADDRESS,DAI_CONTRACT_ADDRESS,ADMIN_WALLET_ADDRESSES
           script_stop: true
@@ -135,10 +133,10 @@ jobs:
               echo "PORT=4000"
               echo "HOST=0.0.0.0"
               echo "DATABASE_URL=${DATABASE_URL}"
-              echo "BSC_RPC_URL=${BSC_RPC_URL:-https://data-seed-prebsc-1-s1.binance.org:8545}"
+              echo "BSC_RPC_URL=${BSC_RPC_URL:-https://bsc-testnet.publicnode.com}"
               echo "CHAIN_ID=${CHAIN_ID:-97}"
-              echo "INDEXER_START_BLOCK=${INDEXER_START_BLOCK:-0}"
-              echo "INDEXER_BATCH_SIZE=2000"
+              echo "INDEXER_START_BLOCK=${INDEXER_START_BLOCK:-114231493}"
+              echo "INDEXER_BATCH_SIZE=300"
               echo "INDEXER_POLL_MS=8000"
               echo "INDEXER_REORG_DEPTH=12"
               echo "SENSO_CONTRACT_ADDRESS=0x6521619C38fe4be6B800263CC783d9524ED4F7BA"
@@ -160,6 +158,16 @@ jobs:
         run: |
           BASE="${{ secrets.BACKEND_PUBLIC_URL }}"
           BASE="${BASE%/}"
-          curl -sf "${BASE}/health"
-          curl -sf "${BASE}/api/indexer/status"
-          echo "Public backend endpoints OK"
+          for i in 1 2 3 4 5; do
+            if curl -sf "${BASE}/health" >/dev/null && curl -sf "${BASE}/api/indexer/status" >/dev/null; then
+              echo "Public backend endpoints OK (attempt ${i})"
+              curl -sf "${BASE}/health"
+              echo ""
+              curl -sf "${BASE}/api/indexer/status"
+              exit 0
+            fi
+            echo "Waiting for backend… attempt ${i}/5"
+            sleep 6
+          done
+          echo "ERROR: public health check failed after retries"
+          exit 1

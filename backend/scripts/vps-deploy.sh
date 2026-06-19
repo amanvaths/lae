@@ -47,7 +47,13 @@ fi
 pm2 save
 
 echo "==> Waiting for API..."
-sleep 4
+for i in 1 2 3 4 5; do
+  if curl -sf "http://127.0.0.1:${PORT}/health" >/dev/null; then
+    break
+  fi
+  echo "    health not ready yet (${i}/5)…"
+  sleep 3
+done
 
 echo "==> Health checks (local)..."
 curl -sf "http://127.0.0.1:${PORT}/health" | head -c 500
