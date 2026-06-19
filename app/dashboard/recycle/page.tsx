@@ -7,7 +7,7 @@ import { useUserEventsOnChain } from "@/lib/contracts/hooks";
 export default function RecyclePage() {
   const events = useUserEventsOnChain();
 
-  if (events.isLoading) return <QueryLoading label="Loading rebirth events…" />;
+  if (events.isLoading && !events.data) return <QueryLoading label="Loading rebirth events…" />;
 
   const rebirths = (events.data ?? []).filter(
     (e) => e.eventName === "ClubRebirthCreated" || e.eventName === "PilotRebirthCreated"

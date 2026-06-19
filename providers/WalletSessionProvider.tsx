@@ -16,6 +16,7 @@ import { useClientMounted } from "@/lib/useClientMounted";
 import { CHAIN_ID } from "@/lib/contracts/config";
 import { withBasePath } from "@/lib/paths";
 import { clearWalletSession } from "@/lib/wallet/clear-session";
+import { contractKeys } from "@/lib/contracts/query-keys";
 
 interface WalletSessionContextValue {
   address: `0x${string}` | undefined;
@@ -77,10 +78,10 @@ export function WalletSessionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!isReady || !isConnected) return;
     if (prevChainId.current !== undefined && prevChainId.current !== chainId) {
-      resetSession();
+      qc.invalidateQueries({ queryKey: contractKeys.all });
     }
     prevChainId.current = chainId;
-  }, [chainId, isConnected, isReady, resetSession]);
+  }, [chainId, isConnected, isReady, qc]);
 
   const value = useMemo(
     () => ({

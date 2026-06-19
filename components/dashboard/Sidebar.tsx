@@ -4,8 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAccount } from "wagmi";
 import { useWalletSession } from "@/providers/WalletSessionProvider";
-import { Hexagon, LogOut, ChevronRight } from "lucide-react";
-import { navGroups, utilityItems } from "./nav";
+import { LogOut, ChevronRight } from "lucide-react";
+import { BrandLogo } from "@/components/ui/BrandLogo";
+import { navGroups } from "./nav";
 import { cn } from "@/lib/utils";
 import { withBasePath } from "@/lib/paths";
 import { truncateAddress } from "@/lib/format";
@@ -66,9 +67,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
     <div className="flex h-full flex-col bg-ink-900/80 backdrop-blur-xl">
       <div className="flex h-16 items-center gap-2.5 border-b border-white/5 px-5">
         <Link href={withBasePath("/")} className="flex items-center gap-2.5">
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-brand-400 to-accent-600 shadow-glow">
-            <Hexagon className="h-5 w-5 text-white" strokeWidth={2.4} />
-          </span>
+          <BrandLogo size={36} />
           <div className="leading-tight">
             <span className="block font-display text-base font-bold text-white">LAE</span>
             <span className="block text-[10px] uppercase tracking-widest text-brand-300/80">
@@ -103,18 +102,6 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           <p className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-widest text-slate-600">
             Account
           </p>
-          <div className="flex flex-col gap-0.5">
-            {utilityItems.map((it) => (
-              <NavLink
-                key={it.href}
-                href={withBasePath(it.href)}
-                label={it.label}
-                icon={it.icon}
-                active={isActive(it.href)}
-                onNavigate={onNavigate}
-              />
-            ))}
-          </div>
         </div>
       </nav>
 
@@ -134,7 +121,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 px-3 py-2.5 text-sm text-slate-300 transition-colors hover:border-red-500/30 hover:bg-red-500/5 hover:text-red-300"
         >
           <LogOut className="h-4 w-4" />
-          Disconnect
+          Disconnect Wallet
         </button>
       </div>
     </div>

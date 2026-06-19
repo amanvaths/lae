@@ -18,7 +18,6 @@ import { StatCard, Panel, Pill } from "@/components/dashboard/ui";
 import { ChainQueryState } from "@/components/dashboard/ChainQueryState";
 import { CoinShowcase } from "@/components/dashboard/CoinShowcase";
 import { PendingQueuePanel } from "@/components/onchain/PendingQueuePanel";
-import { RegisterPanel } from "@/components/onchain/RegisterPanel";
 import { useAnalyticsDashboard } from "@/lib/hooks/useAnalytics";
 import {
   useWalletOnChain,
@@ -132,7 +131,6 @@ export default function DashboardHome() {
           </div>
 
           <div className="mt-4 grid gap-4 lg:grid-cols-2">
-            <RegisterPanel />
             <PendingQueuePanel />
           </div>
 

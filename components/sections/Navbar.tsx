@@ -7,7 +7,7 @@ import { Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { withBasePath } from "@/lib/paths";
 import { useScrollSpy, sectionFromHref } from "@/lib/useScrollSpy";
-import { TopBar } from "@/components/ui/TopBar";
+// import { TopBar } from "@/components/ui/TopBar";
 import { BrandLogo } from "@/components/ui/BrandLogo";
 
 const ConnectWallet = dynamic(
@@ -63,7 +63,7 @@ export function Navbar() {
 
   return (
     <>
-      <TopBar />
+      {/* <TopBar /> — hidden for now */}
       <motion.header
         className={cn(
           "sticky top-0 z-50 border-b bg-ink-900/95 backdrop-blur-md transition-shadow duration-300",

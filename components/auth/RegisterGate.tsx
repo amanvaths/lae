@@ -1,13 +1,21 @@
 "use client";
 
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, type ReactNode } from "react";
 import { useAccount } from "wagmi";
 import { Loader2 } from "lucide-react";
 import { useClientMounted } from "@/lib/useClientMounted";
 import { useWalletSession } from "@/providers/WalletSessionProvider";
 import { useSensoUser } from "@/lib/contracts/hooks";
 import { withBasePath } from "@/lib/paths";
+
+const REGISTRATION_CHECK_MS = 8_000;
+
+function isCheckingRegistration(
+  query: ReturnType<typeof useSensoUser>
+): boolean {
+  return query.isLoading && query.data === undefined && !query.isError;
+}
 
 /** Registration screen — requires connected, unregistered wallet. */
 export function RegisterGate({ children }: { children: ReactNode }) {
@@ -17,10 +25,18 @@ export function RegisterGate({ children }: { children: ReactNode }) {
   const { status, address } = useAccount();
   const { isReady, isWrongNetwork } = useWalletSession();
   const user = useSensoUser();
+  const [checkTimedOut, setCheckTimedOut] = useState(false);
 
   useEffect(() => {
     redirecting.current = false;
+    setCheckTimedOut(false);
   }, [address]);
+
+  useEffect(() => {
+    if (!isCheckingRegistration(user)) return;
+    const t = setTimeout(() => setCheckTimedOut(true), REGISTRATION_CHECK_MS);
+    return () => clearTimeout(t);
+  }, [user.isLoading, user.data, user.isError, address]);
 
   useEffect(() => {
     if (!mounted || !isReady || redirecting.current) return;
@@ -31,7 +47,7 @@ export function RegisterGate({ children }: { children: ReactNode }) {
       return;
     }
 
-    if (user.isLoading || user.isFetching) return;
+    if (isCheckingRegistration(user) && !checkTimedOut) return;
 
     if (user.data?.registered) {
       redirecting.current = true;
@@ -44,8 +60,9 @@ export function RegisterGate({ children }: { children: ReactNode }) {
     address,
     isWrongNetwork,
     user.isLoading,
-    user.isFetching,
+    user.isError,
     user.data?.registered,
+    checkTimedOut,
     router,
   ]);
 
@@ -67,7 +84,7 @@ export function RegisterGate({ children }: { children: ReactNode }) {
     );
   }
 
-  if (user.isLoading || user.isFetching) {
+  if (isCheckingRegistration(user) && !checkTimedOut) {
     return (
       <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3 text-slate-400">
         <Loader2 className="h-8 w-8 animate-spin text-brand-400" />

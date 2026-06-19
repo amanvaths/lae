@@ -12,8 +12,12 @@ export function ChainQueryState<T>({
   label?: string;
   children: (data: T) => React.ReactNode;
 }) {
-  if (query.isLoading) return <QueryLoading label={label} />;
-  if (query.isError || query.data === undefined) {
+  const pending = query.isLoading && query.data === undefined;
+  if (pending) return <QueryLoading label={label} />;
+  if (query.isError && query.data === undefined) {
+    return <QueryError message="Failed to read from BSC Testnet" onRetry={() => query.refetch()} />;
+  }
+  if (query.data === undefined) {
     return <QueryError message="Failed to read from BSC Testnet" onRetry={() => query.refetch()} />;
   }
   return <>{children(query.data)}</>;

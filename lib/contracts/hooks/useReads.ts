@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAccount, usePublicClient, useWatchContractEvent } from "wagmi";
 import { contractKeys } from "../query-keys";
@@ -30,21 +31,26 @@ function useEnabledAddress() {
 export function useInvalidateOnChain() {
   const qc = useQueryClient();
   const { address } = useAccount();
-  return () => {
-    qc.invalidateQueries({ queryKey: contractKeys.all });
-    qc.invalidateQueries({ queryKey: ["analytics"] });
-    if (address) {
-      qc.invalidateQueries({ queryKey: contractKeys.user(address) });
-      qc.invalidateQueries({ queryKey: contractKeys.wallet(address) });
-      qc.invalidateQueries({ queryKey: contractKeys.club(address) });
-      qc.invalidateQueries({ queryKey: contractKeys.pilot(address) });
-      qc.invalidateQueries({ queryKey: contractKeys.referrals(address) });
-      qc.invalidateQueries({ queryKey: contractKeys.events(address) });
-      qc.invalidateQueries({ queryKey: contractKeys.spin(address) });
-      qc.invalidateQueries({ queryKey: contractKeys.staking(address) });
-    }
-    qc.invalidateQueries({ queryKey: contractKeys.pending() });
-  };
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  return useCallback(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      qc.invalidateQueries({ queryKey: contractKeys.all });
+      qc.invalidateQueries({ queryKey: ["analytics"] });
+      if (address) {
+        qc.invalidateQueries({ queryKey: contractKeys.user(address) });
+        qc.invalidateQueries({ queryKey: contractKeys.wallet(address) });
+        qc.invalidateQueries({ queryKey: contractKeys.club(address) });
+        qc.invalidateQueries({ queryKey: contractKeys.pilot(address) });
+        qc.invalidateQueries({ queryKey: contractKeys.referrals(address) });
+        qc.invalidateQueries({ queryKey: contractKeys.events(address) });
+        qc.invalidateQueries({ queryKey: contractKeys.spin(address) });
+        qc.invalidateQueries({ queryKey: contractKeys.staking(address) });
+      }
+      qc.invalidateQueries({ queryKey: contractKeys.pending() });
+    }, 2_000);
+  }, [qc, address]);
 }
 
 /** Watch all LAELimitless events and refresh queries */
@@ -78,8 +84,9 @@ export function useSensoUser() {
     queryFn: () => readSensoUser(client!, address!),
     enabled: enabled && !!client,
     retry: 2,
-    staleTime: 0,
-    refetchOnMount: "always",
+    staleTime: 60_000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -91,6 +98,7 @@ export function useClubPackagesOnChain() {
     queryFn: () => readClubPackages(client!, address!),
     enabled: enabled && !!client,
     retry: 2,
+    staleTime: 30_000,
   });
 }
 
@@ -113,6 +121,7 @@ export function useClubMatricesOnChain() {
     queryFn: () => readActiveClubMatrices(client!, address!),
     enabled: enabled && !!client,
     retry: 2,
+    staleTime: 30_000,
   });
 }
 

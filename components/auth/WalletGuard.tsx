@@ -9,6 +9,12 @@ import { useWalletSession } from "@/providers/WalletSessionProvider";
 import { useSensoUser } from "@/lib/contracts/hooks";
 import { withBasePath } from "@/lib/paths";
 
+function isCheckingRegistration(
+  query: ReturnType<typeof useSensoUser>
+): boolean {
+  return query.isLoading && query.data === undefined && !query.isError;
+}
+
 /** Dashboard access: connected wallet, correct network, on-chain registration. */
 export function WalletGuard({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -37,7 +43,7 @@ export function WalletGuard({ children }: { children: ReactNode }) {
       return;
     }
 
-    if (user.isLoading || user.isFetching) return;
+    if (isCheckingRegistration(user)) return;
 
     if (!user.data?.registered) {
       redirecting.current = true;
@@ -50,7 +56,7 @@ export function WalletGuard({ children }: { children: ReactNode }) {
     address,
     isWrongNetwork,
     user.isLoading,
-    user.isFetching,
+    user.isError,
     user.data?.registered,
     router,
   ]);
@@ -82,7 +88,7 @@ export function WalletGuard({ children }: { children: ReactNode }) {
     );
   }
 
-  if (user.isLoading || user.isFetching) {
+  if (isCheckingRegistration(user)) {
     return (
       <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 text-slate-400">
         <Loader2 className="h-8 w-8 animate-spin text-brand-400" />

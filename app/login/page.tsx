@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { Hexagon, ShieldCheck } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import { LoginConnectPanel } from "@/components/web3/LoginConnectPanel";
 import { LoginGate } from "@/components/auth/LoginGate";
+import { BrandLogo } from "@/components/ui/BrandLogo";
 import { withBasePath } from "@/lib/paths";
 
 export default function LoginPage() {
@@ -17,9 +18,7 @@ export default function LoginPage() {
         href={withBasePath("/")}
         className="absolute left-4 top-[calc(0.75rem+env(safe-area-inset-top))] flex items-center gap-2 sm:left-6 sm:top-6 sm:gap-2.5"
       >
-        <span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-brand-400 to-accent-600 shadow-glow sm:h-10 sm:w-10">
-          <Hexagon className="h-4 w-4 text-white sm:h-5 sm:w-5" strokeWidth={2.4} />
-        </span>
+        <BrandLogo size={40} className="sm:h-10 sm:w-10" />
         <span className="font-display text-lg font-bold text-white sm:text-xl">LAE</span>
       </Link>
 

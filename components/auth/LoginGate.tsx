@@ -11,6 +11,12 @@ import { withBasePath } from "@/lib/paths";
 
 const WALLET_CHECK_MS = 2_500;
 
+function isCheckingRegistration(
+  query: ReturnType<typeof useSensoUser>
+): boolean {
+  return query.isLoading && query.data === undefined && !query.isError;
+}
+
 /** Connect screen — registered wallets go to dashboard; others go to registration. */
 export function LoginGate({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -33,7 +39,7 @@ export function LoginGate({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!mounted || !isReady || redirecting.current) return;
     if (status !== "connected" || !address || isWrongNetwork) return;
-    if (user.isLoading || user.isFetching) return;
+    if (isCheckingRegistration(user)) return;
 
     redirecting.current = true;
     if (user.data?.registered) {
@@ -48,7 +54,7 @@ export function LoginGate({ children }: { children: ReactNode }) {
     address,
     isWrongNetwork,
     user.isLoading,
-    user.isFetching,
+    user.isError,
     user.data?.registered,
     router,
   ]);
@@ -62,7 +68,12 @@ export function LoginGate({ children }: { children: ReactNode }) {
     );
   }
 
-  if (status === "connected" && address && !isWrongNetwork) {
+  if (
+    status === "connected" &&
+    address &&
+    !isWrongNetwork &&
+    isCheckingRegistration(user)
+  ) {
     return (
       <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3 text-slate-400">
         <Loader2 className="h-8 w-8 animate-spin text-brand-400" />
