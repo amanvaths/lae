@@ -9,6 +9,7 @@ import {
   usePendingQueue,
 } from "@/lib/contracts/hooks";
 import { CONTRACTS } from "@/lib/contracts/addresses";
+import { withBasePath } from "@/lib/paths";
 
 export default function AdminPage() {
   const admin = useIsRootAdmin();
@@ -23,7 +24,7 @@ export default function AdminPage() {
     return (
       <div className="py-20 text-center">
         <p className="text-slate-400">Root sponsor wallet required for admin view</p>
-        <Link href="/dashboard" className="mt-4 inline-block text-brand-300">
+        <Link href={withBasePath("/dashboard")} className="mt-4 inline-block text-brand-300">
           Back to dashboard
         </Link>
       </div>

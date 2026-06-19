@@ -7,15 +7,13 @@ import { Loader2 } from "lucide-react";
 import { useClientMounted } from "@/lib/useClientMounted";
 import { useWalletSession } from "@/providers/WalletSessionProvider";
 import { useSensoUser } from "@/lib/contracts/hooks";
+import {
+  isCheckingRegistration,
+  registrationReadFailed,
+} from "@/lib/auth/registration-check";
 import { withBasePath } from "@/lib/paths";
 
 const REGISTRATION_CHECK_MS = 8_000;
-
-function isCheckingRegistration(
-  query: ReturnType<typeof useSensoUser>
-): boolean {
-  return query.isLoading && query.data === undefined && !query.isError;
-}
 
 /** Registration screen — requires connected, unregistered wallet. */
 export function RegisterGate({ children }: { children: ReactNode }) {
@@ -36,7 +34,7 @@ export function RegisterGate({ children }: { children: ReactNode }) {
     if (!isCheckingRegistration(user)) return;
     const t = setTimeout(() => setCheckTimedOut(true), REGISTRATION_CHECK_MS);
     return () => clearTimeout(t);
-  }, [user.isLoading, user.data, user.isError, address]);
+  }, [user.isPending, user.data, user.isError, address]);
 
   useEffect(() => {
     if (!mounted || !isReady || redirecting.current) return;
@@ -49,6 +47,8 @@ export function RegisterGate({ children }: { children: ReactNode }) {
 
     if (isCheckingRegistration(user) && !checkTimedOut) return;
 
+    if (registrationReadFailed(user)) return;
+
     if (user.data?.registered) {
       redirecting.current = true;
       router.replace(withBasePath("/dashboard"));
@@ -59,7 +59,7 @@ export function RegisterGate({ children }: { children: ReactNode }) {
     status,
     address,
     isWrongNetwork,
-    user.isLoading,
+    user.isPending,
     user.isError,
     user.data?.registered,
     checkTimedOut,

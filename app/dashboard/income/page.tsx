@@ -4,7 +4,7 @@ import { Panel } from "@/components/dashboard/ui";
 import { QueryLoading, QueryError } from "@/components/dashboard/QueryState";
 import { useAnalyticsIncome } from "@/lib/hooks/useAnalytics";
 import { useUserEventsOnChain, useWalletOnChain } from "@/lib/contracts/hooks";
-import { fmtEther } from "@/lib/contracts/format";
+import { fmtEther, parseApiWei } from "@/lib/contracts/format";
 import { txUrl } from "@/lib/contracts/addresses";
 import { truncateAddress } from "@/lib/format";
 
@@ -44,7 +44,7 @@ export default function IncomePage() {
   }
 
   const total = useApi
-    ? analytics.data!.reduce((s, r) => s + BigInt(r.amount.split(".")[0] ?? "0"), 0n)
+    ? analytics.data!.reduce((s, r) => s + parseApiWei(r.amount), 0n)
     : wallet.data?.totalEarnings ?? 0n;
 
   return (
@@ -65,7 +65,7 @@ export default function IncomePage() {
                 <span className="text-slate-300">
                   {INCOME_TYPES[row.incomeType] ?? `Type ${row.incomeType}`} · L{row.level}
                 </span>
-                <span className="text-emerald-400">+{fmtEther(BigInt(row.amount.split(".")[0] ?? "0"))}</span>
+                <span className="text-emerald-400">+{fmtEther(parseApiWei(row.amount))}</span>
               </div>
             ))
           )

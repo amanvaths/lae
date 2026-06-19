@@ -7,15 +7,10 @@ import { Loader2 } from "lucide-react";
 import { useClientMounted } from "@/lib/useClientMounted";
 import { useWalletSession } from "@/providers/WalletSessionProvider";
 import { useSensoUser } from "@/lib/contracts/hooks";
+import { isCheckingRegistration, registrationReadFailed } from "@/lib/auth/registration-check";
 import { withBasePath } from "@/lib/paths";
 
 const WALLET_CHECK_MS = 2_500;
-
-function isCheckingRegistration(
-  query: ReturnType<typeof useSensoUser>
-): boolean {
-  return query.isLoading && query.data === undefined && !query.isError;
-}
 
 /** Connect screen — registered wallets go to dashboard; others go to registration. */
 export function LoginGate({ children }: { children: ReactNode }) {
@@ -41,6 +36,8 @@ export function LoginGate({ children }: { children: ReactNode }) {
     if (status !== "connected" || !address || isWrongNetwork) return;
     if (isCheckingRegistration(user)) return;
 
+    if (registrationReadFailed(user)) return;
+
     redirecting.current = true;
     if (user.data?.registered) {
       router.replace(withBasePath("/dashboard"));
@@ -53,7 +50,7 @@ export function LoginGate({ children }: { children: ReactNode }) {
     status,
     address,
     isWrongNetwork,
-    user.isLoading,
+    user.isPending,
     user.isError,
     user.data?.registered,
     router,

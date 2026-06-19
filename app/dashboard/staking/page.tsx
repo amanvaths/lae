@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { parseEther } from "viem";
 import { Panel, Pill } from "@/components/dashboard/ui";
 import { QueryLoading } from "@/components/dashboard/QueryState";
 import { useStakingOnChain, useWalletOnChain } from "@/lib/contracts/hooks";
@@ -67,7 +68,9 @@ export default function StakingPage() {
             onClick={async () => {
               setBusy("stake");
               try {
-                if (allowance.data === 0n) await approve();
+                const wei = parseEther(amount || "0");
+                const allowed = allowance.data ?? 0n;
+                if (allowed < wei) await approve();
                 await stake(amount);
                 setAmount("");
               } finally {

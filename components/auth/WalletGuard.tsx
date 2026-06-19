@@ -1,19 +1,19 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useAccount } from "wagmi";
 import { Loader2 } from "lucide-react";
 import { useClientMounted } from "@/lib/useClientMounted";
 import { useWalletSession } from "@/providers/WalletSessionProvider";
 import { useSensoUser } from "@/lib/contracts/hooks";
+import {
+  isCheckingRegistration,
+  registrationReadFailed,
+} from "@/lib/auth/registration-check";
 import { withBasePath } from "@/lib/paths";
 
-function isCheckingRegistration(
-  query: ReturnType<typeof useSensoUser>
-): boolean {
-  return query.isLoading && query.data === undefined && !query.isError;
-}
+const REGISTRATION_CHECK_MS = 8_000;
 
 /** Dashboard access: connected wallet, correct network, on-chain registration. */
 export function WalletGuard({ children }: { children: ReactNode }) {
@@ -23,10 +23,18 @@ export function WalletGuard({ children }: { children: ReactNode }) {
   const { isReady, isWrongNetwork } = useWalletSession();
   const { status, address } = useAccount();
   const user = useSensoUser();
+  const [checkTimedOut, setCheckTimedOut] = useState(false);
 
   useEffect(() => {
     redirecting.current = false;
+    setCheckTimedOut(false);
   }, [address]);
+
+  useEffect(() => {
+    if (!isCheckingRegistration(user)) return;
+    const t = setTimeout(() => setCheckTimedOut(true), REGISTRATION_CHECK_MS);
+    return () => clearTimeout(t);
+  }, [user.isPending, user.data, user.isError, address]);
 
   useEffect(() => {
     if (!mounted || !isReady || redirecting.current) return;
@@ -43,7 +51,9 @@ export function WalletGuard({ children }: { children: ReactNode }) {
       return;
     }
 
-    if (isCheckingRegistration(user)) return;
+    if (isCheckingRegistration(user) && !checkTimedOut) return;
+
+    if (registrationReadFailed(user)) return;
 
     if (!user.data?.registered) {
       redirecting.current = true;
@@ -55,9 +65,10 @@ export function WalletGuard({ children }: { children: ReactNode }) {
     status,
     address,
     isWrongNetwork,
-    user.isLoading,
+    user.isPending,
     user.isError,
     user.data?.registered,
+    checkTimedOut,
     router,
   ]);
 
@@ -88,7 +99,16 @@ export function WalletGuard({ children }: { children: ReactNode }) {
     );
   }
 
-  if (isCheckingRegistration(user)) {
+  if (registrationReadFailed(user)) {
+    return (
+      <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 px-4 text-center text-slate-400">
+        <p className="text-sm text-rose-300">Could not verify registration on-chain.</p>
+        <p className="text-xs">Check BSC Testnet RPC and try reconnecting your wallet.</p>
+      </div>
+    );
+  }
+
+  if (isCheckingRegistration(user) && !checkTimedOut) {
     return (
       <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 text-slate-400">
         <Loader2 className="h-8 w-8 animate-spin text-brand-400" />

@@ -26,10 +26,10 @@ Import via `@/lib/contracts` or `@/contracts/*` (tsconfig alias).
 | Contract | Address |
 |----------|---------|
 | MockDAI | `0xf8E556996042b34cc706F040c59955abB678995e` |
-| LAEToken | `0x7a509cb5cF853BaE4C4A76B7e37037cf8ec2A146` |
-| LAELimitless | `0x74Ddbe4bcb6000bD9AA357E02B874C3D0e0248D5` |
-| LAESpin | `0xE5BD47a1bA6D742c147b74c54Ca6CFd95cACD50D` |
-| LAEStaking | `0xDAB2Ef2396b53D64cf22Fe58fE0275fDdb0fe5D8` |
+| LAEToken | `0xc842c083E703ecf82496813cc3BFe6d36c0A49b0` |
+| LAELimitless | `0x6521619C38fe4be6B800263CC783d9524ED4F7BA` |
+| LAESpin | `0xF9bdE4a2Ca487b18DA8546124b63Ec9e938ea1aE` |
+| LAEStaking | `0xdb25Af21346aD358D5e52835934AF5f326169984` |
 
 ## Run locally
 

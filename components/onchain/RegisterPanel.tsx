@@ -5,6 +5,7 @@ import { useAccount } from "wagmi";
 import { Panel } from "@/components/dashboard/ui";
 import { QueryLoading } from "@/components/dashboard/QueryState";
 import { useSensoUser } from "@/lib/contracts/hooks";
+import { isCheckingRegistration } from "@/lib/auth/registration-check";
 import { useRegisterOnChain } from "@/lib/contracts/hooks/useWrites";
 import { truncateAddress } from "@/lib/format";
 import { getSponsorFromUrl } from "@/lib/contracts/services/utils";
@@ -17,7 +18,7 @@ export function RegisterPanel() {
   const [pending, setPending] = useState(false);
   const urlSponsor = getSponsorFromUrl();
 
-  if (user.isLoading) return <QueryLoading label="Checking registration…" />;
+  if (isCheckingRegistration(user)) return <QueryLoading label="Checking registration…" />;
 
   if (user.data?.registered) {
     return (

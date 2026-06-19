@@ -1,6 +1,6 @@
 /**
- * SensoLimitless contract event names — backend indexer subscribes to all of these.
- * After Remix deploy, set SENSO_CONTRACT_ADDRESS in backend .env
+ * LAELimitless contract event names — backend indexer subscribes to all of these.
+ * After Remix deploy, set SENSO_CONTRACT_ADDRESS (LAELimitless address) in backend .env
  */
 export const SENSO_CONTRACT_EVENTS = [
     "UserRegistered(address,address,uint256)",

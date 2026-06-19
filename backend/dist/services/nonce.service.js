@@ -23,7 +23,7 @@ export function consumeNonce(walletAddress, nonce) {
 }
 export function buildSignInMessage(walletAddress, nonce) {
     return [
-        "Sign in to SENSO Limitless",
+        "Sign in to LAE Protocol",
         `Wallet: ${walletAddress.toLowerCase()}`,
         `Nonce: ${nonce}`,
         `Issued: ${new Date().toISOString()}`,

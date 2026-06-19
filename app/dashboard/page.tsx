@@ -29,7 +29,7 @@ import {
   useProtocolStatus,
   useUserEventsOnChain,
 } from "@/lib/contracts/hooks";
-import { fmtEther } from "@/lib/contracts/format";
+import { fmtEther, parseApiWei } from "@/lib/contracts/format";
 import { truncateAddress } from "@/lib/format";
 import { withBasePath } from "@/lib/paths";
 
@@ -53,7 +53,7 @@ export default function DashboardHome() {
     ? analytics.data!.directReferrals
     : (referrals.data?.direct.length ?? 0);
   const totalEarned = useApi
-    ? BigInt(analytics.data!.totalIncome.split(".")[0] ?? "0")
+    ? parseApiWei(analytics.data!.totalIncome)
     : (wallet.data?.totalEarnings ?? 0n);
 
   const recentEvents = (events.data ?? []).slice(0, 5);

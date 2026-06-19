@@ -19,7 +19,7 @@ export default function SpinPage() {
   const [spinning, setSpinning] = useState(false);
   const [lastTier, setLastTier] = useState<number | undefined>();
 
-  const couponCount = Number(coupons.data ?? 0n);
+  const couponCount = coupons.isLoading ? null : Number(coupons.data ?? 0n);
 
   return (
     <div>
@@ -32,11 +32,13 @@ export default function SpinPage() {
           <div className="mt-6 text-center">
             <p className="text-sm text-slate-400">
               Available coupons:{" "}
-              <span className="text-xl font-bold text-white">{couponCount}</span>
+              <span className="text-xl font-bold text-white">
+                {couponCount === null ? "…" : couponCount}
+              </span>
             </p>
             <button
               type="button"
-              disabled={spinning || couponCount === 0 || !address}
+              disabled={spinning || couponCount === null || couponCount === 0 || !address}
               className="btn-primary mt-4 disabled:opacity-50"
               onClick={async () => {
                 setSpinning(true);

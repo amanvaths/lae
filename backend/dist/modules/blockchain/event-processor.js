@@ -153,7 +153,7 @@ export async function processIndexedLog(log) {
                     rewardType: Number(args.rewardType),
                     matrixType: Number(args.matrixType),
                     level: Number(args.level),
-                    sltAmount: dec(args.sltAmount),
+                    sltAmount: dec(args.laeAmount ?? args.sltAmount),
                     blockNumber: BigInt(blockNumber),
                     txHash,
                     logIndex,
@@ -197,7 +197,7 @@ export async function processIndexedLog(log) {
                 create: {
                     walletAddress: user,
                     tier: Number(args.tier),
-                    sltAmount: dec(args.sltAmount),
+                    sltAmount: dec(args.laeAmount ?? args.sltAmount),
                     nonce: BigInt(String(args.nonce ?? 0)),
                     blockNumber: BigInt(blockNumber),
                     txHash,
