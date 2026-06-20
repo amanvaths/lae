@@ -20,8 +20,11 @@ export function formatWalletError(error: unknown): string {
   if (lower.includes("allowance") || lower.includes("exceeds allowance")) {
     return "Token approval required — approve payment token first";
   }
-  if (lower.includes("transfer amount exceeds balance") || lower.includes("erc20: transfer amount exceeds balance")) {
-    return "Insufficient payment token balance";
+  if (lower.includes("transfer amount exceeds balance") || lower.includes("exceeds balance")) {
+    return "Insufficient payment token — you need at least 0.001 BUSD (testnet mock) in your wallet";
+  }
+  if (lower.includes("gas limit too high")) {
+    return "Transaction gas too high for RPC — usually means the contract would revert. Check payment token balance and sponsor ID.";
   }
   if (lower.includes("wrong network") || lower.includes("chain mismatch") || lower.includes("unsupported chain")) {
     return "Wrong network — switch to BSC Testnet";
