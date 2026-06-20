@@ -313,6 +313,7 @@ export async function processIndexedLog(log) {
             }
             break;
         }
+        case "ClubPoolPayment":
         case "TreasuryPool": {
             const refId = num(args.refId);
             const ref = await prisma.indexedLaeUser.findFirst({ where: { userId: refId } });

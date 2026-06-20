@@ -66,7 +66,7 @@ export const laeClubMatrixAbi = [
   },
   {
     type: "function",
-    name: "BTCB_TOKEN_ADDRESS",
+    name: "PAYMENT_TOKEN",
     inputs: [],
     outputs: [{ type: "address" }],
     stateMutability: "view",
@@ -131,7 +131,7 @@ export const laeClubMatrixAbi = [
   },
   {
     type: "function",
-    name: "ROYAL_POOL_ADDRESS",
+    name: "CLUB_POOL_ADDRESS",
     inputs: [],
     outputs: [{ type: "address" }],
     stateMutability: "view",
@@ -225,7 +225,7 @@ export const laeClubMatrixAbi = [
   },
   {
     type: "event",
-    name: "TreasuryPool",
+    name: "ClubPoolPayment",
     inputs: [
       { name: "refId", type: "uint256", indexed: true },
       { name: "userId", type: "uint256", indexed: true },
@@ -306,7 +306,7 @@ export const laeClubMatrixAbi = [
     type: "event",
     name: "PoolAddressesUpdated",
     inputs: [
-      { name: "newRoyalPool", type: "address", indexed: true },
+      { name: "newClubPool", type: "address", indexed: true },
       { name: "newTreasuryPool", type: "address", indexed: true },
     ],
   },

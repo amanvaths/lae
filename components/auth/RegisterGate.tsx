@@ -17,6 +17,7 @@ import {
   RegistrationCheckSpinner,
 } from "@/components/auth/RegistrationCheckBanner";
 import { withBasePath } from "@/lib/paths";
+import { WrongNetworkPanel } from "@/components/web3/WrongNetworkPanel";
 
 /** Registration screen — requires connected, unregistered wallet. */
 export function RegisterGate({ children }: { children: ReactNode }) {
@@ -42,11 +43,7 @@ export function RegisterGate({ children }: { children: ReactNode }) {
       return;
     }
 
-    if (isWrongNetwork) {
-      redirecting.current = true;
-      router.replace(withBasePath("/login"));
-      return;
-    }
+    if (isWrongNetwork) return;
 
     if (isCheckingLaeRegistration(user, timedOut)) return;
     if (laeRegistrationFailed(user, timedOut)) return;
@@ -73,6 +70,10 @@ export function RegisterGate({ children }: { children: ReactNode }) {
 
   if (status !== "connected" || !address) {
     return <RegistrationCheckSpinner label="Redirecting to login…" />;
+  }
+
+  if (isWrongNetwork) {
+    return <WrongNetworkPanel />;
   }
 
   if (checking) {

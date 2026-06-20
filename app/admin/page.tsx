@@ -27,6 +27,9 @@ export default function AdminLoginPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message ?? "Login failed");
+      if (!data.token || typeof data.token !== "string") {
+        throw new Error("Invalid server response — missing token");
+      }
       localStorage.setItem("lae_admin_token", data.token);
       router.push(withBasePath("/admin/dashboard"));
     } catch (err) {

@@ -1,7 +1,7 @@
 "use client";
 
 import { Panel } from "@/components/dashboard/ui";
-import { QueryLoading } from "@/components/dashboard/QueryState";
+import { QueryLoading, QueryError } from "@/components/dashboard/QueryState";
 import {
   referralLinkByUserId,
   useLaeDirectTeam,
@@ -14,8 +14,17 @@ export default function SharePage() {
   const team = useLaeDirectTeam();
   const link = referralLinkByUserId(user.userId);
 
-  if (user.isLoading) {
+  if (user.isLoading || team.isLoading) {
     return <QueryLoading label="Loading referral data…" />;
+  }
+
+  if (user.isError) {
+    return (
+      <QueryError
+        message="Could not load referral data — check wallet and network"
+        onRetry={() => user.refetch()}
+      />
+    );
   }
 
   return (

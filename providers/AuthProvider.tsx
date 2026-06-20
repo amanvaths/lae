@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -42,6 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [bootstrapped, setBootstrapped] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loginPending, setLoginPending] = useState(false);
+  const autoLoginAttempted = useRef(false);
 
   useEffect(() => {
     loadStoredTokens();
@@ -82,10 +84,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [qc]);
 
   useEffect(() => {
-    if (isConnected && address && bootstrapped && !hasToken && !loginPending) {
-      login().catch(() => {});
-    }
+    if (!isConnected || !address || !bootstrapped || hasToken || loginPending) return;
+    if (autoLoginAttempted.current) return;
+    autoLoginAttempted.current = true;
+    login().catch(() => {});
   }, [isConnected, address, bootstrapped, hasToken, loginPending, login]);
+
+  useEffect(() => {
+    if (!isConnected) autoLoginAttempted.current = false;
+  }, [isConnected, address]);
 
   const value = useMemo<AuthContextValue>(
     () => ({

@@ -31,14 +31,14 @@ const slides = [
     desc: (
       <>
         Join the <strong className="text-white">LAE Club Matrix</strong> — a transparent 14-spot,
-        12-level referral system. Matrix income is paid in BTC/USDT directly from the smart contract.
+        15-level referral system. Matrix income is paid in BTC/USDT directly from the smart contract.
       </>
     ),
     primary: { href: withBasePath("/register"), label: "Join LAE Club" },
     secondary: { href: "#network", label: "View Matrix" },
   },
   {
-    label: "12 levels · auto upgrade",
+    label: "15 levels · auto upgrade",
     title: (
       <>
         12 Levels

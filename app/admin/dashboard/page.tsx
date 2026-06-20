@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { Panel } from "@/components/dashboard/ui";
+import { QueryError } from "@/components/dashboard/QueryState";
 import { fetchLaeAdminStats, type LaeAdminStats } from "@/lib/lae-club/admin-api";
 import { useLaeCoinStats, useLaeProtocolStats, useLaeRoyalPoolBalance } from "@/lib/lae-club/hooks";
 import { LAE_CONTRACTS, addressUrl } from "@/lib/lae-club/contracts";
@@ -10,12 +11,21 @@ import { fmtEther } from "@/lib/contracts/format";
 
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState<LaeAdminStats | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const protocol = useLaeProtocolStats();
   const coin = useLaeCoinStats();
   const pool = useLaeRoyalPoolBalance();
 
   useEffect(() => {
-    fetchLaeAdminStats().then(setStats);
+    fetchLaeAdminStats().then((result) => {
+      if (result.ok) {
+        setStats(result.data);
+        setError(null);
+      } else {
+        setStats(null);
+        setError(result.error);
+      }
+    });
   }, []);
 
   return (
@@ -24,6 +34,12 @@ export default function AdminDashboardPage() {
       <p className="mt-1 text-sm text-slate-400">
         Indexed analytics + live on-chain protocol reads
       </p>
+
+      {error && (
+        <div className="mt-4">
+          <QueryError message={error} onRetry={() => window.location.reload()} />
+        </div>
+      )}
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Panel title="Total Users">
@@ -37,7 +53,7 @@ export default function AdminDashboardPage() {
         </Panel>
         <Panel title="Royal Pool (indexed paid)">
           <p className="text-3xl font-bold">
-            {stats?.royalPool.totalPaid ? fmtEther(BigInt(stats.royalPool.totalPaid)) : "—"}
+            {stats?.royalPool?.totalPaid ? fmtEther(BigInt(stats.royalPool.totalPaid)) : "—"}
           </p>
           <p className="text-xs text-slate-500">
             Pool balance: {fmtEther(pool.balance)}
@@ -45,7 +61,7 @@ export default function AdminDashboardPage() {
         </Panel>
         <Panel title="Chain events indexed">
           <p className="text-3xl font-bold">{stats?.chainEvents ?? "—"}</p>
-          <p className="text-xs text-slate-500">Block {stats?.indexer.lastBlock ?? "—"}</p>
+          <p className="text-xs text-slate-500">Block {stats?.indexer?.lastBlock ?? "—"}</p>
         </Panel>
       </div>
 
@@ -63,10 +79,10 @@ export default function AdminDashboardPage() {
         </Panel>
         <Panel title="Staking Stats">
           <p className="text-sm text-slate-400">
-            Indexed TVL: {stats?.staking.totalStaked ? fmtEther(BigInt(stats.staking.totalStaked), 0) : "—"}
+            Indexed TVL: {stats?.staking?.totalStaked ? fmtEther(BigInt(stats.staking.totalStaked), 0) : "—"}
           </p>
           <p className="text-sm text-slate-400">
-            Active stakes: {stats?.staking.activeStakes ?? "—"}
+            Active stakes: {stats?.staking?.activeStakes ?? "—"}
           </p>
         </Panel>
         <Panel title="Matrix contract">

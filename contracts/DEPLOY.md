@@ -1,23 +1,22 @@
-# LAE Club — Deployment (4 contracts)
+# LAE Club — Deployment (2 contracts)
 
 ## 1. Deploy
 
-1. Payment token (BTC/USDT mock on testnet)
+1. Payment token — BTC (BEP-20); a mock on testnet
 2. `LAECoin`
-3. `LAERegistrationPassNFT` + 4× `LAERoyalCardNFT` (ranks 1–4)
-4. `LAEClubMatrix` (owner, payment token, royal pool, treasury, NFT addresses)
+3. `LAEClubMatrix` — `(owner, paymentToken, clubPool, platformTreasury)`
 
 ## 2. Wire
 
 ```solidity
 // LAECoin
-coin.setWallets(treasury, rewardWallet, liquidityWallet, operations);
+coin.setWallets(treasury, liquidityWallet, operations);
 coin.setMatrixContract(matrix);
 coin.bootstrapSupply(
-  400_000 ether,  // reward pool → matrix holds LAE
-  40_000 ether,   // example residual split
-  30_000 ether,
-  30_000 ether
+  450_000 ether,  // reward pool → matrix holds LAE
+  20_000 ether,   // example residual split (≤ 50k total)
+  20_000 ether,
+  10_000 ether
 );
 coin.setP2PPaymentToken(paymentToken);
 coin.setTaxExempt(matrix, true);
@@ -25,12 +24,14 @@ coin.setTaxExempt(matrix, true);
 // LAEClubMatrix
 matrix.setLaeCoin(coin);
 matrix.setLiquidityPool(liquidityWallet);
-// defaults: 9000/1000 split, 5%/month × 20, direct M1=2…M20=21
+// defaults: 9000/1000 split, 5%/month × 20, direct M1=1…M20=20
 ```
 
-## 3. NFT minters
+## 3. Initialize partners (optional)
 
-Set matrix as minter on registration pass + royal card NFTs.
+```solidity
+matrix.initializePartners(partner2, partner3); // locks owner's direct slots
+```
 
 ## 4. PancakeSwap
 

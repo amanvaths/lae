@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
 import { useAuthContext } from "@/providers/AuthProvider";
 import { Loader2 } from "lucide-react";
+import { withBasePath } from "@/lib/paths";
 
 export function AuthGuard({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -11,7 +12,7 @@ export function AuthGuard({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      router.replace("/login");
+      router.replace(withBasePath("/login"));
     }
   }, [isLoading, isAuthenticated, router]);
 

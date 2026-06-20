@@ -6,12 +6,26 @@ function authHeaders(): HeadersInit {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-async function adminFetch<T>(path: string): Promise<T | null> {
-  const res = await fetch(`${ADMIN_API}/api/admin${path}`, {
-    headers: { ...authHeaders() },
-  });
-  if (!res.ok) return null;
-  return res.json() as Promise<T>;
+export type AdminFetchResult<T> =
+  | { ok: true; data: T }
+  | { ok: false; error: string; status?: number };
+
+async function adminFetch<T>(path: string): Promise<AdminFetchResult<T>> {
+  try {
+    const res = await fetch(`${ADMIN_API}/api/admin${path}`, {
+      headers: { ...authHeaders() },
+    });
+    if (!res.ok) {
+      if (res.status === 401) {
+        return { ok: false, error: "Session expired — sign in again", status: 401 };
+      }
+      return { ok: false, error: `Admin API error (${res.status})`, status: res.status };
+    }
+    const data = (await res.json()) as T;
+    return { ok: true, data };
+  } catch {
+    return { ok: false, error: "Backend unavailable — is the API running?" };
+  }
 }
 
 export type LaeAdminStats = {

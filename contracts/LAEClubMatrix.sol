@@ -1,50 +1,54 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
+// Standard ERC-20 / BEP-20 interface for the BTC payment token.
 interface IERC20 {
     function transfer(address recipient, uint256 amount) external returns (bool);
     function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
 }
 
+// LAE reward token (the only token minted by this project).
 interface ILAECoin {
     function recordRewardAllocation(uint256 amount) external;
     function transfer(address to, uint256 amount) external returns (bool);
     function rewardPoolRemaining() external view returns (uint256);
 }
 
-interface IRegistrationPassNFT {
-    function mint(address to, uint256 tokenId) external;
-}
-
-interface IRoyaltyCardNFT {
-    function mint(address to) external;
-}
-
+/**
+ * @title LAEClubMatrix
+ * @notice 15-slot Smart Matrix. Each slot is a 14-position recycling matrix.
+ *         Registration / upgrades are paid in BTC (BEP-20). 90% of every payment
+ *         is distributed across the matrix, 10% funds the liquidity pool and mints
+ *         a vested LAE reward allocation released over 20 months (5%/month, gated by
+ *         new direct referrals). No NFTs are used anywhere in this plan.
+ */
 contract LAEClubMatrix {
-    uint8 public constant LAST_LEVEL = 12;
-    uint8 public constant MATRIX_SIZE = 14;
+    // --- Constants ---
+    uint8 public constant LAST_LEVEL = 15;       // 15 slots
+    uint8 public constant MATRIX_SIZE = 14;      // 14 positions per slot
     uint256 public constant BPS = 10_000;
-    uint8 public constant VESTING_MONTHS = 20;
+    uint8 public constant VESTING_MONTHS = 20;   // 20-month release protocol
     uint256 public constant MONTH_DURATION = 30 days;
 
+    // --- Structs ---
     struct XMatrix {
-        address currentReferrer;
-        address[] referrals;
-        uint256 reinvestCount;
-        uint256 heldTokenForUpgrade;
-        uint256 lastSpillUnderReceiverIndex;
-        uint256 totalTeamSize;
-        uint256 totalEarning;
+        address currentReferrer;            // Upline that physically placed this matrix
+        address[] referrals;                // 14 spots (index 0..13)
+        uint256 reinvestCount;              // Cycle count (0 = first cycle)
+        uint256 heldTokenForUpgrade;        // BTC held at spot 4 for the auto-upgrade
+        uint256 lastSpillUnderReceiverIndex;// Round-robin pointer for downline spill
+        uint256 totalTeamSize;              // Total placements in this matrix (all cycles)
+        uint256 totalEarning;               // Total BTC earned from this matrix
     }
 
     struct User {
         uint256 id;
-        address referrer;
+        address referrer;                   // Initial sponsor
         uint256 referrerId;
         address[] directReferrals;
         uint256 teamSize;
         uint256 registrationTimestamp;
-        uint256 totalIncome;
+        uint256 totalIncome;                // Total BTC earned across all slots
         mapping(uint8 => bool) activeLevels;
         mapping(uint8 => XMatrix) xMatrix;
     }
@@ -57,57 +61,52 @@ contract LAEClubMatrix {
         uint8 level;
     }
 
+    // --- Core state ---
     address public owner;
-    address public BTCB_TOKEN_ADDRESS;
-    address public ROYAL_POOL_ADDRESS;
-    address public TREASURY_POOL_ADDRESS;
-
-    address public REGISTRATION_PASS_NFT_CONTRACT;
-    address public ROYAL_RANK1_NFT_CONTRACT;
-    address public ROYAL_RANK2_NFT_CONTRACT;
-    address public ROYAL_RANK3_NFT_CONTRACT;
-    address public ROYAL_RANK4_NFT_CONTRACT;
+    address public PAYMENT_TOKEN;            // BTC (BEP-20) used for registration & income
+    address public CLUB_POOL_ADDRESS;        // "Club Pool" (spot 4 in recycle cycles)
+    address public TREASURY_POOL_ADDRESS;    // Platform treasury (owner-matrix spillover)
 
     mapping(address => User) private users;
     mapping(uint256 => address) public idToAddress;
     mapping(address => uint256) public addressToId;
     mapping(uint8 => uint256) public levelTokenCost;
 
-    uint256 public lastUserId = 2;
+    uint256 public lastUserId = 2;           // Owner is ID 1
     bool public partnersInitialized;
     uint256 public totalProjectInvestment;
 
+    // --- LAE reward layer ---
     address public LAE_COIN_ADDRESS;
     address public LIQUIDITY_POOL_ADDRESS;
-    uint256 public matrixDistributionBps = 9000;
-    uint256 public liquidityAllocationBps = 1000;
-    uint256 public laePriceInPaymentToken = 1e12;
+    uint256 public matrixDistributionBps = 9000; // 90% distributed in matrix
+    uint256 public liquidityAllocationBps = 1000; // 10% to liquidity / LAE reward
+    uint256 public laePriceInPaymentToken = 1e12; // LAE price denominated in payment token
 
     uint256 public totalLiquidityCollected;
     uint256 public totalLaeAllocated;
     uint256 public totalLaeClaimed;
 
-    uint256[20] public monthlyReleaseBps;
-    uint256[20] public directRequirementByMonth;
+    uint256[20] public monthlyReleaseBps;        // 5% (500 bps) per month by default
+    uint256[20] public directRequirementByMonth; // directs required to unlock each month
 
     mapping(address => LaeRewardSchedule[]) private laeSchedules;
 
     bool private entered;
 
+    // --- Events ---
     event Registration(uint256 indexed userId, uint256 indexed referrerId, address indexed userAddress);
     event TokenReceived(uint256 indexed receiverId, uint256 indexed fromId, address indexed from, uint8 level, uint256 amount);
-    event TreasuryPool(uint256 indexed refId, uint256 indexed userId, uint256 amount, uint8 level);
+    event ClubPoolPayment(uint256 indexed refId, uint256 indexed userId, uint256 amount, uint8 level);
     event NewUserPlace(uint256 indexed user, uint256 indexed referrer, uint8 level, uint256 cycle, uint8 spot);
     event Spillover(uint256 indexed referrerId, uint256 indexed receiverId, uint8 level, uint256 cycle, uint8 virtualSpot);
     event Reinvest(uint256 indexed userId, uint256 indexed newReferrerId, uint256 indexed callerId, uint8 level);
     event Upgrade(uint256 indexed userId, uint256 indexed newReferrerId, uint8 level);
     event MissedIncome(uint256 indexed receiverId, uint256 indexed userId, uint8 level);
     event TokenTransferFailed(address indexed recipient, uint256 amount, string reason);
-    event PoolAddressesUpdated(address indexed newRoyalPool, address indexed newTreasuryPool);
+    event PoolAddressesUpdated(address indexed newClubPool, address indexed newTreasuryPool);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-    event TokenAddressesUpdated(address indexed newToken);
-    event RegistrationPassNftAddressUpdated(address indexed newAddress);
-    event RoyalNftAddressesUpdated(address newRank1, address newRank2, address newRank3, address newRank4);
+    event TokenAddressUpdated(address indexed newToken);
     event LevelTokenCostUpdated(uint8 indexed level, uint256 tokenCost);
 
     event LaeCoinUpdated(address indexed laeCoin);
@@ -139,34 +138,22 @@ contract LAEClubMatrix {
 
     constructor(
         address ownerAddress,
-        address btcTokenAddress,
-        address treasuryPoolAddress,
-        address platformAddress,
-        address registrationPassNftAddress,
-        address royalRank1NftAddress,
-        address royalRank2NftAddress,
-        address royalRank3NftAddress,
-        address royalRank4NftAddress
+        address paymentTokenAddress,
+        address clubPoolAddress,
+        address platformTreasuryAddress
     ) {
-        require(btcTokenAddress != address(0), "Invalid BTC address");
-        require(treasuryPoolAddress != address(0), "Invalid Loyalty Pool address");
-        require(platformAddress != address(0), "Invalid Platform Treasury address");
-        require(registrationPassNftAddress != address(0), "Invalid Reg Pass NFT address");
-        require(royalRank1NftAddress != address(0), "Invalid Rank 1 NFT address");
-        require(royalRank2NftAddress != address(0), "Invalid Rank 2 NFT address");
-        require(royalRank3NftAddress != address(0), "Invalid Rank 3 NFT address");
-        require(royalRank4NftAddress != address(0), "Invalid Rank 4 NFT address");
+        require(ownerAddress != address(0), "Invalid owner address");
+        require(paymentTokenAddress != address(0), "Invalid payment token address");
+        require(clubPoolAddress != address(0), "Invalid Club Pool address");
+        require(platformTreasuryAddress != address(0), "Invalid Platform Treasury address");
 
         owner = ownerAddress;
-        BTCB_TOKEN_ADDRESS = btcTokenAddress;
-        ROYAL_POOL_ADDRESS = treasuryPoolAddress;
-        TREASURY_POOL_ADDRESS = platformAddress;
-        REGISTRATION_PASS_NFT_CONTRACT = registrationPassNftAddress;
-        ROYAL_RANK1_NFT_CONTRACT = royalRank1NftAddress;
-        ROYAL_RANK2_NFT_CONTRACT = royalRank2NftAddress;
-        ROYAL_RANK3_NFT_CONTRACT = royalRank3NftAddress;
-        ROYAL_RANK4_NFT_CONTRACT = royalRank4NftAddress;
+        PAYMENT_TOKEN = paymentTokenAddress;
+        CLUB_POOL_ADDRESS = clubPoolAddress;
+        TREASURY_POOL_ADDRESS = platformTreasuryAddress;
 
+        // Slot 1 full price = 0.001 BTC; each slot doubles up to slot 15 (16.384 BTC).
+        // 90% of each price flows through the matrix (slot 1 matrix share = 0.0009 BTC).
         levelTokenCost[1] = 1e15;
         for (uint8 i = 2; i <= LAST_LEVEL; i++) {
             levelTokenCost[i] = levelTokenCost[i - 1] * 2;
@@ -182,11 +169,15 @@ contract LAEClubMatrix {
             users[ownerAddress].activeLevels[level] = true;
         }
 
+        // 20-month release: 5%/month, unlocking +1 direct referral per month
+        // (month 1 needs 1 direct ... month 20 needs 20 directs for 100%).
         for (uint8 month = 0; month < VESTING_MONTHS; month++) {
             monthlyReleaseBps[month] = 500;
-            directRequirementByMonth[month] = month + 2;
+            directRequirementByMonth[month] = month + 1;
         }
     }
+
+    // --- PUBLIC ENTRY POINTS ---
 
     function registrationExt(uint256 referrerId) external nonReentrant {
         address referrerAddress = idToAddress[referrerId];
@@ -194,7 +185,7 @@ contract LAEClubMatrix {
         require(!isUserExists(msg.sender), "LAEClubMatrix: user exists");
 
         uint256 amount = levelTokenCost[1];
-        require(IERC20(BTCB_TOKEN_ADDRESS).transferFrom(msg.sender, address(this), amount), "BTC transfer failed for registration");
+        require(IERC20(PAYMENT_TOKEN).transferFrom(msg.sender, address(this), amount), "BTC transfer failed for registration");
 
         _splitPaymentAndAllocateLae(msg.sender, 1, amount);
         totalProjectInvestment += amount;
@@ -208,7 +199,7 @@ contract LAEClubMatrix {
         require(!isUserExists(userAddress), "LAEClubMatrix: user exists");
 
         uint256 amount = levelTokenCost[1];
-        require(IERC20(BTCB_TOKEN_ADDRESS).transferFrom(msg.sender, address(this), amount), "BTC transfer failed for registration");
+        require(IERC20(PAYMENT_TOKEN).transferFrom(msg.sender, address(this), amount), "BTC transfer failed for registration");
 
         _splitPaymentAndAllocateLae(userAddress, 1, amount);
         totalProjectInvestment += amount;
@@ -218,6 +209,7 @@ contract LAEClubMatrix {
     function initializePartners(address partner2, address partner3) external onlyOwner {
         require(!partnersInitialized, "LAEClubMatrix: already initialized");
         require(partner2 != address(0) && partner3 != address(0), "LAEClubMatrix: zero partner");
+        require(partner2 != partner3, "LAEClubMatrix: duplicate partner");
         require(!isUserExists(partner2) && !isUserExists(partner3), "LAEClubMatrix: partner exists");
 
         _registerPartner(partner2, 2);
@@ -226,31 +218,20 @@ contract LAEClubMatrix {
         partnersInitialized = true;
     }
 
-    function ChangeTitanPassNftaddress(address new1) external onlyOwner {
-        REGISTRATION_PASS_NFT_CONTRACT = new1;
-        emit RegistrationPassNftAddressUpdated(new1);
-    }
-
-    function ChangeRoyalNftaddresses(address new1, address new2, address new3, address new4) external onlyOwner {
-        ROYAL_RANK1_NFT_CONTRACT = new1;
-        ROYAL_RANK2_NFT_CONTRACT = new2;
-        ROYAL_RANK3_NFT_CONTRACT = new3;
-        ROYAL_RANK4_NFT_CONTRACT = new4;
-        emit RoyalNftAddressesUpdated(new1, new2, new3, new4);
-    }
+    // --- ADMIN SETTERS ---
 
     function updateTokenAddress(address newToken) external onlyOwner {
         require(newToken != address(0), "Invalid token address");
-        BTCB_TOKEN_ADDRESS = newToken;
-        emit TokenAddressesUpdated(newToken);
+        PAYMENT_TOKEN = newToken;
+        emit TokenAddressUpdated(newToken);
     }
 
-    function updatePoolAddresses(address newRoyalPool, address newTreasuryPool) external onlyOwner {
-        require(newRoyalPool != address(0), "Invalid Royal Pool address");
+    function updatePoolAddresses(address newClubPool, address newTreasuryPool) external onlyOwner {
+        require(newClubPool != address(0), "Invalid Club Pool address");
         require(newTreasuryPool != address(0), "Invalid Treasury Pool address");
-        ROYAL_POOL_ADDRESS = newRoyalPool;
+        CLUB_POOL_ADDRESS = newClubPool;
         TREASURY_POOL_ADDRESS = newTreasuryPool;
-        emit PoolAddressesUpdated(newRoyalPool, newTreasuryPool);
+        emit PoolAddressesUpdated(newClubPool, newTreasuryPool);
     }
 
     function setLevelTokenCost(uint8 level, uint256 tokenCost) external onlyOwner {
@@ -336,6 +317,8 @@ contract LAEClubMatrix {
         emit OwnershipTransferred(oldOwner, newOwner);
     }
 
+    // --- CORE REGISTRATION / PLACEMENT ---
+
     function _registration(address userAddress, address referrerAddress) private {
         uint256 referrerId = users[referrerAddress].id;
         uint256 currentUserId = lastUserId;
@@ -349,10 +332,6 @@ contract LAEClubMatrix {
         idToAddress[currentUserId] = userAddress;
         addressToId[userAddress] = currentUserId;
         lastUserId++;
-
-        if (REGISTRATION_PASS_NFT_CONTRACT != address(0)) {
-            IRegistrationPassNFT(REGISTRATION_PASS_NFT_CONTRACT).mint(userAddress, currentUserId);
-        }
 
         if (referrerAddress == owner) {
             require(!partnersInitialized, "LAEClubMatrix: owner locked");
@@ -378,10 +357,6 @@ contract LAEClubMatrix {
         users[owner].directReferrals.push(userAddress);
         emit Registration(partnerId, 1, userAddress);
 
-        if (REGISTRATION_PASS_NFT_CONTRACT != address(0)) {
-            IRegistrationPassNFT(REGISTRATION_PASS_NFT_CONTRACT).mint(userAddress, partnerId);
-        }
-
         address freeReferrer = _findFreeReferrer(userAddress, 1);
         require(freeReferrer == owner, "Owner must be the L1 referrer for initial partners.");
         users[userAddress].xMatrix[1].currentReferrer = freeReferrer;
@@ -403,6 +378,7 @@ contract LAEClubMatrix {
 
         emit NewUserPlace(users[newUser].id, referrerId, level, matrix.reinvestCount + 1, uint8(spotIndex + 1));
 
+        // Spot 1 & 2 (index 0,1): spill to upline.
         if (spotIndex == 0) {
             if (isOwnerRef) {
                 _sendToPlatformTreasury(amount);
@@ -428,15 +404,17 @@ contract LAEClubMatrix {
         bool isFirstCycle = matrix.reinvestCount == 0;
         bool isLastLevel = level == LAST_LEVEL;
 
+        // Spot 4 (index 3): first cycle holds funds for auto-upgrade; later cycles → Club Pool.
         if (spotIndex == 3) {
             if (isFirstCycle && !isLastLevel && !isOwnerRef) {
                 matrix.heldTokenForUpgrade = amount;
             } else {
-                _sendToRoyalPool(referrer, newUser, level, amount);
+                _sendToClubPool(referrer, newUser, level, amount);
             }
             return;
         }
 
+        // Spot 5 (index 4): first cycle triggers the free auto-upgrade; later cycles → self income.
         if (spotIndex == 4) {
             if (isFirstCycle && !isLastLevel && !isOwnerRef) {
                 matrix.heldTokenForUpgrade = 0;
@@ -447,11 +425,13 @@ contract LAEClubMatrix {
             return;
         }
 
+        // Self income spots: 3,6,8,9,11,12 (index 2,5,7,8,10,11).
         if (spotIndex == 2 || spotIndex == 5 || spotIndex == 7 || spotIndex == 8 || spotIndex == 10 || spotIndex == 11) {
             _sendTokenDividends(referrer, newUser, level, amount);
             return;
         }
 
+        // Spot 7 & 10 (index 6,9): 1st downline spillover.
         if (spotIndex == 6 || spotIndex == 9) {
             address downline = _findEligibleDownlineUser(newUser, referrer, 1, level);
             emit Spillover(referrerId, users[downline].id, level, matrix.reinvestCount + 1, spotIndex == 6 ? 17 : 18);
@@ -463,6 +443,7 @@ contract LAEClubMatrix {
             return;
         }
 
+        // Spot 13 (index 12): 2nd downline spillover.
         if (spotIndex == 12) {
             address downline = _findEligibleDownlineUser(newUser, referrer, 2, level);
             emit Spillover(referrerId, users[downline].id, level, matrix.reinvestCount + 1, 19);
@@ -474,6 +455,7 @@ contract LAEClubMatrix {
             return;
         }
 
+        // Spot 14 (index 13): recycle / reinvest.
         if (spotIndex == 13) {
             _recycleCurrentLevel(referrer, level, newUser);
         }
@@ -483,21 +465,8 @@ contract LAEClubMatrix {
         users[userAddress].activeLevels[nextLevel] = true;
         address freeReferrer = _findFreeReferrer(userAddress, nextLevel);
         users[userAddress].xMatrix[nextLevel].currentReferrer = freeReferrer;
-        _checkRoyalCardMint(userAddress, nextLevel);
         _processNewPlacement(userAddress, freeReferrer, nextLevel);
         emit Upgrade(users[userAddress].id, users[freeReferrer].id, nextLevel);
-    }
-
-    function _checkRoyalCardMint(address userAddress, uint8 level) private {
-        if (level == 3 && ROYAL_RANK1_NFT_CONTRACT != address(0)) {
-            IRoyaltyCardNFT(ROYAL_RANK1_NFT_CONTRACT).mint(userAddress);
-        } else if (level == 6 && ROYAL_RANK2_NFT_CONTRACT != address(0)) {
-            IRoyaltyCardNFT(ROYAL_RANK2_NFT_CONTRACT).mint(userAddress);
-        } else if (level == 9 && ROYAL_RANK3_NFT_CONTRACT != address(0)) {
-            IRoyaltyCardNFT(ROYAL_RANK3_NFT_CONTRACT).mint(userAddress);
-        } else if (level == 12 && ROYAL_RANK4_NFT_CONTRACT != address(0)) {
-            IRoyaltyCardNFT(ROYAL_RANK4_NFT_CONTRACT).mint(userAddress);
-        }
     }
 
     function _recycleCurrentLevel(address userAddress, uint8 level, address caller) private {
@@ -532,40 +501,44 @@ contract LAEClubMatrix {
         return userAddress == owner || users[userAddress].directReferrals.length >= 2;
     }
 
+    // --- BTC PAYOUTS (90% matrix share) ---
+
     function _sendTokenDividends(address receiver, address from, uint8 level, uint256 amount) private {
         uint256 distributable = _matrixShare(amount);
-        bool success = IERC20(BTCB_TOKEN_ADDRESS).transfer(receiver, distributable);
+        bool success = IERC20(PAYMENT_TOKEN).transfer(receiver, distributable);
         if (!success) {
             emit TokenTransferFailed(receiver, distributable, "BTC transfer failed from contract balance");
-            revert("BTitan: Token transfer failed to receiver.");
+            revert("LAEClubMatrix: token transfer failed to receiver");
         }
         users[receiver].totalIncome += distributable;
         users[receiver].xMatrix[level].totalEarning += distributable;
         emit TokenReceived(users[receiver].id, users[from].id, from, level, distributable);
     }
 
-    function _sendToRoyalPool(address referrer, address userAddress, uint8 level, uint256 amount) private {
+    function _sendToClubPool(address referrer, address userAddress, uint8 level, uint256 amount) private {
         uint256 distributable = _matrixShare(amount);
-        bool success = IERC20(BTCB_TOKEN_ADDRESS).transfer(ROYAL_POOL_ADDRESS, distributable);
+        bool success = IERC20(PAYMENT_TOKEN).transfer(CLUB_POOL_ADDRESS, distributable);
         if (!success) {
-            emit TokenTransferFailed(ROYAL_POOL_ADDRESS, distributable, "BTC transfer failed to Royal Pool");
-            revert("BTitan: Royal Pool transfer failed.");
+            emit TokenTransferFailed(CLUB_POOL_ADDRESS, distributable, "BTC transfer failed to Club Pool");
+            revert("LAEClubMatrix: Club Pool transfer failed");
         }
-        emit TreasuryPool(users[referrer].id, users[userAddress].id, distributable, level);
+        emit ClubPoolPayment(users[referrer].id, users[userAddress].id, distributable, level);
     }
 
     function _sendToPlatformTreasury(uint256 amount) private {
         uint256 distributable = _matrixShare(amount);
-        bool success = IERC20(BTCB_TOKEN_ADDRESS).transfer(TREASURY_POOL_ADDRESS, distributable);
+        bool success = IERC20(PAYMENT_TOKEN).transfer(TREASURY_POOL_ADDRESS, distributable);
         if (!success) {
             emit TokenTransferFailed(TREASURY_POOL_ADDRESS, distributable, "BTC transfer failed to Platform Treasury");
-            revert("BTitan: Platform Treasury transfer failed.");
+            revert("LAEClubMatrix: Platform Treasury transfer failed");
         }
     }
 
     function _matrixShare(uint256 amount) private view returns (uint256) {
         return (amount * matrixDistributionBps) / BPS;
     }
+
+    // --- SPILL HELPERS ---
 
     function _findEligibleUplineTarget(address newUser, address referrer, uint256 uplineLevel, uint8 level) private returns (address) {
         address current = referrer;
@@ -627,6 +600,8 @@ contract LAEClubMatrix {
         return owner;
     }
 
+    // --- LAE REWARD LAYER (10% liquidity → vested LAE) ---
+
     function _splitPaymentAndAllocateLae(address userAddress, uint8 level, uint256 totalAmount) private {
         if (LAE_COIN_ADDRESS == address(0) || LIQUIDITY_POOL_ADDRESS == address(0)) {
             return;
@@ -638,7 +613,7 @@ contract LAEClubMatrix {
         }
 
         require(
-            IERC20(BTCB_TOKEN_ADDRESS).transfer(LIQUIDITY_POOL_ADDRESS, liquidityShare),
+            IERC20(PAYMENT_TOKEN).transfer(LIQUIDITY_POOL_ADDRESS, liquidityShare),
             "LAEClubMatrix: liquidity transfer failed"
         );
         totalLiquidityCollected += liquidityShare;
@@ -769,6 +744,8 @@ contract LAEClubMatrix {
         return qualifiedReleased - schedule.claimed;
     }
 
+    // --- VIEW FUNCTIONS ---
+
     function getLaeRewardSummary(address userAddress)
         external
         view
@@ -853,7 +830,7 @@ contract LAEClubMatrix {
         address[] storage directs = users[userAddress].directReferrals;
         ids = new uint256[](directs.length);
         for (uint256 i = 0; i < directs.length; i++) {
-        ids[i] = addressToId[directs[i]];
+            ids[i] = addressToId[directs[i]];
         }
     }
 

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { Panel } from "@/components/dashboard/ui";
+import { QueryError } from "@/components/dashboard/QueryState";
 import { fetchLaeAdminMatrix } from "@/lib/lae-club/admin-api";
 import { truncateAddress } from "@/lib/format";
 
@@ -18,20 +19,31 @@ type Placement = {
 
 export default function AdminMatrixPage() {
   const [placements, setPlacements] = useState<Placement[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchLaeAdminMatrix().then((d) => setPlacements((d?.placements as Placement[]) ?? []));
+    fetchLaeAdminMatrix().then((result) => {
+      if (result.ok) {
+        setPlacements(result.data.placements as Placement[]);
+        setError(null);
+      } else {
+        setPlacements([]);
+        setError(result.error);
+      }
+    });
   }, []);
 
   return (
     <AdminShell title="Matrix">
       <h1 className="font-display text-2xl font-bold">Matrix Placements</h1>
       <p className="mt-1 text-sm text-slate-400">
-        NewUserPlace events · 12 levels · 14 spots per cycle
+        NewUserPlace events · 15 levels · 14 spots per cycle
       </p>
 
       <Panel className="mt-6" title="Recent placements">
-        {placements.length === 0 ? (
+        {error ? (
+          <QueryError message={error} />
+        ) : placements.length === 0 ? (
           <p className="text-sm text-slate-500">No indexed placements yet</p>
         ) : (
           <div className="overflow-x-auto">

@@ -30,7 +30,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "LAE Club — 12-Level Matrix Business",
     description:
-      "Join the LAE Club Matrix — transparent 14-spot, 12-level business on BNB Chain.",
+      "Join the LAE Club Matrix — transparent 14-spot, 15-level business on BNB Chain.",
     type: "website",
     images: [
       {

@@ -22,7 +22,6 @@ import {
   useLaeRecycleCount,
   useLaeNftStatus,
   useLaeMatrixLevel,
-  useLaeUserEvents,
   referralLinkByUserId,
 } from "@/lib/lae-club/hooks";
 import { fmtEther } from "@/lib/contracts/format";
@@ -37,7 +36,7 @@ export default function DashboardHome() {
   const recycles = useLaeRecycleCount();
   const nft = useLaeNftStatus();
   const matrixL1 = useLaeMatrixLevel(1);
-  const events = useLaeUserEvents();
+  const recentEvents = (income.allEvents ?? []).slice(-8).reverse();
 
   if (user.isLoading || levels.isLoading) {
     return <QueryLoading label="Loading on-chain dashboard…" />;
@@ -59,7 +58,6 @@ export default function DashboardHome() {
     );
   }
 
-  const recentEvents = (events.data ?? []).slice(-8).reverse();
   const royalRank = nft.royalRank4
     ? 4
     : nft.royalRank3
@@ -190,7 +188,7 @@ export default function DashboardHome() {
           </Link>
         }
       >
-        {events.isLoading ? (
+        {income.isLoading ? (
           <p className="text-sm text-slate-500">Loading events from chain…</p>
         ) : recentEvents.length === 0 ? (
           <p className="text-sm text-slate-500">No events yet for this user</p>
@@ -223,7 +221,7 @@ export default function DashboardHome() {
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {[
-          { href: "/dashboard/matrix", icon: Layers, label: "Matrix", desc: "12 levels · 14 spots" },
+          { href: "/dashboard/matrix", icon: Layers, label: "Matrix", desc: "15 levels · 14 spots" },
           { href: "/dashboard/income", icon: TrendingUp, label: "Income", desc: "TokenReceived events" },
           { href: "/dashboard/royal-pool", icon: Crown, label: "Royal Pool", desc: "TreasuryPool income" },
           { href: "/dashboard/rewards", icon: Sparkles, label: "Rewards", desc: "LAE token rewards" },

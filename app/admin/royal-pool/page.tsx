@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { Panel } from "@/components/dashboard/ui";
+import { QueryError } from "@/components/dashboard/QueryState";
 import { fetchLaeAdminIncome, fetchLaeAdminStats } from "@/lib/lae-club/admin-api";
 import { useLaeRoyalPoolBalance } from "@/lib/lae-club/hooks";
 import { fmtEther } from "@/lib/contracts/format";
@@ -20,15 +21,35 @@ export default function AdminRoyalPoolPage() {
   const pool = useLaeRoyalPoolBalance();
   const [stats, setStats] = useState<{ totalPaid: string; eventCount: number } | null>(null);
   const [rows, setRows] = useState<IncomeRow[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchLaeAdminStats().then((s) => setStats(s?.royalPool ?? null));
-    fetchLaeAdminIncome("royal").then((d) => setRows((d?.incomes as IncomeRow[]) ?? []));
+    Promise.all([fetchLaeAdminStats(), fetchLaeAdminIncome("royal")]).then(
+      ([statsResult, incomeResult]) => {
+        if (!statsResult.ok) {
+          setError(statsResult.error);
+          return;
+        }
+        if (!incomeResult.ok) {
+          setError(incomeResult.error);
+          return;
+        }
+        setStats(statsResult.data.royalPool ?? null);
+        setRows(incomeResult.data.incomes as IncomeRow[]);
+        setError(null);
+      }
+    );
   }, []);
 
   return (
     <AdminShell title="Royal Pool">
       <h1 className="font-display text-2xl font-bold">Royal Pool</h1>
+
+      {error && (
+        <div className="mt-4">
+          <QueryError message={error} />
+        </div>
+      )}
 
       <div className="mt-6 grid gap-4 sm:grid-cols-3">
         <Panel title="Pool balance (live ERC20)">
@@ -58,8 +79,8 @@ export default function AdminRoyalPoolPage() {
         {rows.length === 0 ? (
           <p className="text-sm text-slate-500">No indexed royal payouts</p>
         ) : (
-          rows.map((r) => (
-            <div key={r.txHash} className="flex justify-between border-b border-white/5 py-2 text-sm">
+          rows.map((r, i) => (
+            <div key={`${r.txHash}-${i}`} className="flex justify-between border-b border-white/5 py-2 text-sm">
               <span>User #{r.receiverUserId} · L{r.level}</span>
               <span className="text-brand-300">+{fmtEther(BigInt(r.amount))}</span>
             </div>

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { Panel } from "@/components/dashboard/ui";
+import { QueryError } from "@/components/dashboard/QueryState";
 import { fetchLaeAdminAnalytics } from "@/lib/lae-club/admin-api";
 
 type Analytics = {
@@ -18,9 +19,18 @@ type Analytics = {
 
 export default function AdminAnalyticsPage() {
   const [data, setData] = useState<Analytics | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchLaeAdminAnalytics().then((d) => setData(d as Analytics | null));
+    fetchLaeAdminAnalytics().then((result) => {
+      if (result.ok) {
+        setData(result.data as Analytics);
+        setError(null);
+      } else {
+        setData(null);
+        setError(result.error);
+      }
+    });
   }, []);
 
   return (
@@ -28,10 +38,16 @@ export default function AdminAnalyticsPage() {
       <h1 className="font-display text-2xl font-bold">Analytics</h1>
       <p className="mt-1 text-sm text-slate-400">Indexed LAE matrix analytics database</p>
 
+      {error && (
+        <div className="mt-4">
+          <QueryError message={error} />
+        </div>
+      )}
+
       <Panel className="mt-6" title="Income by kind">
-        {!data ? (
+        {!data && !error ? (
           <p className="text-sm text-slate-500">Loading…</p>
-        ) : data.incomeByKind.length === 0 ? (
+        ) : !data || data.incomeByKind.length === 0 ? (
           <p className="text-sm text-slate-500">No income indexed yet</p>
         ) : (
           data.incomeByKind.map((r) => (

@@ -6,8 +6,6 @@ const dir = __dirname;
 const files = [
   "LAEClubMatrix.sol",
   "LAECoin.sol",
-  "LAERegistrationPassNFT.sol",
-  "LAERoyalCardNFT.sol",
 ];
 const sources = {};
 for (const f of files) {

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { Panel } from "@/components/dashboard/ui";
+import { QueryError } from "@/components/dashboard/QueryState";
 import { fetchLaeAdminStaking } from "@/lib/lae-club/admin-api";
 import { useLaeStaking } from "@/lib/lae-club/hooks";
 import { fmtEther } from "@/lib/contracts/format";
@@ -23,22 +24,35 @@ export default function AdminStakingPage() {
     activeStakes: number;
     recent: StakeRow[];
   } | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchLaeAdminStaking().then((d) =>
-      setIndexed(
-        d as {
-          totalStaked: string;
-          activeStakes: number;
-          recent: StakeRow[];
-        } | null
-      )
-    );
+    fetchLaeAdminStaking().then((result) => {
+      if (result.ok) {
+        setIndexed(
+          result.data as {
+            totalStaked: string;
+            activeStakes: number;
+            recent: StakeRow[];
+          }
+        );
+        setError(null);
+      } else {
+        setIndexed(null);
+        setError(result.error);
+      }
+    });
   }, []);
 
   return (
     <AdminShell title="Staking">
       <h1 className="font-display text-2xl font-bold">Staking</h1>
+
+      {error && (
+        <div className="mt-4">
+          <QueryError message={error} />
+        </div>
+      )}
 
       <div className="mt-6 grid gap-4 sm:grid-cols-3">
         <Panel title="Global staked (live contract)">

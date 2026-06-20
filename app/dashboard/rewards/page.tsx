@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Panel, StatCard } from "@/components/dashboard/ui";
-import { QueryLoading } from "@/components/dashboard/QueryState";
+import { QueryLoading, QueryError } from "@/components/dashboard/QueryState";
 import {
   useLaeUser,
   useLaeRewardSummary,
@@ -11,6 +11,7 @@ import {
 } from "@/lib/lae-club/hooks";
 import { fmtEther } from "@/lib/contracts/format";
 import { LAE_COIN_TOKENOMICS } from "@/lib/lae-club/constants";
+import { formatWalletError } from "@/lib/wallet/errors";
 
 export default function RewardsPage() {
   const user = useLaeUser();
@@ -19,14 +20,29 @@ export default function RewardsPage() {
   const claim = useClaimLaeRewards();
   const [msg, setMsg] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (claim.receipt.isSuccess) {
+      rewards.refetch();
+    }
+  }, [claim.receipt.isSuccess, claim.receipt.data?.transactionHash, rewards.refetch]);
+
   if (user.isLoading || rewards.isLoading) {
     return <QueryLoading label="Loading LAE rewards…" />;
+  }
+
+  if (user.isError) {
+    return (
+      <QueryError
+        message="Could not load user profile — wallet disconnected or contract unavailable"
+        onRetry={() => user.refetch()}
+      />
+    );
   }
 
   if (!user.registered) {
     return (
       <Panel title="LAE Rewards">
-        <p className="text-sm text-slate-400">Register on LAE Club Matrix to receive locked LAE rewards.</p>
+        <p className="text-sm text-slate-400">User not registered — register on LAE Club Matrix first.</p>
       </Panel>
     );
   }
@@ -36,13 +52,14 @@ export default function RewardsPage() {
     try {
       await claim.claim();
       setMsg("Claim submitted — confirm in your wallet.");
-      rewards.refetch();
     } catch (e) {
-      setMsg(e instanceof Error ? e.message : "Claim failed");
+      setMsg(formatWalletError(e));
     }
   }
 
   const directOk = rewards.directCount >= vesting.requiredDirects;
+  const canClaim =
+    rewards.claimable > 0n && directOk && !claim.isPending && !claim.isConfirming;
 
   return (
     <div>
@@ -77,13 +94,16 @@ export default function RewardsPage() {
         )}
         <button
           type="button"
-          className="btn-primary mt-4"
-          disabled={rewards.claimable === 0n || claim.isPending || claim.isConfirming}
+          className="btn-primary mt-4 disabled:opacity-50"
+          disabled={!canClaim}
           onClick={() => void onClaim()}
         >
           {claim.isPending || claim.isConfirming ? "Claiming…" : "Claim LAE rewards"}
         </button>
         {msg && <p className="mt-3 text-sm text-slate-300">{msg}</p>}
+        {claim.error && (
+          <p className="mt-2 text-sm text-red-400">{formatWalletError(claim.error)}</p>
+        )}
         {claim.receipt.isSuccess && (
           <p className="mt-2 text-sm text-emerald-400">Claim confirmed on-chain.</p>
         )}

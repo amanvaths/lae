@@ -21,7 +21,7 @@ const steps = [
   {
     num: "03",
     title: "Grow Network",
-    desc: "Invite direct referrals and build depth across 12 levels. The matrix fills organically through spillover.",
+    desc: "Invite direct referrals and build depth across 15 levels. The matrix fills organically through spillover.",
     icon: Network,
   },
   {

@@ -12,8 +12,8 @@ export const LAE_VISION = {
 
 export const LAE_TOKENOMICS = {
   totalSupply: 500_000,
-  communityReward: { amount: 400_000, pct: 80, label: "Reward Pool (vesting)" },
-  liquidityPool: { amount: 100_000, pct: 20, label: "Treasury · Liquidity · Operations" },
+  communityReward: { amount: 450_000, pct: 90, label: "Reward Pool (vesting)" },
+  liquidityPool: { amount: 50_000, pct: 10, label: "Treasury · Liquidity · Operations" },
   launchPrice: 0.1,
   launchPriceLabel: "$0.10",
   ecosystemTarget: "Up To 1 BTC",
@@ -39,11 +39,11 @@ export const LAE_DISTRIBUTION = {
 };
 
 export const LAE_SMART_MATRIX = {
-  eyebrow: "12 level smart matrix",
+  eyebrow: "15 level smart matrix",
   title: "Fully automated matrix distribution",
-  body: "The LAE Club ecosystem operates through a fully automated 12-level Smart Matrix with 14 spots per level. Each participant activates Level 1 through registration and progresses through higher levels based on matrix completion, auto-upgrade, and recycle events.",
+  body: "The LAE Club ecosystem operates through a fully automated 15-level Smart Matrix with 14 spots per level. Each participant activates Level 1 through registration and progresses through higher levels based on matrix completion, auto-upgrade, and recycle events.",
   slots: 14,
-  levels: 12,
+  levels: 15,
 };
 
 export const LAE_COMMUNITY = {

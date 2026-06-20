@@ -5,6 +5,7 @@ import { Panel } from "@/components/dashboard/ui";
 import { QueryLoading } from "@/components/dashboard/QueryState";
 import { ConnectWallet } from "@/components/web3/ConnectWallet";
 import Link from "next/link";
+import { withBasePath } from "@/lib/paths";
 import { useLaeUser, referralLinkByUserId } from "@/lib/lae-club/hooks";
 import { useWalletSession } from "@/providers/WalletSessionProvider";
 import { truncateAddress } from "@/lib/format";
@@ -59,7 +60,7 @@ export default function SettingsPage() {
           <button type="button" className="btn-ghost" onClick={disconnectWallet}>
             Disconnect wallet
           </button>
-          <Link href="/admin" className="btn-ghost">
+          <Link href={withBasePath("/admin")} className="btn-ghost">
             Admin panel
           </Link>
         </div>

@@ -3,14 +3,24 @@
 import { useEffect, useState } from "react";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { Panel } from "@/components/dashboard/ui";
+import { QueryError } from "@/components/dashboard/QueryState";
 import { fetchLaeAdminUsers, type LaeIndexedUser } from "@/lib/lae-club/admin-api";
 import { truncateAddress } from "@/lib/format";
 
 export default function AdminUsersPage() {
   const [data, setData] = useState<{ users: LaeIndexedUser[]; total: number } | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchLaeAdminUsers(200).then(setData);
+    fetchLaeAdminUsers(200).then((result) => {
+      if (result.ok) {
+        setData(result.data);
+        setError(null);
+      } else {
+        setData(null);
+        setError(result.error);
+      }
+    });
   }, []);
 
   return (
@@ -21,7 +31,9 @@ export default function AdminUsersPage() {
       </p>
 
       <Panel className="mt-6" title="Recent users">
-        {!data ? (
+        {error ? (
+          <QueryError message={error} />
+        ) : !data ? (
           <p className="text-sm text-slate-500">Loading…</p>
         ) : data.users.length === 0 ? (
           <p className="text-sm text-slate-500">No indexed users — ensure indexer is running</p>

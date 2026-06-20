@@ -17,6 +17,7 @@ import {
   RegistrationCheckSpinner,
 } from "@/components/auth/RegistrationCheckBanner";
 import { withBasePath } from "@/lib/paths";
+import { WrongNetworkPanel } from "@/components/web3/WrongNetworkPanel";
 
 /** Connect screen — registered wallets go to dashboard; others go to registration. */
 export function LoginGate({ children }: { children: ReactNode }) {
@@ -63,6 +64,10 @@ export function LoginGate({ children }: { children: ReactNode }) {
 
   if (walletWait.waiting) {
     return <RegistrationCheckSpinner label="Checking wallet…" />;
+  }
+
+  if (status === "connected" && address && isWrongNetwork) {
+    return <WrongNetworkPanel />;
   }
 
   if (

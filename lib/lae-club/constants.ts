@@ -1,6 +1,6 @@
-/** LAE Club Matrix — 12 levels · 14 spots (BTitan-style) */
+/** LAE Club Matrix — 15 levels · 14 spots */
 
-export const LAE_LEVELS = 12;
+export const LAE_LEVELS = 15;
 export const LAE_MATRIX_SIZE = 14;
 
 /** Spot layout: 2 + 4 + 8 = 14 */
@@ -34,16 +34,19 @@ export const DEFAULT_LEVEL_PRICES_BTC = [
   "0.512",
   "1.024",
   "2.048",
+  "4.096",
+  "8.192",
+  "16.384",
 ] as const;
 
 export const LAE_COIN_TOKENOMICS = {
   name: "LAE Coin",
   symbol: "LAE",
   totalSupply: 500_000,
-  rewardPool: 400_000,
-  residualSupply: 100_000,
-  communityReward: 400_000,
-  liquidityPool: 100_000,
+  rewardPool: 450_000,
+  residualSupply: 50_000,
+  communityReward: 450_000,
+  liquidityPool: 50_000,
   launchPrice: 0.1,
   decimals: 18,
   vestingMonths: 20,

@@ -24,7 +24,7 @@ export default function MatrixPage() {
     <div>
       <h1 className="font-display text-2xl font-bold text-white">LAE Club Matrix</h1>
       <p className="mt-1 text-sm text-slate-400">
-        12 levels · 14 spots · live on-chain · User ID #{String(user.userId ?? "—")}
+        15 levels · 14 spots · live on-chain · User ID #{String(user.userId ?? "—")}
       </p>
 
       <div className="mt-4 flex flex-wrap gap-2">

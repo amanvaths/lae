@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { Panel } from "@/components/dashboard/ui";
+import { QueryError } from "@/components/dashboard/QueryState";
 import { fetchLaeAdminIncome } from "@/lib/lae-club/admin-api";
 import { fmtEther } from "@/lib/contracts/format";
 import { truncateAddress } from "@/lib/format";
@@ -19,10 +20,26 @@ type IncomeRow = {
 export default function AdminIncomePage() {
   const [matrix, setMatrix] = useState<IncomeRow[]>([]);
   const [royal, setRoyal] = useState<IncomeRow[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchLaeAdminIncome("matrix").then((d) => setMatrix((d?.incomes as IncomeRow[]) ?? []));
-    fetchLaeAdminIncome("royal").then((d) => setRoyal((d?.incomes as IncomeRow[]) ?? []));
+    Promise.all([fetchLaeAdminIncome("matrix"), fetchLaeAdminIncome("royal")]).then(
+      ([matrixResult, royalResult]) => {
+        if (!matrixResult.ok || !royalResult.ok) {
+          setError(
+            !matrixResult.ok
+              ? matrixResult.error
+              : !royalResult.ok
+                ? royalResult.error
+                : "Failed to load income"
+          );
+          return;
+        }
+        setMatrix(matrixResult.data.incomes as IncomeRow[]);
+        setRoyal(royalResult.data.incomes as IncomeRow[]);
+        setError(null);
+      }
+    );
   }, []);
 
   return (
@@ -32,12 +49,18 @@ export default function AdminIncomePage() {
         TokenReceived (matrix) and TreasuryPool (royal) from indexer
       </p>
 
+      {error && (
+        <div className="mt-4">
+          <QueryError message={error} />
+        </div>
+      )}
+
       <Panel className="mt-6" title="Matrix income (TokenReceived)">
         {matrix.length === 0 ? (
           <p className="text-sm text-slate-500">No indexed matrix income</p>
         ) : (
-          matrix.map((r) => (
-            <div key={r.txHash} className="flex justify-between border-b border-white/5 py-2 text-sm">
+          matrix.map((r, i) => (
+            <div key={`${r.txHash}-${r.receiverUserId}-${i}`} className="flex justify-between border-b border-white/5 py-2 text-sm">
               <span>
                 #{r.receiverUserId} · L{r.level} · from #{r.fromUserId ?? "—"}
               </span>
@@ -51,8 +74,8 @@ export default function AdminIncomePage() {
         {royal.length === 0 ? (
           <p className="text-sm text-slate-500">No indexed royal income</p>
         ) : (
-          royal.map((r) => (
-            <div key={r.txHash} className="flex justify-between border-b border-white/5 py-2 text-sm">
+          royal.map((r, i) => (
+            <div key={`${r.txHash}-${r.receiverUserId}-${i}`} className="flex justify-between border-b border-white/5 py-2 text-sm">
               <span>#{r.receiverUserId} · L{r.level}</span>
               <span className="text-brand-300">+{fmtEther(BigInt(r.amount))}</span>
             </div>

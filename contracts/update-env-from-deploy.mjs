@@ -28,11 +28,6 @@ upsertEnv(path.join(__dirname, "..", ".env.local"), {
   NEXT_PUBLIC_LAE_MATRIX_CONTRACT: d.matrix,
   NEXT_PUBLIC_LAE_COIN_CONTRACT: d.laeCoin,
   NEXT_PUBLIC_PAYMENT_TOKEN: d.paymentToken,
-  NEXT_PUBLIC_REG_NFT_CONTRACT: d.registrationNft,
-  NEXT_PUBLIC_ROYAL1_NFT: d.royalRank1,
-  NEXT_PUBLIC_ROYAL2_NFT: d.royalRank2,
-  NEXT_PUBLIC_ROYAL3_NFT: d.royalRank3,
-  NEXT_PUBLIC_ROYAL4_NFT: d.royalRank4,
   NEXT_PUBLIC_API_URL: "http://localhost:4000",
 });
 
@@ -48,11 +43,6 @@ upsertEnv(path.join(__dirname, "..", ".env.example"), {
   NEXT_PUBLIC_CHAIN_ID: String(d.chainId),
   NEXT_PUBLIC_LAE_MATRIX_CONTRACT: d.matrix,
   NEXT_PUBLIC_LAE_COIN_CONTRACT: d.laeCoin,
-  NEXT_PUBLIC_REG_NFT_CONTRACT: d.registrationNft,
-  NEXT_PUBLIC_ROYAL1_NFT: d.royalRank1,
-  NEXT_PUBLIC_ROYAL2_NFT: d.royalRank2,
-  NEXT_PUBLIC_ROYAL3_NFT: d.royalRank3,
-  NEXT_PUBLIC_ROYAL4_NFT: d.royalRank4,
   LAE_MATRIX_CONTRACT_ADDRESS: d.matrix,
   LAE_COIN_CONTRACT_ADDRESS: d.laeCoin,
 });

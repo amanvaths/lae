@@ -20,6 +20,7 @@ import {
 } from "./abis";
 import { LAE_LEVELS } from "./constants";
 import { withBasePath } from "@/lib/paths";
+import { matrixEventMatchesUser } from "./event-filter";
 
 export type LaeUserDetails = readonly [
   Address,
@@ -208,7 +209,7 @@ export function useLaeProtocolStats() {
     contracts: [
       { address: LAE_CONTRACTS.matrix, abi: laeClubMatrixAbi, functionName: "lastUserId" },
       { address: LAE_CONTRACTS.matrix, abi: laeClubMatrixAbi, functionName: "totalProjectInvestment" },
-      { address: LAE_CONTRACTS.matrix, abi: laeClubMatrixAbi, functionName: "BTCB_TOKEN_ADDRESS" },
+      { address: LAE_CONTRACTS.matrix, abi: laeClubMatrixAbi, functionName: "PAYMENT_TOKEN" },
     ],
     query: { staleTime: 30_000 },
   });
@@ -293,17 +294,17 @@ export function useLaeRoyalPoolBalance(poolAddress?: Address) {
   const onChainPool = useReadContract({
     address: LAE_CONTRACTS.matrix,
     abi: laeClubMatrixAbi,
-    functionName: "ROYAL_POOL_ADDRESS",
+    functionName: "CLUB_POOL_ADDRESS",
     query: { staleTime: 60_000 },
   });
   const addr =
     poolAddress ??
     (onChainPool.data as Address | undefined) ??
-    LAE_CONTRACTS.royalPool;
+    LAE_CONTRACTS.clubPool;
   const paymentToken = useReadContract({
     address: LAE_CONTRACTS.matrix,
     abi: laeClubMatrixAbi,
-    functionName: "BTCB_TOKEN_ADDRESS",
+    functionName: "PAYMENT_TOKEN",
     query: { staleTime: 60_000 },
   });
   const token = (paymentToken.data as Address | undefined) ?? LAE_CONTRACTS.payment;
@@ -331,7 +332,7 @@ export function useLaeUserEvents() {
   const user = useLaeUser();
 
   return useQuery({
-    queryKey: ["lae-events", user.userId?.toString(), LAE_CONTRACTS.matrix],
+    queryKey: ["lae-events", user.userId?.toString(), user.userAddress, LAE_CONTRACTS.matrix],
     enabled: !!client && !!user.userId && user.userId > 0n,
     staleTime: 120_000,
     retry: 1,
@@ -348,17 +349,13 @@ export function useLaeUserEvents() {
         fromBlock,
         toBlock: head,
       });
-      return logs.filter((log) => {
-        const args = log.args as Record<string, unknown>;
-        return (
-          args.userId === uid ||
-          args.receiverId === uid ||
-          args.user === uid ||
-          args.refId === uid ||
-          args.callerId === uid ||
-          args.fromId === uid
-        );
-      });
+      return logs.filter((log) =>
+        matrixEventMatchesUser(
+          { eventName: log.eventName, args: log.args as Record<string, unknown> },
+          uid,
+          user.userAddress
+        )
+      );
     },
   });
 }
@@ -366,12 +363,13 @@ export function useLaeUserEvents() {
 export function useLaeIncomeEvents() {
   const events = useLaeUserEvents();
   const income = (events.data ?? []).filter((e) => e.eventName === "TokenReceived");
-  const royal = (events.data ?? []).filter((e) => e.eventName === "TreasuryPool");
+  const royal = (events.data ?? []).filter((e) => e.eventName === "ClubPoolPayment");
   const totalMatrix = income.reduce((s, e) => s + ((e.args.amount as bigint) ?? 0n), 0n);
   const totalRoyal = royal.reduce((s, e) => s + ((e.args.amount as bigint) ?? 0n), 0n);
   return {
     incomeEvents: income,
     royalEvents: royal,
+    allEvents: events.data ?? [],
     spillEvents: (events.data ?? []).filter((e) => e.eventName === "Spillover"),
     placementEvents: (events.data ?? []).filter((e) => e.eventName === "NewUserPlace"),
     reinvestEvents: (events.data ?? []).filter((e) => e.eventName === "Reinvest"),

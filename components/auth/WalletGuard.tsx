@@ -17,6 +17,7 @@ import {
   RegistrationCheckSpinner,
 } from "@/components/auth/RegistrationCheckBanner";
 import { withBasePath } from "@/lib/paths";
+import { WrongNetworkPanel } from "@/components/web3/WrongNetworkPanel";
 
 /** Dashboard access: connected wallet, correct network, on-chain registration. */
 export function WalletGuard({ children }: { children: ReactNode }) {
@@ -42,11 +43,7 @@ export function WalletGuard({ children }: { children: ReactNode }) {
       return;
     }
 
-    if (isWrongNetwork) {
-      redirecting.current = true;
-      router.replace(withBasePath("/login"));
-      return;
-    }
+    if (isWrongNetwork) return;
 
     if (isCheckingLaeRegistration(user, timedOut)) return;
     if (laeRegistrationFailed(user, timedOut)) return;
@@ -75,8 +72,12 @@ export function WalletGuard({ children }: { children: ReactNode }) {
     return <RegistrationCheckSpinner label="Connecting wallet…" />;
   }
 
-  if (status !== "connected" || !address || isWrongNetwork) {
+  if (status !== "connected" || !address) {
     return <RegistrationCheckSpinner label="Redirecting to login…" />;
+  }
+
+  if (isWrongNetwork) {
+    return <WrongNetworkPanel />;
   }
 
   if (failed) {

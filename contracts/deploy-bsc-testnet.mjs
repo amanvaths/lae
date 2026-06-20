@@ -18,8 +18,6 @@ const PAYMENT_TOKEN =
 
 const FILES = [
   "LAECoin.sol",
-  "LAERegistrationPassNFT.sol",
-  "LAERoyalCardNFT.sol",
   "LAEClubMatrix.sol",
 ];
 
@@ -84,44 +82,13 @@ async function main() {
   const coinAddr = await coin.getAddress();
   console.log("   LAECoin:", coinAddr);
 
-  console.log("\n2. Deploy LAERegistrationPassNFT...");
-  const passFactory = new ethers.ContractFactory(
-    compiled.LAERegistrationPassNFT.abi,
-    compiled.LAERegistrationPassNFT.bytecode,
-    wallet
-  );
-  const pass = await passFactory.deploy("https://laeclub.com/nft/pass/", gasOpts);
-  await pass.waitForDeployment();
-  const passAddr = await pass.getAddress();
-  console.log("   RegPass:", passAddr);
-
-  const ranks = [];
-  for (let r = 1; r <= 4; r++) {
-    console.log(`\n3.${r} Deploy LAERoyalCardNFT Rank ${r}...`);
-    const royalFactory = new ethers.ContractFactory(
-      compiled.LAERoyalCardNFT.abi,
-      compiled.LAERoyalCardNFT.bytecode,
-      wallet
-    );
-    const royal = await royalFactory.deploy(
-      `LAE Royal Rank ${r}`,
-      `LAER${r}`,
-      r,
-      gasOpts
-    );
-    await royal.waitForDeployment();
-    const addr = await royal.getAddress();
-    ranks.push(addr);
-    console.log(`   Royal${r}:`, addr);
-  }
-
   const treasury = wallet.address;
-  const royalPool = wallet.address;
+  const clubPool = wallet.address;
   const platformTreasury = wallet.address;
   const liquidityWallet = wallet.address;
   const operationsWallet = wallet.address;
 
-  console.log("\n4. Deploy LAEClubMatrix...");
+  console.log("\n2. Deploy LAEClubMatrix...");
   const matrixFactory = new ethers.ContractFactory(
     compiled.LAEClubMatrix.abi,
     compiled.LAEClubMatrix.bytecode,
@@ -130,42 +97,27 @@ async function main() {
   const matrix = await matrixFactory.deploy(
     wallet.address,
     PAYMENT_TOKEN,
-    royalPool,
+    clubPool,
     platformTreasury,
-    passAddr,
-    ranks[0],
-    ranks[1],
-    ranks[2],
-    ranks[3],
     gasOpts
   );
   await matrix.waitForDeployment();
   const matrixAddr = await matrix.getAddress();
   console.log("   Matrix:", matrixAddr);
 
-  console.log("\n5. Wire contracts...");
+  console.log("\n3. Wire contracts...");
   const coinC = new ethers.Contract(coinAddr, compiled.LAECoin.abi, wallet);
   const matrixC = new ethers.Contract(matrixAddr, compiled.LAEClubMatrix.abi, wallet);
-  const passC = new ethers.Contract(passAddr, compiled.LAERegistrationPassNFT.abi, wallet);
 
-  let tx = await passC.setMinter(matrixAddr);
-  await tx.wait();
-  for (let i = 0; i < 4; i++) {
-    const royalC = new ethers.Contract(ranks[i], compiled.LAERoyalCardNFT.abi, wallet);
-    tx = await royalC.setMinter(matrixAddr);
-    await tx.wait();
-  }
-  console.log("   NFT minters set");
-
-  tx = await coinC.setWallets(treasury, liquidityWallet, operationsWallet);
+  let tx = await coinC.setWallets(treasury, liquidityWallet, operationsWallet);
   await tx.wait();
   tx = await coinC.setMatrixContract(matrixAddr);
   await tx.wait();
   tx = await coinC.bootstrapSupply(
-    ethers.parseEther("400000"),
-    ethers.parseEther("40000"),
-    ethers.parseEther("30000"),
-    ethers.parseEther("30000")
+    ethers.parseEther("450000"),
+    ethers.parseEther("20000"),
+    ethers.parseEther("20000"),
+    ethers.parseEther("10000")
   );
   await tx.wait();
   console.log("   bootstrapSupply tx:", tx.hash);
@@ -190,14 +142,9 @@ async function main() {
     deployer: wallet.address,
     paymentToken: PAYMENT_TOKEN,
     laeCoin: coinAddr,
-    registrationNft: passAddr,
-    royalRank1: ranks[0],
-    royalRank2: ranks[1],
-    royalRank3: ranks[2],
-    royalRank4: ranks[3],
     matrix: matrixAddr,
     treasuryWallet: treasury,
-    royalPool,
+    clubPool,
     platformTreasury,
     liquidityWallet,
     operationsWallet,

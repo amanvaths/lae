@@ -1,7 +1,7 @@
 "use client";
 
 import { Panel } from "@/components/dashboard/ui";
-import { QueryLoading } from "@/components/dashboard/QueryState";
+import { QueryLoading, QueryError } from "@/components/dashboard/QueryState";
 import { useLaeIncomeEvents, useLaeUser } from "@/lib/lae-club/hooks";
 import { fmtEther } from "@/lib/contracts/format";
 import { txUrl } from "@/lib/lae-club/contracts";
@@ -13,6 +13,23 @@ export default function IncomePage() {
 
   if (user.isLoading || income.isLoading) {
     return <QueryLoading label="Loading income from chain…" />;
+  }
+
+  if (user.isError || income.isError) {
+    return (
+      <QueryError
+        message="Could not load income — check wallet connection and BSC Testnet RPC"
+        onRetry={() => income.refetch()}
+      />
+    );
+  }
+
+  if (!user.registered) {
+    return (
+      <Panel title="Income">
+        <p className="text-sm text-slate-400">User not registered on LAE Club Matrix.</p>
+      </Panel>
+    );
   }
 
   const total = income.totalMatrixIncome || user.totalIncome || 0n;

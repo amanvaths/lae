@@ -1,0 +1,10 @@
+{
+  "chainId": 97,
+  "network": "bsc-testnet",
+  "matrix": "0xfa671b8Bae031fB9ef6eD02E9a9a63d05f764Dcf",
+  "laeCoin": "0xD6698E6a8Ee4712cC2E36C150f1C34e59884C45A",
+  "paymentToken": "0xf8E556996042b34cc706F040c59955abB678995e",
+  "matrixDeployBlock": 114471162,
+  "laeCoinDeployBlock": 114471462,
+  "deployBlock": 114471162
+}

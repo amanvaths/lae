@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { Panel } from "@/components/dashboard/ui";
+import { QueryError } from "@/components/dashboard/QueryState";
 import { fetchLaeAdminRewards, type LaeRewardsAnalytics } from "@/lib/lae-club/admin-api";
 import { fmtEther } from "@/lib/contracts/format";
 import { truncateAddress } from "@/lib/format";
@@ -19,9 +20,18 @@ function payloadAmount(payload: unknown, key: string): string {
 
 export default function AdminRewardsPage() {
   const [data, setData] = useState<LaeRewardsAnalytics | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchLaeAdminRewards().then(setData);
+    fetchLaeAdminRewards().then((result) => {
+      if (result.ok) {
+        setData(result.data);
+        setError(null);
+      } else {
+        setData(null);
+        setError(result.error);
+      }
+    });
   }, []);
 
   return (
@@ -30,6 +40,12 @@ export default function AdminRewardsPage() {
       <p className="mt-1 text-sm text-slate-400">
         Indexed LaeRewardAllocated and LaeRewardClaimed events from LAEClubMatrix
       </p>
+
+      {error && (
+        <div className="mt-4">
+          <QueryError message={error} />
+        </div>
+      )}
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Panel title="Allocations indexed">
