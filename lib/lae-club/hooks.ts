@@ -552,3 +552,227 @@ export function useClaimLaeRewards() {
 
   return { claim, hash, isPending, isConfirming: receipt.isLoading, error, receipt };
 }
+
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as Address;
+
+export function parseLaeUserId(input: string | number | null | undefined): bigint | null {
+  if (input === null || input === undefined || input === "") return null;
+  try {
+    const id = BigInt(String(input).trim());
+    return id > 0n ? id : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Public read-only profile by numeric user ID — no wallet required. */
+export function useLaeUserById(userIdInput: string | number | null | undefined) {
+  const userId = parseLaeUserId(userIdInput);
+
+  const reads = useReadContracts({
+    contracts: userId
+      ? [
+          {
+            address: LAE_CONTRACTS.matrix,
+            abi: laeClubMatrixAbi,
+            functionName: "idToAddress" as const,
+            args: [userId] as [bigint],
+          },
+          {
+            address: LAE_CONTRACTS.matrix,
+            abi: laeClubMatrixAbi,
+            functionName: "getUserDetails" as const,
+            args: [userId] as [bigint],
+          },
+        ]
+      : [],
+    query: { enabled: !!userId, staleTime: 60_000, retry: 1 },
+  });
+
+  const walletAddress = reads.data?.[0]?.result as Address | undefined;
+  const exists =
+    !!walletAddress &&
+    walletAddress.toLowerCase() !== ZERO_ADDRESS.toLowerCase();
+  const d = reads.data?.[1]?.result as LaeUserDetails | undefined;
+  const registered = exists && !!d?.[0];
+
+  return {
+    ...mapLaeUserSnapshot({
+      registered,
+      userId: userId ?? undefined,
+      details: registered ? d : undefined,
+    }),
+    walletAddress: exists ? walletAddress : undefined,
+    isLoading: !!userId && reads.isLoading,
+    isError: reads.isError,
+    notFound: !!userId && !reads.isLoading && !exists,
+    refetch: () => void reads.refetch(),
+  };
+}
+
+export function useLaeMatrixLevelForUser(
+  userAddress: Address | undefined,
+  userId: bigint | undefined,
+  level: number
+) {
+  const enabled =
+    !!userAddress &&
+    !!userId &&
+    userId > 0n &&
+    level >= 1 &&
+    level <= LAE_LEVELS;
+
+  const reads = useReadContracts({
+    contracts: enabled
+      ? [
+          {
+            address: LAE_CONTRACTS.matrix,
+            abi: laeClubMatrixAbi,
+            functionName: "usersXMatrix" as const,
+            args: [userAddress, level] as [Address, number],
+          },
+          {
+            address: LAE_CONTRACTS.matrix,
+            abi: laeClubMatrixAbi,
+            functionName: "usersXMatrixReferrals" as const,
+            args: [userAddress, level] as [Address, number],
+          },
+          {
+            address: LAE_CONTRACTS.matrix,
+            abi: laeClubMatrixAbi,
+            functionName: "isUserSlotActive" as const,
+            args: [userId, level] as [bigint, number],
+          },
+        ]
+      : [],
+    query: { enabled, staleTime: 15_000, retry: 1 },
+  });
+
+  const m = reads.data?.[0]?.result as readonly [Address, bigint, bigint, bigint, bigint, bigint] | undefined;
+  const refs = (reads.data?.[1]?.result as Address[] | undefined) ?? [];
+
+  return {
+    active: reads.data?.[2]?.result === true,
+    reinvestCount: m?.[1] ?? 0n,
+    heldForUpgrade: m?.[2] ?? 0n,
+    totalTeamSize: m?.[4] ?? 0n,
+    totalEarning: m?.[5] ?? 0n,
+    referrals: refs,
+    filledSpots: refs.length,
+    isLoading: enabled && reads.isLoading,
+  };
+}
+
+export function useLaeAllMatrixLevelsForUser(userId: bigint | undefined) {
+  const contracts = Array.from({ length: LAE_LEVELS }, (_, i) => ({
+    address: LAE_CONTRACTS.matrix,
+    abi: laeClubMatrixAbi,
+    functionName: "isUserSlotActive" as const,
+    args: userId ? [userId, i + 1] : ([0n, i + 1] as [bigint, number]),
+  }));
+
+  const activeSlots = useReadContracts({
+    contracts,
+    query: { enabled: !!userId && userId > 0n, staleTime: 30_000, retry: 1 },
+  });
+
+  return {
+    levels: Array.from({ length: LAE_LEVELS }, (_, i) => ({
+      level: i + 1,
+      active: activeSlots.data?.[i]?.result === true,
+    })),
+    activeCount: activeSlots.data?.filter((r) => r.result === true).length ?? 0,
+    isLoading: activeSlots.isLoading,
+  };
+}
+
+export function useLaeDirectTeamForUser(userId: bigint | undefined) {
+  const enabled = !!userId && userId > 0n;
+  const reads = useReadContracts({
+    contracts: enabled
+      ? [
+          {
+            address: LAE_CONTRACTS.matrix,
+            abi: laeClubMatrixAbi,
+            functionName: "getDirectPartnerAddresses" as const,
+            args: [userId] as [bigint],
+          },
+          {
+            address: LAE_CONTRACTS.matrix,
+            abi: laeClubMatrixAbi,
+            functionName: "getDirectPartnerIds" as const,
+            args: [userId] as [bigint],
+          },
+        ]
+      : [],
+    query: { enabled, staleTime: 15_000, retry: 1 },
+  });
+
+  return {
+    addresses: (reads.data?.[0]?.result as Address[] | undefined) ?? [],
+    ids: (reads.data?.[1]?.result as bigint[] | undefined) ?? [],
+    isLoading: enabled && reads.isLoading,
+  };
+}
+
+export function useLaeRewardSummaryForAddress(userAddress: Address | undefined) {
+  const reads = useReadContracts({
+    contracts: userAddress
+      ? [
+          {
+            address: LAE_CONTRACTS.matrix,
+            abi: laeClubMatrixAbi,
+            functionName: "getLaeRewardSummary" as const,
+            args: [userAddress] as [Address],
+          },
+          {
+            address: LAE_CONTRACTS.matrix,
+            abi: laeClubMatrixAbi,
+            functionName: "getDirectPartnerCount" as const,
+            args: [userAddress] as [Address],
+          },
+        ]
+      : [],
+    query: { enabled: !!userAddress, staleTime: 15_000, retry: 1 },
+  });
+
+  const s = reads.data?.[0]?.result as readonly [bigint, bigint, bigint, bigint, bigint] | undefined;
+  const allocated = s?.[0] ?? 0n;
+  const released = s?.[1] ?? 0n;
+  const claimable = s?.[2] ?? 0n;
+  const claimed = s?.[3] ?? 0n;
+  const locked = s?.[4] ?? 0n;
+  const directCount = (reads.data?.[1]?.result as bigint | undefined) ?? 0n;
+
+  return {
+    allocated,
+    released,
+    claimable,
+    claimed,
+    locked,
+    directCount,
+    nextRelease: released > claimed + claimable ? released - claimed - claimable : 0n,
+    isLoading: !!userAddress && reads.isLoading,
+  };
+}
+
+export function useLaeUserEventsForUser(
+  userId: bigint | undefined,
+  userAddress: Address | undefined
+) {
+  const client = usePublicClient();
+
+  return useQuery<MatrixUserEvent[]>({
+    queryKey: ["lae-events", userId?.toString(), userAddress, LAE_CONTRACTS.matrix, "public"],
+    enabled: !!client && !!userId && userId > 0n && !!userAddress,
+    staleTime: 120_000,
+    retry: 0,
+    refetchOnWindowFocus: false,
+    throwOnError: false,
+    queryFn: async () => {
+      if (!client || !userId || !userAddress) return [];
+      const { events } = await fetchMatrixUserEvents(client, userId, userAddress);
+      return events;
+    },
+  });
+}

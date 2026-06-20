@@ -4,6 +4,7 @@ import Link from "next/link";
 import { UserPlus } from "lucide-react";
 import { RegisterGate } from "@/components/auth/RegisterGate";
 import { LaeRegisterPanel } from "@/components/lae-club/LaeRegisterPanel";
+import { ViewUserIdPanel } from "@/components/lae-club/ViewUserIdPanel";
 import { BrandLogo } from "@/components/ui/BrandLogo";
 import { withBasePath } from "@/lib/paths";
 
@@ -22,27 +23,31 @@ export default function RegisterPage() {
         <span className="font-display text-lg font-bold text-white sm:text-xl">LAE</span>
       </Link>
 
-      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-white/[0.03] p-5 backdrop-blur sm:p-8">
-        <div className="mb-5 text-center sm:mb-6">
-          <UserPlus className="mx-auto h-9 w-9 text-brand-400 sm:h-10 sm:w-10" />
-          <h1 className="mt-3 font-display text-xl font-bold text-white sm:text-2xl">
-            Register on-chain
-          </h1>
-          <p className="mt-2 text-xs leading-relaxed text-slate-400 sm:text-sm">
-            Complete registration before accessing the dashboard.
+      <div className="grid w-full max-w-4xl gap-4 md:grid-cols-2 md:items-start">
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 backdrop-blur sm:p-8">
+          <div className="mb-5 text-center sm:mb-6">
+            <UserPlus className="mx-auto h-9 w-9 text-brand-400 sm:h-10 sm:w-10" />
+            <h1 className="mt-3 font-display text-xl font-bold text-white sm:text-2xl">
+              Register on-chain
+            </h1>
+            <p className="mt-2 text-xs leading-relaxed text-slate-400 sm:text-sm">
+              Complete registration before accessing the dashboard.
+            </p>
+          </div>
+
+          <RegisterGate>
+            <LaeRegisterPanel />
+          </RegisterGate>
+
+          <p className="mt-5 text-center text-xs text-slate-500">
+            Already registered?{" "}
+            <Link href={withBasePath("/login")} className="text-brand-300 hover:text-brand-200">
+              Login with wallet
+            </Link>
           </p>
         </div>
 
-        <RegisterGate>
-          <LaeRegisterPanel />
-        </RegisterGate>
-
-        <p className="mt-5 text-center text-xs text-slate-500">
-          Already registered?{" "}
-          <Link href={withBasePath("/login")} className="text-brand-300 hover:text-brand-200">
-            Login with wallet
-          </Link>
-        </p>
+        <ViewUserIdPanel />
       </div>
     </main>
   );
