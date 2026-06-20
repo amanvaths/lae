@@ -1,16 +1,22 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useAccount } from "wagmi";
-import { Loader2 } from "lucide-react";
 import { useClientMounted } from "@/lib/useClientMounted";
 import { useWalletSession } from "@/providers/WalletSessionProvider";
 import { useLaeUser } from "@/lib/lae-club/hooks";
-import { isCheckingLaeRegistration, laeRegistrationFailed } from "@/lib/lae-club/auth-check";
+import {
+  isCheckingLaeRegistration,
+  laeRegistrationFailed,
+  useRegistrationCheckTimeout,
+  useWalletConnectTimeout,
+} from "@/lib/lae-club/auth-check";
+import {
+  RegistrationCheckError,
+  RegistrationCheckSpinner,
+} from "@/components/auth/RegistrationCheckBanner";
 import { withBasePath } from "@/lib/paths";
-
-const REGISTRATION_CHECK_MS = 8_000;
 
 /** Registration screen — requires connected, unregistered wallet. */
 export function RegisterGate({ children }: { children: ReactNode }) {
@@ -20,18 +26,12 @@ export function RegisterGate({ children }: { children: ReactNode }) {
   const { status, address } = useAccount();
   const { isReady, isWrongNetwork } = useWalletSession();
   const user = useLaeUser();
-  const [checkTimedOut, setCheckTimedOut] = useState(false);
+  const { timedOut, checking, failed } = useRegistrationCheckTimeout(user);
+  const walletWait = useWalletConnectTimeout(status);
 
   useEffect(() => {
     redirecting.current = false;
-    setCheckTimedOut(false);
   }, [address]);
-
-  useEffect(() => {
-    if (!isCheckingLaeRegistration(user)) return;
-    const t = setTimeout(() => setCheckTimedOut(true), REGISTRATION_CHECK_MS);
-    return () => clearTimeout(t);
-  }, [user.isLoading, user.registered, address]);
 
   useEffect(() => {
     if (!mounted || !isReady || redirecting.current) return;
@@ -48,8 +48,8 @@ export function RegisterGate({ children }: { children: ReactNode }) {
       return;
     }
 
-    if (isCheckingLaeRegistration(user) && !checkTimedOut) return;
-    if (laeRegistrationFailed(user)) return;
+    if (isCheckingLaeRegistration(user, timedOut)) return;
+    if (laeRegistrationFailed(user, timedOut)) return;
 
     if (user.registered) {
       redirecting.current = true;
@@ -63,44 +63,36 @@ export function RegisterGate({ children }: { children: ReactNode }) {
     isWrongNetwork,
     user.isLoading,
     user.registered,
-    checkTimedOut,
+    timedOut,
     router,
   ]);
 
-  if (!mounted || !isReady || status === "connecting" || status === "reconnecting") {
-    return (
-      <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3 text-slate-400">
-        <Loader2 className="h-8 w-8 animate-spin text-brand-400" />
-        <p className="text-sm">Connecting wallet…</p>
-      </div>
-    );
+  if (!mounted || !isReady || walletWait.waiting) {
+    return <RegistrationCheckSpinner label="Connecting wallet…" />;
   }
 
   if (status !== "connected" || !address) {
-    return (
-      <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3 text-slate-400">
-        <Loader2 className="h-8 w-8 animate-spin text-brand-400" />
-        <p className="text-sm">Redirecting to login…</p>
-      </div>
-    );
+    return <RegistrationCheckSpinner label="Redirecting to login…" />;
   }
 
-  if (isCheckingLaeRegistration(user) && !checkTimedOut) {
+  if (checking) {
+    return <RegistrationCheckSpinner label="Checking registration…" />;
+  }
+
+  if (failed) {
     return (
-      <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3 text-slate-400">
-        <Loader2 className="h-8 w-8 animate-spin text-brand-400" />
-        <p className="text-sm">Checking registration…</p>
+      <div className="px-1">
+        <RegistrationCheckError
+          message="Registration check timed out. Ensure you are on BSC Testnet and retry."
+          onRetry={() => user.refetch()}
+        />
+        {children}
       </div>
     );
   }
 
   if (user.registered) {
-    return (
-      <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3 text-slate-400">
-        <Loader2 className="h-8 w-8 animate-spin text-brand-400" />
-        <p className="text-sm">Opening dashboard…</p>
-      </div>
-    );
+    return <RegistrationCheckSpinner label="Opening dashboard…" />;
   }
 
   return <>{children}</>;

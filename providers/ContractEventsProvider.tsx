@@ -1,12 +1,6 @@
 "use client";
 
-import { useAccount } from "wagmi";
-import { useLaeEventWatcher } from "@/lib/contracts/hooks";
-
+/** Legacy event watcher disabled — active LAE Club reads use @/lib/lae-club hooks. */
 export function ContractEventsProvider({ children }: { children: React.ReactNode }) {
-  const { isConnected } = useAccount();
-
-  useLaeEventWatcher(isConnected);
-
   return <>{children}</>;
 }

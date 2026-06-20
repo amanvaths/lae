@@ -74,14 +74,21 @@ export function ConnectWallet({
           (!authenticationStatus || authenticationStatus === "authenticated");
 
         return (
-          <div
-            className={cn("flex items-center", full && "w-full")}
-            {...(!ready && {
-              "aria-hidden": true,
-              style: { opacity: 0, pointerEvents: "none", userSelect: "none" },
-            })}
-          >
-            {!connected ? (
+          <div className={cn("flex items-center", full && "w-full")}>
+            {!ready ? (
+              <button
+                type="button"
+                disabled
+                className={cn(
+                  variant === "primary" ? "btn-primary" : "btn-ghost",
+                  full && "w-full justify-center",
+                  "opacity-60"
+                )}
+              >
+                <Wallet className="h-4 w-4" />
+                {variant === "primary" ? "Connect Wallet" : "Connect"}
+              </button>
+            ) : !connected ? (
               <button
                 type="button"
                 onClick={openConnectModal}

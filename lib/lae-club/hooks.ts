@@ -10,6 +10,7 @@ import {
   useWaitForTransactionReceipt,
 } from "wagmi";
 import { formatEther, type Address } from "viem";
+import { LOG_LOOKBACK_BLOCKS } from "@/lib/contracts/config";
 import { LAE_CONTRACTS } from "./contracts";
 import {
   erc20BalanceAbi,
@@ -33,34 +34,45 @@ export type LaeUserDetails = readonly [
 
 export function useLaeUser() {
   const { address } = useAccount();
-  const exists = useReadContract({
-    address: LAE_CONTRACTS.matrix,
-    abi: laeClubMatrixAbi,
-    functionName: "isUserExists",
-    args: address ? [address] : undefined,
-    query: { enabled: !!address, staleTime: 15_000 },
+
+  const identity = useReadContracts({
+    contracts: address
+      ? [
+          {
+            address: LAE_CONTRACTS.matrix,
+            abi: laeClubMatrixAbi,
+            functionName: "isUserExists" as const,
+            args: [address] as [Address],
+          },
+          {
+            address: LAE_CONTRACTS.matrix,
+            abi: laeClubMatrixAbi,
+            functionName: "addressToId" as const,
+            args: [address] as [Address],
+          },
+        ]
+      : [],
+    query: { enabled: !!address, staleTime: 30_000, retry: 1 },
   });
-  const userId = useReadContract({
-    address: LAE_CONTRACTS.matrix,
-    abi: laeClubMatrixAbi,
-    functionName: "addressToId",
-    args: address ? [address] : undefined,
-    query: { enabled: !!address && exists.data === true, staleTime: 15_000 },
-  });
+
+  const exists = identity.data?.[0]?.result as boolean | undefined;
+  const userId = identity.data?.[1]?.result as bigint | undefined;
+  const hasUserId = userId !== undefined && userId > 0n;
+
   const details = useReadContract({
     address: LAE_CONTRACTS.matrix,
     abi: laeClubMatrixAbi,
     functionName: "getUserDetails",
-    args: userId.data && userId.data > 0n ? [userId.data] : undefined,
-    query: { enabled: !!userId.data && userId.data > 0n, staleTime: 15_000 },
+    args: hasUserId ? [userId] : undefined,
+    query: { enabled: hasUserId, staleTime: 30_000, retry: 1 },
   });
 
-  const registered = exists.data === true && (userId.data ?? 0n) > 0n;
+  const registered = exists === true && hasUserId;
   const d = details.data as LaeUserDetails | undefined;
 
   return {
     registered,
-    userId: userId.data,
+    userId,
     details: d,
     userAddress: d?.[0],
     sponsorAddress: d?.[1],
@@ -70,11 +82,12 @@ export function useLaeUser() {
     teamSize: d?.[5] ?? 0n,
     registeredAt: d?.[6],
     totalIncome: d?.[7] ?? 0n,
-    isLoading: exists.isLoading || userId.isLoading || (registered && details.isLoading),
-    isError: exists.isError || userId.isError || details.isError,
+    isLoading:
+      !!address &&
+      (identity.isLoading || (registered && details.isLoading)),
+    isError: identity.isError || details.isError,
     refetch: () => {
-      void exists.refetch();
-      void userId.refetch();
+      void identity.refetch();
       void details.refetch();
     },
   };
@@ -154,7 +167,7 @@ export function useLaeAllMatrixLevels() {
 
   const activeSlots = useReadContracts({
     contracts,
-    query: { enabled: !!user.userId && user.userId > 0n, staleTime: 15_000 },
+    query: { enabled: !!user.userId && user.userId > 0n, staleTime: 30_000, retry: 1 },
   });
 
   return {
@@ -320,15 +333,20 @@ export function useLaeUserEvents() {
   return useQuery({
     queryKey: ["lae-events", user.userId?.toString(), LAE_CONTRACTS.matrix],
     enabled: !!client && !!user.userId && user.userId > 0n,
-    staleTime: 20_000,
+    staleTime: 120_000,
+    retry: 1,
+    refetchOnWindowFocus: false,
     queryFn: async () => {
       if (!client || !user.userId) return [];
       const uid = user.userId;
+      const head = await client.getBlockNumber();
+      const fromBlock =
+        head > LOG_LOOKBACK_BLOCKS ? head - LOG_LOOKBACK_BLOCKS : 0n;
       const logs = await client.getContractEvents({
         address: LAE_CONTRACTS.matrix,
         abi: laeClubMatrixAbi,
-        fromBlock: 0n,
-        toBlock: "latest",
+        fromBlock,
+        toBlock: head,
       });
       return logs.filter((log) => {
         const args = log.args as Record<string, unknown>;

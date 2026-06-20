@@ -2,7 +2,6 @@
 
 import { createContext, useContext, useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { RETRY } from "@/lib/api/query-keys";
 import { Web3Providers } from "./web3-providers";
 
 const Web3LoadedContext = createContext(true);
@@ -14,7 +13,12 @@ export function useWeb3Loaded() {
 function makeQueryClient() {
   return new QueryClient({
     defaultOptions: {
-      queries: { retry: RETRY, staleTime: 30_000, refetchOnWindowFocus: false },
+      queries: {
+        retry: 1,
+        staleTime: 30_000,
+        refetchOnWindowFocus: false,
+        refetchOnReconnect: false,
+      },
     },
   });
 }

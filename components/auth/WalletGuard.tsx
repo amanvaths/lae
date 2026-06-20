@@ -1,16 +1,22 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { useAccount } from "wagmi";
-import { Loader2 } from "lucide-react";
 import { useClientMounted } from "@/lib/useClientMounted";
 import { useWalletSession } from "@/providers/WalletSessionProvider";
 import { useLaeUser } from "@/lib/lae-club/hooks";
-import { isCheckingLaeRegistration, laeRegistrationFailed } from "@/lib/lae-club/auth-check";
+import {
+  isCheckingLaeRegistration,
+  laeRegistrationFailed,
+  useRegistrationCheckTimeout,
+  useWalletConnectTimeout,
+} from "@/lib/lae-club/auth-check";
+import {
+  RegistrationCheckError,
+  RegistrationCheckSpinner,
+} from "@/components/auth/RegistrationCheckBanner";
 import { withBasePath } from "@/lib/paths";
-
-const REGISTRATION_CHECK_MS = 8_000;
 
 /** Dashboard access: connected wallet, correct network, on-chain registration. */
 export function WalletGuard({ children }: { children: ReactNode }) {
@@ -20,18 +26,12 @@ export function WalletGuard({ children }: { children: ReactNode }) {
   const { isReady, isWrongNetwork } = useWalletSession();
   const { status, address } = useAccount();
   const user = useLaeUser();
-  const [checkTimedOut, setCheckTimedOut] = useState(false);
+  const { timedOut, checking, failed } = useRegistrationCheckTimeout(user);
+  const walletWait = useWalletConnectTimeout(status);
 
   useEffect(() => {
     redirecting.current = false;
-    setCheckTimedOut(false);
   }, [address]);
-
-  useEffect(() => {
-    if (!isCheckingLaeRegistration(user)) return;
-    const t = setTimeout(() => setCheckTimedOut(true), REGISTRATION_CHECK_MS);
-    return () => clearTimeout(t);
-  }, [user.isLoading, user.registered, address]);
 
   useEffect(() => {
     if (!mounted || !isReady || redirecting.current) return;
@@ -48,8 +48,8 @@ export function WalletGuard({ children }: { children: ReactNode }) {
       return;
     }
 
-    if (isCheckingLaeRegistration(user) && !checkTimedOut) return;
-    if (laeRegistrationFailed(user)) return;
+    if (isCheckingLaeRegistration(user, timedOut)) return;
+    if (laeRegistrationFailed(user, timedOut)) return;
 
     if (!user.registered) {
       redirecting.current = true;
@@ -63,62 +63,39 @@ export function WalletGuard({ children }: { children: ReactNode }) {
     isWrongNetwork,
     user.isLoading,
     user.registered,
-    checkTimedOut,
+    timedOut,
     router,
   ]);
 
   if (!mounted) {
-    return (
-      <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 text-slate-400">
-        <Loader2 className="h-8 w-8 animate-spin text-brand-400" />
-        <p className="text-sm">Loading…</p>
-      </div>
-    );
+    return <RegistrationCheckSpinner label="Loading…" />;
   }
 
-  if (!isReady || status === "connecting" || status === "reconnecting") {
-    return (
-      <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 text-slate-400">
-        <Loader2 className="h-8 w-8 animate-spin text-brand-400" />
-        <p className="text-sm">Connecting wallet…</p>
-      </div>
-    );
+  if (!isReady || walletWait.waiting) {
+    return <RegistrationCheckSpinner label="Connecting wallet…" />;
   }
 
   if (status !== "connected" || !address || isWrongNetwork) {
+    return <RegistrationCheckSpinner label="Redirecting to login…" />;
+  }
+
+  if (failed) {
     return (
-      <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 text-slate-400">
-        <Loader2 className="h-8 w-8 animate-spin text-brand-400" />
-        <p className="text-sm">Redirecting to login…</p>
+      <div className="flex min-h-[50vh] flex-col items-center justify-center px-4">
+        <RegistrationCheckError
+          message="Could not verify registration on-chain. Check BSC Testnet RPC and retry."
+          onRetry={() => user.refetch()}
+        />
       </div>
     );
   }
 
-  if (laeRegistrationFailed(user)) {
-    return (
-      <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 px-4 text-center text-slate-400">
-        <p className="text-sm text-rose-300">Could not verify registration on-chain.</p>
-        <p className="text-xs">Check BSC Testnet RPC and try reconnecting your wallet.</p>
-      </div>
-    );
-  }
-
-  if (isCheckingLaeRegistration(user) && !checkTimedOut) {
-    return (
-      <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 text-slate-400">
-        <Loader2 className="h-8 w-8 animate-spin text-brand-400" />
-        <p className="text-sm">Verifying registration…</p>
-      </div>
-    );
+  if (checking) {
+    return <RegistrationCheckSpinner label="Verifying registration…" />;
   }
 
   if (!user.registered) {
-    return (
-      <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 text-slate-400">
-        <Loader2 className="h-8 w-8 animate-spin text-brand-400" />
-        <p className="text-sm">Redirecting to registration…</p>
-      </div>
-    );
+    return <RegistrationCheckSpinner label="Redirecting to registration…" />;
   }
 
   return <>{children}</>;

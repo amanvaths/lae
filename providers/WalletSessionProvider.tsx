@@ -47,7 +47,7 @@ export function WalletSessionProvider({ children }: { children: ReactNode }) {
   const disconnectWallet = useCallback(() => {
     resetSession();
     disconnect();
-    router.replace(withBasePath("/"));
+    router.replace(withBasePath("/login"));
   }, [resetSession, disconnect, router]);
 
   const prevAddress = useRef<string | undefined>(undefined);
@@ -65,7 +65,7 @@ export function WalletSessionProvider({ children }: { children: ReactNode }) {
 
     if (prev && !isConnected) {
       resetSession();
-      router.replace(withBasePath("/"));
+      router.replace(withBasePath("/login"));
     }
 
     if (isConnected && next) {

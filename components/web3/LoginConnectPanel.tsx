@@ -2,11 +2,12 @@
 
 import { useCallback, useState } from "react";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
-import { useConnect } from "wagmi";
+import { useAccount, useConnect } from "wagmi";
 import { ExternalLink, Loader2, Smartphone, Wallet } from "lucide-react";
 import { ConnectWallet } from "@/components/web3/ConnectWallet";
 import { useClientMounted } from "@/lib/useClientMounted";
 import { useIsMobile } from "@/lib/useDeferredReady";
+import { useWalletConnectTimeout } from "@/lib/lae-club/auth-check";
 import { CHAIN_ID } from "@/lib/contracts/config";
 import { hasWalletConnectProject } from "@/lib/wagmi";
 import {
@@ -20,9 +21,11 @@ import { cn } from "@/lib/utils";
 export function LoginConnectPanel() {
   const mounted = useClientMounted();
   const isMobile = useIsMobile();
+  const { status } = useAccount();
   const { openConnectModal } = useConnectModal();
   const { connect, connectors, isPending, error } = useConnect();
   const [hint, setHint] = useState<string | null>(null);
+  const walletWait = useWalletConnectTimeout(status);
 
   const connectMetaMask = useCallback(async () => {
     setHint(null);
@@ -102,9 +105,11 @@ export function LoginConnectPanel() {
           : "More wallet options"}
       </button>
 
-      {(hint || error) && (
+      {(hint || error || walletWait.timedOut) && (
         <p className="rounded-lg border border-red-500/20 bg-red-500/5 px-3 py-2 text-center text-xs leading-relaxed text-red-300">
-          {hint ?? error?.message}
+          {hint ??
+            error?.message ??
+            "Wallet connection is taking too long. Try MetaMask in-app browser or WalletConnect."}
         </p>
       )}
 
