@@ -10,7 +10,6 @@ import {
   useWaitForTransactionReceipt,
 } from "wagmi";
 import { formatEther, type Address } from "viem";
-import { LOG_LOOKBACK_BLOCKS } from "@/lib/contracts/config";
 import { LAE_CONTRACTS } from "./contracts";
 import {
   erc20BalanceAbi,
@@ -20,7 +19,7 @@ import {
 } from "./abis";
 import { LAE_LEVELS } from "./constants";
 import { withBasePath } from "@/lib/paths";
-import { matrixEventMatchesUser } from "./event-filter";
+import { fetchMatrixUserEvents, type MatrixUserEvent } from "./matrix-events";
 
 export type LaeUserDetails = readonly [
   Address,
@@ -331,31 +330,17 @@ export function useLaeUserEvents() {
   const client = usePublicClient();
   const user = useLaeUser();
 
-  return useQuery({
+  return useQuery<MatrixUserEvent[]>({
     queryKey: ["lae-events", user.userId?.toString(), user.userAddress, LAE_CONTRACTS.matrix],
-    enabled: !!client && !!user.userId && user.userId > 0n,
+    enabled: !!client && !!user.userId && user.userId > 0n && !!user.userAddress,
     staleTime: 120_000,
-    retry: 1,
+    retry: 0,
     refetchOnWindowFocus: false,
+    throwOnError: false,
     queryFn: async () => {
-      if (!client || !user.userId) return [];
-      const uid = user.userId;
-      const head = await client.getBlockNumber();
-      const fromBlock =
-        head > LOG_LOOKBACK_BLOCKS ? head - LOG_LOOKBACK_BLOCKS : 0n;
-      const logs = await client.getContractEvents({
-        address: LAE_CONTRACTS.matrix,
-        abi: laeClubMatrixAbi,
-        fromBlock,
-        toBlock: head,
-      });
-      return logs.filter((log) =>
-        matrixEventMatchesUser(
-          { eventName: log.eventName, args: log.args as Record<string, unknown> },
-          uid,
-          user.userAddress
-        )
-      );
+      if (!client || !user.userId || !user.userAddress) return [];
+      const { events } = await fetchMatrixUserEvents(client, user.userId, user.userAddress);
+      return events;
     },
   });
 }
@@ -377,7 +362,8 @@ export function useLaeIncomeEvents() {
     totalMatrixIncome: totalMatrix,
     totalRoyalIncome: totalRoyal,
     isLoading: events.isLoading,
-    isError: events.isError,
+    isError: false,
+    fetchFailed: events.isError,
     refetch: events.refetch,
   };
 }

@@ -17,3 +17,11 @@ export const MAX_UINT256 =
 
 /** How many blocks back to scan for events on BSC testnet RPCs */
 export const LOG_LOOKBACK_BLOCKS = 30_000n;
+
+/** LAEClubMatrix deploy block — BSC Testnet (Jun 2026) */
+export const LAE_MATRIX_DEPLOY_BLOCK = BigInt(
+  process.env.NEXT_PUBLIC_LAE_MATRIX_DEPLOY_BLOCK ?? "114471162"
+);
+
+/** Max blocks per eth_getLogs request (public RPC limit) */
+export const LOG_CHUNK_BLOCKS = 2_000n;

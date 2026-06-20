@@ -1,7 +1,7 @@
 "use client";
 
 import { Panel, Pill } from "@/components/dashboard/ui";
-import { QueryLoading, QueryError } from "@/components/dashboard/QueryState";
+import { QueryLoading } from "@/components/dashboard/QueryState";
 import { useLaeUserEvents } from "@/lib/lae-club/hooks";
 import { txUrl } from "@/lib/lae-club/contracts";
 import { fmtEther } from "@/lib/contracts/format";
@@ -12,15 +12,6 @@ export default function TransactionsPage() {
 
   if (events.isLoading) {
     return <QueryLoading label="Loading matrix events from chain…" />;
-  }
-
-  if (events.isError) {
-    return (
-      <QueryError
-        message="Could not load transactions — RPC timeout or contract unavailable"
-        onRetry={() => void events.refetch()}
-      />
-    );
   }
 
   const rows = [...(events.data ?? [])].reverse();

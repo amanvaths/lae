@@ -195,19 +195,23 @@ export default function DashboardHome() {
         ) : (
           <div className="divide-y divide-white/5">
             {recentEvents.map((e, i) => {
-              const args = e.args as Record<string, unknown>;
-              const amount = args.amount;
+              const row = e as {
+                transactionHash: string;
+                eventName?: string;
+                args?: Record<string, unknown>;
+              };
+              const amount = row.args?.amount;
               return (
-              <div key={`${e.transactionHash}-${i}`} className="flex items-center justify-between gap-3 py-3 text-sm">
+              <div key={`${row.transactionHash}-${i}`} className="flex items-center justify-between gap-3 py-3 text-sm">
                 <div className="min-w-0">
-                  <Pill tone="brand">{e.eventName}</Pill>
+                  <Pill tone="brand">{row.eventName}</Pill>
                   <a
-                    href={txUrl(e.transactionHash)}
+                    href={txUrl(row.transactionHash)}
                     target="_blank"
                     rel="noreferrer"
                     className="mt-1 block truncate text-xs text-brand-300 hover:underline"
                   >
-                    {truncateAddress(e.transactionHash)}
+                    {truncateAddress(row.transactionHash)}
                   </a>
                 </div>
                 {typeof amount === "bigint" && (
