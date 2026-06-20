@@ -1,37 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { Panel } from "@/components/dashboard/ui";
-import { QueryError } from "@/components/dashboard/QueryState";
+import { QueryError, QueryLoading } from "@/components/dashboard/QueryState";
 import { fetchLaeAdminMatrix } from "@/lib/lae-club/admin-api";
 import { truncateAddress } from "@/lib/format";
-
-type Placement = {
-  userId: number;
-  referrerId: number;
-  level: number;
-  cycle: number;
-  spot: number;
-  txHash: string;
-  blockNumber: string;
-};
+import { useAdminFetch } from "@/hooks/useAdminFetch";
 
 export default function AdminMatrixPage() {
-  const [placements, setPlacements] = useState<Placement[]>([]);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetchLaeAdminMatrix().then((result) => {
-      if (result.ok) {
-        setPlacements(result.data.placements as Placement[]);
-        setError(null);
-      } else {
-        setPlacements([]);
-        setError(result.error);
-      }
-    });
-  }, []);
+  const { data, error, loading, retry } = useAdminFetch("admin-matrix", fetchLaeAdminMatrix);
+  const placements = data?.placements ?? [];
 
   return (
     <AdminShell title="Matrix">
@@ -42,12 +20,14 @@ export default function AdminMatrixPage() {
 
       <Panel className="mt-6" title="Recent placements">
         {error ? (
-          <QueryError message={error} />
+          <QueryError message={error} onRetry={() => void retry()} />
+        ) : loading && !data ? (
+          <QueryLoading label="Loading placements…" />
         ) : placements.length === 0 ? (
           <p className="text-sm text-slate-500">No indexed placements yet</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+          <div className="table-scroll">
+            <table className="text-left text-sm">
               <thead className="text-xs uppercase text-slate-500">
                 <tr>
                   <th className="pb-2">User</th>

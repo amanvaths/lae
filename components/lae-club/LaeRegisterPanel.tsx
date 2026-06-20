@@ -21,13 +21,13 @@ const REG_GAS_LIMIT = 12_000_000n;
 async function waitForRegistration(
   refetch: () => void,
   getRegistered: () => boolean,
-  maxMs = 30_000
+  maxMs = 15_000
 ): Promise<boolean> {
   const start = Date.now();
   while (Date.now() - start < maxMs) {
     refetch();
     if (getRegistered()) return true;
-    await new Promise((r) => setTimeout(r, 1500));
+    await new Promise((r) => setTimeout(r, 800));
   }
   return getRegistered();
 }

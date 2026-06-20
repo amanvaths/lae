@@ -9,14 +9,15 @@ import {
   useRef,
   type ReactNode,
 } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAccount, useDisconnect, useChainId } from "wagmi";
 import { useQueryClient } from "@tanstack/react-query";
 import { useClientMounted } from "@/lib/useClientMounted";
 import { CHAIN_ID } from "@/lib/contracts/config";
 import { withBasePath } from "@/lib/paths";
-import { clearWalletSession, clearWalletStorage } from "@/lib/wallet/clear-session";
+import { clearWalletSession } from "@/lib/wallet/clear-session";
 import { contractKeys } from "@/lib/contracts/query-keys";
+import { isLoginPath, isProtectedAppPath } from "@/lib/wallet/routes";
 
 interface WalletSessionContextValue {
   address: `0x${string}` | undefined;
@@ -31,6 +32,7 @@ const WalletSessionContext = createContext<WalletSessionContextValue | null>(nul
 
 export function WalletSessionProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const qc = useQueryClient();
   const mounted = useClientMounted();
   const chainId = useChainId();
@@ -40,13 +42,22 @@ export function WalletSessionProvider({ children }: { children: ReactNode }) {
   const isReady = mounted && !isConnecting && !isReconnecting;
   const isWrongNetwork = isConnected && chainId !== CHAIN_ID;
 
+  const disconnectingRef = useRef(false);
+  const prevAddress = useRef<string | undefined>(undefined);
+  const prevChainId = useRef<number | undefined>(undefined);
+
   const resetSession = useCallback(() => {
     clearWalletSession(qc);
   }, [qc]);
 
+  const redirectToLogin = useCallback(() => {
+    if (isLoginPath(pathname)) return;
+    router.replace(withBasePath("/login"));
+  }, [pathname, router]);
+
   const disconnectWallet = useCallback(async () => {
+    disconnectingRef.current = true;
     resetSession();
-    clearWalletStorage();
     try {
       if (connector) {
         await disconnectAsync({ connector });
@@ -55,12 +66,14 @@ export function WalletSessionProvider({ children }: { children: ReactNode }) {
       }
     } catch {
       disconnect();
+    } finally {
+      disconnectingRef.current = false;
+      prevAddress.current = undefined;
+      if (isProtectedAppPath(pathname)) {
+        redirectToLogin();
+      }
     }
-    router.replace(withBasePath("/login"));
-  }, [resetSession, disconnectAsync, disconnect, connector, router]);
-
-  const prevAddress = useRef<string | undefined>(undefined);
-  const prevChainId = useRef<number | undefined>(undefined);
+  }, [resetSession, disconnectAsync, disconnect, connector, pathname, redirectToLogin]);
 
   useEffect(() => {
     if (!isReady) return;
@@ -72,9 +85,11 @@ export function WalletSessionProvider({ children }: { children: ReactNode }) {
       resetSession();
     }
 
-    if (prev && !isConnected) {
+    if (prev && !isConnected && !disconnectingRef.current) {
       resetSession();
-      router.replace(withBasePath("/login"));
+      if (isProtectedAppPath(pathname)) {
+        redirectToLogin();
+      }
     }
 
     if (isConnected && next) {
@@ -82,7 +97,7 @@ export function WalletSessionProvider({ children }: { children: ReactNode }) {
     } else if (!isConnected) {
       prevAddress.current = undefined;
     }
-  }, [address, isConnected, isReady, resetSession, router]);
+  }, [address, isConnected, isReady, resetSession, pathname, redirectToLogin]);
 
   useEffect(() => {
     if (!isReady || !isConnected) return;

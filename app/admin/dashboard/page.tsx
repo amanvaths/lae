@@ -1,32 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { Panel } from "@/components/dashboard/ui";
-import { QueryError } from "@/components/dashboard/QueryState";
-import { fetchLaeAdminStats, type LaeAdminStats } from "@/lib/lae-club/admin-api";
+import { QueryError, QueryLoading } from "@/components/dashboard/QueryState";
+import { fetchLaeAdminStats } from "@/lib/lae-club/admin-api";
 import { useLaeCoinStats, useLaeProtocolStats, useLaeRoyalPoolBalance } from "@/lib/lae-club/hooks";
 import { LAE_CONTRACTS, addressUrl } from "@/lib/lae-club/contracts";
 import { fmtEther } from "@/lib/contracts/format";
+import { useAdminFetch } from "@/hooks/useAdminFetch";
 
 export default function AdminDashboardPage() {
-  const [stats, setStats] = useState<LaeAdminStats | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const { data: stats, error, loading, retry } = useAdminFetch("admin-stats", fetchLaeAdminStats);
   const protocol = useLaeProtocolStats();
   const coin = useLaeCoinStats();
   const pool = useLaeRoyalPoolBalance();
-
-  useEffect(() => {
-    fetchLaeAdminStats().then((result) => {
-      if (result.ok) {
-        setStats(result.data);
-        setError(null);
-      } else {
-        setStats(null);
-        setError(result.error);
-      }
-    });
-  }, []);
 
   return (
     <AdminShell title="Dashboard">
@@ -37,10 +24,14 @@ export default function AdminDashboardPage() {
 
       {error && (
         <div className="mt-4">
-          <QueryError message={error} onRetry={() => window.location.reload()} />
+          <QueryError message={error} onRetry={() => void retry()} />
         </div>
       )}
 
+      {loading && !stats ? (
+        <QueryLoading label="Loading admin stats…" />
+      ) : (
+        <>
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Panel title="Total Users">
           <p className="text-3xl font-bold">{stats?.totalUsers ?? protocol.totalUsers ?? "—"}</p>
@@ -114,6 +105,8 @@ export default function AdminDashboardPage() {
           </div>
         )}
       </Panel>
+        </>
+      )}
     </AdminShell>
   );
 }

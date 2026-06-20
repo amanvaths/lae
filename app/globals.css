@@ -19,12 +19,15 @@
   html {
     scroll-behavior: smooth;
     -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+    max-width: 100%;
   }
 
   body {
     @apply bg-ink-950 text-slate-300 font-sans antialiased;
     background-color: var(--cryptro-bg);
     overflow-x: hidden;
+    max-width: 100vw;
   }
 
   ::selection {
@@ -35,6 +38,14 @@
 @layer components {
   .container-edge {
     @apply mx-auto w-full max-w-7xl px-5 sm:px-8;
+  }
+
+  .table-scroll {
+    @apply -mx-3 w-[calc(100%+1.5rem)] overflow-x-auto px-3 sm:mx-0 sm:w-full sm:px-0;
+  }
+
+  .table-scroll table {
+    @apply min-w-[520px] w-full;
   }
 
   .glass {

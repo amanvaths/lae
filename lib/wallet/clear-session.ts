@@ -1,6 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { clearTokens } from "@/lib/api-client";
 import { contractKeys } from "@/lib/contracts/query-keys";
+import { LAE_USER_QUERY_KEY } from "@/lib/lae-club/query-keys";
 
 const WALLET_STORAGE_KEYS = [
   "wagmi.store",
@@ -39,6 +40,7 @@ export function clearWalletSession(qc: QueryClient) {
   qc.removeQueries({ queryKey: ["auth"] });
   qc.removeQueries({ queryKey: ["wallet"] });
   qc.removeQueries({ queryKey: ["lae-events"] });
+  qc.removeQueries({ queryKey: [LAE_USER_QUERY_KEY] });
   qc.clear();
   clearWalletStorage();
 }

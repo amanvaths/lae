@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { Panel } from "@/components/dashboard/ui";
-import { QueryError } from "@/components/dashboard/QueryState";
-import { fetchLaeAdminRewards, type LaeRewardsAnalytics } from "@/lib/lae-club/admin-api";
+import { QueryError, QueryLoading } from "@/components/dashboard/QueryState";
+import { fetchLaeAdminRewards } from "@/lib/lae-club/admin-api";
 import { fmtEther } from "@/lib/contracts/format";
 import { truncateAddress } from "@/lib/format";
+import { useAdminFetch } from "@/hooks/useAdminFetch";
 
 function payloadAmount(payload: unknown, key: string): string {
   if (!payload || typeof payload !== "object") return "0";
@@ -19,20 +19,7 @@ function payloadAmount(payload: unknown, key: string): string {
 }
 
 export default function AdminRewardsPage() {
-  const [data, setData] = useState<LaeRewardsAnalytics | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetchLaeAdminRewards().then((result) => {
-      if (result.ok) {
-        setData(result.data);
-        setError(null);
-      } else {
-        setData(null);
-        setError(result.error);
-      }
-    });
-  }, []);
+  const { data, error, loading, retry } = useAdminFetch("admin-rewards", fetchLaeAdminRewards);
 
   return (
     <AdminShell title="Rewards">
@@ -43,10 +30,14 @@ export default function AdminRewardsPage() {
 
       {error && (
         <div className="mt-4">
-          <QueryError message={error} />
+          <QueryError message={error} onRetry={() => void retry()} />
         </div>
       )}
 
+      {loading && !data ? (
+        <QueryLoading label="Loading rewards analytics…" />
+      ) : (
+        <>
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Panel title="Allocations indexed">
           <p className="text-3xl font-bold">{data?.allocatedCount ?? "—"}</p>
@@ -106,6 +97,8 @@ export default function AdminRewardsPage() {
           ))
         )}
       </Panel>
+        </>
+      )}
     </AdminShell>
   );
 }

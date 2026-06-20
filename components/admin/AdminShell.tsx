@@ -49,9 +49,9 @@ export function AdminShell({
   }
 
   return (
-    <main className="min-h-screen bg-ink-950 text-white">
-      <header className="border-b border-white/5 px-6 py-4">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
+    <main className="min-h-screen overflow-x-hidden bg-ink-950 text-white">
+      <header className="border-b border-white/5 px-4 py-4 sm:px-6">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 sm:gap-4">
           <div className="flex items-center gap-3">
             <BrandLogo variant="club" size={40} />
             <div>
@@ -77,7 +77,7 @@ export function AdminShell({
         </div>
       </header>
 
-      <div className="mx-auto flex max-w-7xl flex-col gap-6 px-6 py-8 lg:flex-row">
+      <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 sm:py-8 lg:flex-row">
         <nav className="flex shrink-0 flex-wrap gap-2 lg:w-48 lg:flex-col">
           {NAV.map((item) => (
             <Link

@@ -14,7 +14,7 @@ export default function MatrixPage() {
   const prices = useLaeLevelPrices();
   const matrix = useLaeMatrixLevel(level);
 
-  if (user.isLoading || prices.isLoading) {
+  if (user.isLoading) {
     return <QueryLoading label="Loading LAE Club matrix…" />;
   }
 
@@ -87,6 +87,9 @@ export default function MatrixPage() {
       </div>
 
       <Panel className="mt-4" title="All level prices (on-chain)">
+        {prices.isLoading ? (
+          <QueryLoading label="Loading prices…" />
+        ) : (
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
           {(prices.prices ?? []).map((p) => (
             <div
@@ -98,6 +101,7 @@ export default function MatrixPage() {
             </div>
           ))}
         </div>
+        )}
       </Panel>
     </div>
   );

@@ -38,7 +38,7 @@ export default function DashboardHome() {
   const matrixL1 = useLaeMatrixLevel(1);
   const recentEvents = (income.allEvents ?? []).slice(-8).reverse();
 
-  if (user.isLoading || levels.isLoading) {
+  if (user.isLoading) {
     return <QueryLoading label="Loading on-chain dashboard…" />;
   }
 
@@ -86,7 +86,7 @@ export default function DashboardHome() {
             Sponsor ID #{String(user.sponsorId ?? "—")} ·{" "}
             {user.sponsorAddress ? truncateAddress(user.sponsorAddress, 6, 4) : "—"}
             <Pill tone="emerald" className="ml-2">
-              {levels.activeCount} active levels
+              {levels.isLoading ? "…" : `${levels.activeCount} active levels`}
             </Pill>
           </p>
         </div>
@@ -128,6 +128,9 @@ export default function DashboardHome() {
 
       <div className="mt-4 grid gap-4 lg:grid-cols-3">
         <Panel title="Active levels (on-chain)">
+          {levels.isLoading ? (
+            <QueryLoading label="Loading levels…" />
+          ) : (
           <div className="flex flex-wrap gap-1.5">
             {(levels.levels ?? []).map((l) => (
               <span
@@ -142,6 +145,7 @@ export default function DashboardHome() {
               </span>
             ))}
           </div>
+          )}
         </Panel>
         <Panel title="NFT status">
           <div className="space-y-1 text-sm">

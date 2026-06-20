@@ -26,6 +26,8 @@ import { truncateAddress } from "@/lib/format";
 import { BrandLogo } from "@/components/ui/BrandLogo";
 import { ConnectWallet } from "@/components/web3/ConnectWallet";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/providers/ToastProvider";
+import { formatWalletError } from "@/lib/wallet/errors";
 
 type OrderRow = {
   id: bigint;
@@ -157,6 +159,7 @@ function LaeBalanceDisplay({ address }: { address?: Address }) {
 }
 
 function SellPanel({ address }: { address?: Address }) {
+  const { push } = useToast();
   const [sellAmount, setSellAmount] = useState("");
   const [pricePerLae, setPricePerLae] = useState("");
   const [pending, setPending] = useState(false);
@@ -188,7 +191,7 @@ function SellPanel({ address }: { address?: Address }) {
       setSellAmount("");
       setPricePerLae("");
     } catch (e) {
-      console.error(e);
+      push(formatWalletError(e), "error");
     }
     setPending(false);
   }
@@ -296,6 +299,7 @@ function SellPanel({ address }: { address?: Address }) {
 }
 
 function BuyPanel({ address }: { address?: Address }) {
+  const { push } = useToast();
   const [pending, setPending] = useState<string | null>(null);
   const nextId = useReadContract({
     address: LAE_CONTRACTS.laeCoin,
@@ -349,7 +353,7 @@ function BuyPanel({ address }: { address?: Address }) {
         args: [order.id],
       });
     } catch (e) {
-      console.error(e);
+      push(formatWalletError(e), "error");
     }
     setPending(null);
   }
@@ -401,6 +405,7 @@ function BuyPanel({ address }: { address?: Address }) {
 }
 
 function MyOrdersPanel({ address }: { address?: Address }) {
+  const { push } = useToast();
   const [pending, setPending] = useState<string | null>(null);
   const nextId = useReadContract({
     address: LAE_CONTRACTS.laeCoin,
@@ -426,7 +431,7 @@ function MyOrdersPanel({ address }: { address?: Address }) {
         args: [orderId],
       });
     } catch (e) {
-      console.error(e);
+      push(formatWalletError(e), "error");
     }
     setPending(null);
   }
@@ -566,7 +571,7 @@ function OrderCard({
                 laeAmount,
                 pricePerLae,
                 active,
-              }).catch(console.error)
+              }).catch(() => {})
             }
           >
             {pending === `fill-${orderId}` ? (
@@ -581,7 +586,7 @@ function OrderCard({
             type="button"
             className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2 text-xs font-medium text-red-300 transition-colors hover:bg-red-500/20 disabled:opacity-50"
             disabled={pending !== null}
-            onClick={() => void onCancel(orderId).catch(console.error)}
+            onClick={() => void onCancel(orderId).catch(() => {})}
           >
             {pending === `cancel-${orderId}` ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" />

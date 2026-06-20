@@ -20,6 +20,7 @@ import {
 import { LAE_LEVELS } from "./constants";
 import { withBasePath } from "@/lib/paths";
 import { fetchMatrixUserEvents, type MatrixUserEvent } from "./matrix-events";
+import { LAE_USER_QUERY_KEY } from "./query-keys";
 
 export type LaeUserDetails = readonly [
   Address,
@@ -32,44 +33,14 @@ export type LaeUserDetails = readonly [
   bigint,
 ];
 
-export function useLaeUser() {
-  const { address } = useAccount();
+type LaeUserSnapshot = {
+  registered: boolean;
+  userId: bigint | undefined;
+  details: LaeUserDetails | undefined;
+};
 
-  const identity = useReadContracts({
-    contracts: address
-      ? [
-          {
-            address: LAE_CONTRACTS.matrix,
-            abi: laeClubMatrixAbi,
-            functionName: "isUserExists" as const,
-            args: [address] as [Address],
-          },
-          {
-            address: LAE_CONTRACTS.matrix,
-            abi: laeClubMatrixAbi,
-            functionName: "addressToId" as const,
-            args: [address] as [Address],
-          },
-        ]
-      : [],
-    query: { enabled: !!address, staleTime: 30_000, retry: 1 },
-  });
-
-  const exists = identity.data?.[0]?.result as boolean | undefined;
-  const userId = identity.data?.[1]?.result as bigint | undefined;
-  const hasUserId = userId !== undefined && userId > 0n;
-
-  const details = useReadContract({
-    address: LAE_CONTRACTS.matrix,
-    abi: laeClubMatrixAbi,
-    functionName: "getUserDetails",
-    args: hasUserId ? [userId] : undefined,
-    query: { enabled: hasUserId, staleTime: 30_000, retry: 1 },
-  });
-
-  const registered = exists === true && hasUserId;
-  const d = details.data as LaeUserDetails | undefined;
-
+function mapLaeUserSnapshot({ registered, userId, details }: LaeUserSnapshot) {
+  const d = details;
   return {
     registered,
     userId,
@@ -82,13 +53,88 @@ export function useLaeUser() {
     teamSize: d?.[5] ?? 0n,
     registeredAt: d?.[6],
     totalIncome: d?.[7] ?? 0n,
-    isLoading:
-      !!address &&
-      (identity.isLoading || (registered && details.isLoading)),
-    isError: identity.isError || details.isError,
+  };
+}
+
+/** Single cached identity read shared across all auth gates and dashboard pages. */
+export function useLaeUser() {
+  const { address } = useAccount();
+  const client = usePublicClient();
+
+  const q = useQuery({
+    queryKey: [LAE_USER_QUERY_KEY, address, LAE_CONTRACTS.matrix],
+    enabled: !!address && !!client,
+    staleTime: 30_000,
+    gcTime: 300_000,
+    retry: 1,
+    refetchOnWindowFocus: false,
+    queryFn: async (): Promise<LaeUserSnapshot> => {
+      if (!address || !client) {
+        return { registered: false, userId: undefined, details: undefined };
+      }
+
+      const identity = await client.multicall({
+        contracts: [
+          {
+            address: LAE_CONTRACTS.matrix,
+            abi: laeClubMatrixAbi,
+            functionName: "isUserExists",
+            args: [address],
+          },
+          {
+            address: LAE_CONTRACTS.matrix,
+            abi: laeClubMatrixAbi,
+            functionName: "addressToId",
+            args: [address],
+          },
+        ],
+      });
+
+      const exists = identity[0]?.result as boolean | undefined;
+      const userId = identity[1]?.result as bigint | undefined;
+      const hasUserId = userId !== undefined && userId > 0n;
+      const registered = exists === true && hasUserId;
+
+      if (!registered || !hasUserId) {
+        return { registered: false, userId, details: undefined };
+      }
+
+      const details = (await client.readContract({
+        address: LAE_CONTRACTS.matrix,
+        abi: laeClubMatrixAbi,
+        functionName: "getUserDetails",
+        args: [userId],
+      })) as LaeUserDetails;
+
+      return { registered: true, userId, details };
+    },
+  });
+
+  const empty = mapLaeUserSnapshot({
+    registered: false,
+    userId: undefined,
+    details: undefined,
+  });
+
+  if (!address) {
+    return {
+      ...empty,
+      isLoading: false,
+      isError: false,
+      refetch: () => {},
+    };
+  }
+
+  const snapshot = q.data
+    ? mapLaeUserSnapshot(q.data)
+    : empty;
+
+  return {
+    ...snapshot,
+    isLoading: q.isLoading,
+    isError: q.isError,
     refetch: () => {
-      void identity.refetch();
-      void details.refetch();
+      void q.refetch();
     },
   };
 }
@@ -115,34 +161,46 @@ export function useLaeLevelPrices() {
 export function useLaeMatrixLevel(level: number) {
   const { address } = useAccount();
   const user = useLaeUser();
+  const enabled =
+    !!address &&
+    user.registered &&
+    !!user.userId &&
+    user.userId > 0n &&
+    level >= 1 &&
+    level <= LAE_LEVELS;
 
-  const matrix = useReadContract({
-    address: LAE_CONTRACTS.matrix,
-    abi: laeClubMatrixAbi,
-    functionName: "usersXMatrix",
-    args: address && level >= 1 && level <= LAE_LEVELS ? [address, level] : undefined,
-    query: { enabled: !!address && user.registered, staleTime: 15_000 },
-  });
-  const referrals = useReadContract({
-    address: LAE_CONTRACTS.matrix,
-    abi: laeClubMatrixAbi,
-    functionName: "usersXMatrixReferrals",
-    args: address && level >= 1 && level <= LAE_LEVELS ? [address, level] : undefined,
-    query: { enabled: !!address && user.registered, staleTime: 15_000 },
-  });
-  const slotActive = useReadContract({
-    address: LAE_CONTRACTS.matrix,
-    abi: laeClubMatrixAbi,
-    functionName: "isUserSlotActive",
-    args: user.userId && level >= 1 ? [user.userId, level] : undefined,
-    query: { enabled: !!user.userId && user.userId > 0n, staleTime: 15_000 },
+  const reads = useReadContracts({
+    contracts: enabled
+      ? [
+          {
+            address: LAE_CONTRACTS.matrix,
+            abi: laeClubMatrixAbi,
+            functionName: "usersXMatrix" as const,
+            args: [address, level] as [Address, number],
+          },
+          {
+            address: LAE_CONTRACTS.matrix,
+            abi: laeClubMatrixAbi,
+            functionName: "usersXMatrixReferrals" as const,
+            args: [address, level] as [Address, number],
+          },
+          {
+            address: LAE_CONTRACTS.matrix,
+            abi: laeClubMatrixAbi,
+            functionName: "isUserSlotActive" as const,
+            args: [user.userId!, level] as [bigint, number],
+          },
+        ]
+      : [],
+    query: { enabled, staleTime: 15_000, retry: 1 },
   });
 
-  const m = matrix.data;
-  const refs = (referrals.data as Address[] | undefined) ?? [];
+  const m = reads.data?.[0]?.result as readonly [Address, bigint, bigint, bigint, bigint, bigint] | undefined;
+  const refs = (reads.data?.[1]?.result as Address[] | undefined) ?? [];
+  const slotActive = reads.data?.[2]?.result === true;
 
   return {
-    active: slotActive.data === true,
+    active: slotActive,
     currentReferrer: m?.[0] as Address | undefined,
     reinvestCount: m?.[1] ?? 0n,
     heldForUpgrade: m?.[2] ?? 0n,
@@ -150,8 +208,8 @@ export function useLaeMatrixLevel(level: number) {
     totalEarning: m?.[5] ?? 0n,
     referrals: refs,
     filledSpots: refs.length,
-    isLoading: matrix.isLoading || referrals.isLoading || slotActive.isLoading,
-    isError: matrix.isError || referrals.isError,
+    isLoading: enabled && reads.isLoading,
+    isError: reads.isError,
   };
 }
 
@@ -182,24 +240,32 @@ export function useLaeAllMatrixLevels() {
 
 export function useLaeDirectTeam() {
   const user = useLaeUser();
-  const directs = useReadContract({
-    address: LAE_CONTRACTS.matrix,
-    abi: laeClubMatrixAbi,
-    functionName: "getDirectPartnerAddresses",
-    args: user.userId && user.userId > 0n ? [user.userId] : undefined,
-    query: { enabled: !!user.userId && user.userId > 0n, staleTime: 15_000 },
+  const enabled = !!user.userId && user.userId > 0n;
+
+  const reads = useReadContracts({
+    contracts: enabled
+      ? [
+          {
+            address: LAE_CONTRACTS.matrix,
+            abi: laeClubMatrixAbi,
+            functionName: "getDirectPartnerAddresses" as const,
+            args: [user.userId!] as [bigint],
+          },
+          {
+            address: LAE_CONTRACTS.matrix,
+            abi: laeClubMatrixAbi,
+            functionName: "getDirectPartnerIds" as const,
+            args: [user.userId!] as [bigint],
+          },
+        ]
+      : [],
+    query: { enabled, staleTime: 15_000, retry: 1 },
   });
-  const directIds = useReadContract({
-    address: LAE_CONTRACTS.matrix,
-    abi: laeClubMatrixAbi,
-    functionName: "getDirectPartnerIds",
-    args: user.userId && user.userId > 0n ? [user.userId] : undefined,
-    query: { enabled: !!user.userId && user.userId > 0n, staleTime: 15_000 },
-  });
+
   return {
-    addresses: (directs.data as Address[] | undefined) ?? [],
-    ids: (directIds.data as bigint[] | undefined) ?? [],
-    isLoading: user.isLoading || directs.isLoading,
+    addresses: (reads.data?.[0]?.result as Address[] | undefined) ?? [],
+    ids: (reads.data?.[1]?.result as bigint[] | undefined) ?? [],
+    isLoading: user.isLoading || (enabled && reads.isLoading),
   };
 }
 
@@ -401,28 +467,34 @@ const MONTH_SECONDS = 30n * 24n * 60n * 60n;
 
 export function useLaeRewardSummary() {
   const { address } = useAccount();
-  const summary = useReadContract({
-    address: LAE_CONTRACTS.matrix,
-    abi: laeClubMatrixAbi,
-    functionName: "getLaeRewardSummary",
-    args: address ? [address] : undefined,
-    query: { enabled: !!address, staleTime: 15_000 },
-  });
-  const directs = useReadContract({
-    address: LAE_CONTRACTS.matrix,
-    abi: laeClubMatrixAbi,
-    functionName: "getDirectPartnerCount",
-    args: address ? [address] : undefined,
-    query: { enabled: !!address, staleTime: 15_000 },
+
+  const reads = useReadContracts({
+    contracts: address
+      ? [
+          {
+            address: LAE_CONTRACTS.matrix,
+            abi: laeClubMatrixAbi,
+            functionName: "getLaeRewardSummary" as const,
+            args: [address] as [Address],
+          },
+          {
+            address: LAE_CONTRACTS.matrix,
+            abi: laeClubMatrixAbi,
+            functionName: "getDirectPartnerCount" as const,
+            args: [address] as [Address],
+          },
+        ]
+      : [],
+    query: { enabled: !!address, staleTime: 15_000, retry: 1 },
   });
 
-  const s = summary.data as readonly [bigint, bigint, bigint, bigint, bigint] | undefined;
+  const s = reads.data?.[0]?.result as readonly [bigint, bigint, bigint, bigint, bigint] | undefined;
   const allocated = s?.[0] ?? 0n;
   const released = s?.[1] ?? 0n;
   const claimable = s?.[2] ?? 0n;
   const claimed = s?.[3] ?? 0n;
   const locked = s?.[4] ?? 0n;
-  const directCount = (directs.data as bigint | undefined) ?? 0n;
+  const directCount = (reads.data?.[1]?.result as bigint | undefined) ?? 0n;
 
   return {
     allocated,
@@ -432,10 +504,9 @@ export function useLaeRewardSummary() {
     locked,
     directCount,
     nextRelease: released > claimed + claimable ? released - claimed - claimable : 0n,
-    isLoading: summary.isLoading || directs.isLoading,
+    isLoading: !!address && reads.isLoading,
     refetch: () => {
-      void summary.refetch();
-      void directs.refetch();
+      void reads.refetch();
     },
   };
 }

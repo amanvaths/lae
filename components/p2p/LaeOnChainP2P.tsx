@@ -8,6 +8,8 @@ import { laeCoinAbi, erc20BalanceAbi } from "@/lib/lae-club/abis";
 import { Panel, Pill } from "@/components/dashboard/ui";
 import { fmtEther } from "@/lib/contracts/format";
 import { truncateAddress } from "@/lib/format";
+import { useToast } from "@/providers/ToastProvider";
+import { formatWalletError } from "@/lib/wallet/errors";
 
 type OrderRow = {
   id: bigint;
@@ -19,6 +21,7 @@ type OrderRow = {
 
 export function LaeOnChainP2P() {
   const { address } = useAccount();
+  const { push } = useToast();
   const [sellAmount, setSellAmount] = useState("");
   const [pricePerLae, setPricePerLae] = useState("");
   const [pending, setPending] = useState<string | null>(null);
@@ -87,40 +90,58 @@ export function LaeOnChainP2P() {
     const price = parseEther(pricePerLae || "0");
     if (laeAmount <= 0n || price <= 0n) return;
     setPending("create");
-    await writeContractAsync({
-      address: LAE_CONTRACTS.laeCoin,
-      abi: laeCoinAbi,
-      functionName: "createP2POrder",
-      args: [laeAmount, price],
-    });
-    setPending(null);
-    setSellAmount("");
-    setPricePerLae("");
+    try {
+      await writeContractAsync({
+        address: LAE_CONTRACTS.laeCoin,
+        abi: laeCoinAbi,
+        functionName: "createP2POrder",
+        args: [laeAmount, price],
+      });
+      setSellAmount("");
+      setPricePerLae("");
+      push("Sell order created", "success");
+    } catch (e) {
+      push(formatWalletError(e), "error");
+    } finally {
+      setPending(null);
+    }
   }
 
   async function fillOrder(order: OrderRow) {
     if (!address) return;
     const payment = (order.laeAmount * order.pricePerLae) / parseEther("1");
     setPending(`fill-${order.id}`);
-    await approvePayment(LAE_CONTRACTS.laeCoin, payment);
-    await writeContractAsync({
-      address: LAE_CONTRACTS.laeCoin,
-      abi: laeCoinAbi,
-      functionName: "fillP2POrder",
-      args: [order.id],
-    });
-    setPending(null);
+    try {
+      await approvePayment(LAE_CONTRACTS.laeCoin, payment);
+      await writeContractAsync({
+        address: LAE_CONTRACTS.laeCoin,
+        abi: laeCoinAbi,
+        functionName: "fillP2POrder",
+        args: [order.id],
+      });
+      push("Order filled", "success");
+    } catch (e) {
+      push(formatWalletError(e), "error");
+    } finally {
+      setPending(null);
+    }
   }
 
   async function cancelOrder(orderId: bigint) {
     setPending(`cancel-${orderId}`);
-    await writeContractAsync({
-      address: LAE_CONTRACTS.laeCoin,
-      abi: laeCoinAbi,
-      functionName: "cancelP2POrder",
-      args: [orderId],
-    });
-    setPending(null);
+    try {
+      await writeContractAsync({
+        address: LAE_CONTRACTS.laeCoin,
+        abi: laeCoinAbi,
+        functionName: "cancelP2POrder",
+        args: [orderId],
+      });
+      push("Order cancelled", "success");
+    } catch (e) {
+      push(formatWalletError(e), "error");
+    } finally {
+      setPending(null);
+    }
   }
 
   if (enabled.data === false) {
@@ -169,7 +190,7 @@ export function LaeOnChainP2P() {
         )}
         <button
           type="button"
-          onClick={() => void createOrder().catch(console.error)}
+          onClick={() => void createOrder()}
           disabled={!address || pending !== null || receipt.isLoading}
           className="btn-primary mt-4"
         >
@@ -242,7 +263,7 @@ function OrderCard({
             className="btn-primary !py-2 !text-xs"
             disabled={pending !== null}
             onClick={() =>
-              void onFill({ id: orderId, seller, laeAmount, pricePerLae, active }).catch(console.error)
+              void onFill({ id: orderId, seller, laeAmount, pricePerLae, active })
             }
           >
             {pending === `fill-${orderId}` ? "Buying…" : "Buy"}
@@ -253,7 +274,7 @@ function OrderCard({
             type="button"
             className="btn-ghost !py-2 !text-xs"
             disabled={pending !== null}
-            onClick={() => void onCancel(orderId).catch(console.error)}
+            onClick={() => void onCancel(orderId)}
           >
             {pending === `cancel-${orderId}` ? "Cancelling…" : "Cancel"}
           </button>

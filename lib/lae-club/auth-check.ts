@@ -5,10 +5,10 @@ import { useAccount } from "wagmi";
 import { useLaeUser } from "@/lib/lae-club/hooks";
 
 /** Max wait for on-chain registration check before showing UI / error. */
-export const REGISTRATION_CHECK_TIMEOUT_MS = 5_000;
+export const REGISTRATION_CHECK_TIMEOUT_MS = 4_000;
 
 /** Max wait for wallet reconnect before showing connect UI. */
-export const WALLET_SESSION_TIMEOUT_MS = 5_000;
+export const WALLET_SESSION_TIMEOUT_MS = 3_000;
 
 export type LaeUserState = ReturnType<typeof useLaeUser>;
 
