@@ -83,7 +83,6 @@ export function LaeRegisterPanel() {
     );
   }
 
-  const level1Price = prices.prices?.find((p) => p.level === 1)?.price;
   const paymentBal = tokenBalance.data ?? 0n;
   const hasEnoughToken = level1Price != null && paymentBal >= level1Price;
   const hasGas = (nativeBalance.data?.value ?? 0n) > parseEther("0.001");
