@@ -70,9 +70,9 @@ export function Navbar() {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
-            <BrandLogo />
+            <BrandLogo size={44} />
             <span className="font-display text-lg font-semibold text-white">
-              LAE<span className="font-normal text-slate-400">Protocol</span>
+              LAE<span className="font-normal text-slate-400"> Club</span>
             </span>
           </motion.a>
 

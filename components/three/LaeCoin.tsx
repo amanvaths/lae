@@ -31,7 +31,7 @@ function Coin({
 }) {
   const spin = useRef<THREE.Group>(null);
 
-  const tex = useTexture(withBasePath("/lae-coin-logo.png"));
+  const tex = useTexture(withBasePath("/lae-coin.png"));
   useMemo(() => {
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.anisotropy = 4;

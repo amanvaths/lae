@@ -59,7 +59,7 @@ export default function CoinLandingPage() {
           animate={{ opacity: 1, scale: 1 }}
           className="flex justify-center"
         >
-          <BrandLogo variant="coin" size={320} className="!rounded-2xl drop-shadow-[0_0_80px_rgba(255,195,26,0.25)]" />
+          <BrandLogo variant="coin" size={320} className="!rounded-full drop-shadow-[0_0_80px_rgba(255,195,26,0.25)]" />
         </motion.div>
       </section>
 
