@@ -32,8 +32,27 @@ export function HeroClub() {
       </div>
 
       <div className="container-edge relative z-10 mx-auto flex max-w-5xl flex-col items-center text-center">
-        <motion.span
+        {/* Crown Logo */}
+        <motion.div
           custom={0}
+          variants={fadeUp}
+          initial="hidden"
+          animate="visible"
+          className="mb-8"
+        >
+          <div className="relative mx-auto h-28 w-28 sm:h-36 sm:w-36">
+            <div className="absolute inset-0 animate-pulse-glow rounded-full bg-brand-500/20 blur-2xl" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={withBasePath("/lae-club-logo.png")}
+              alt="LAE Club"
+              className="relative h-full w-full rounded-2xl object-contain drop-shadow-[0_0_40px_rgba(255,195,26,0.5)]"
+            />
+          </div>
+        </motion.div>
+
+        <motion.span
+          custom={1}
           variants={fadeUp}
           initial="hidden"
           animate="visible"
@@ -43,7 +62,7 @@ export function HeroClub() {
         </motion.span>
 
         <motion.h1
-          custom={1}
+          custom={2}
           variants={fadeUp}
           initial="hidden"
           animate="visible"
@@ -56,7 +75,7 @@ export function HeroClub() {
         </motion.h1>
 
         <motion.p
-          custom={2}
+          custom={3}
           variants={fadeUp}
           initial="hidden"
           animate="visible"
@@ -67,7 +86,7 @@ export function HeroClub() {
         </motion.p>
 
         <motion.div
-          custom={3}
+          custom={4}
           variants={fadeUp}
           initial="hidden"
           animate="visible"
@@ -92,7 +111,7 @@ export function HeroClub() {
         </motion.div>
 
         <motion.div
-          custom={4}
+          custom={5}
           variants={fadeUp}
           initial="hidden"
           animate="visible"
