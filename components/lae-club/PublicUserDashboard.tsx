@@ -23,6 +23,7 @@ import {
   useLaeUserEventsForUser,
   useLaeVestingDirectRequirement,
   referralLinkByUserId,
+  parseLaeUserId,
 } from "@/lib/lae-club/hooks";
 import { LAE_LEVELS, LAE_COIN_TOKENOMICS } from "@/lib/lae-club/constants";
 import { fmtEther } from "@/lib/contracts/format";
@@ -43,14 +44,15 @@ const TABS: { id: Tab; label: string }[] = [
 export function PublicUserDashboard({ userId }: { userId: string }) {
   const [tab, setTab] = useState<Tab>("overview");
   const [matrixLevel, setMatrixLevel] = useState(1);
+  const parsedId = parseLaeUserId(userId);
 
   const user = useLaeUserById(userId);
-  const levels = useLaeAllMatrixLevelsForUser(user.userId);
-  const matrixL1 = useLaeMatrixLevelForUser(user.walletAddress, user.userId, 1);
-  const matrix = useLaeMatrixLevelForUser(user.walletAddress, user.userId, matrixLevel);
-  const team = useLaeDirectTeamForUser(user.userId);
+  const levels = useLaeAllMatrixLevelsForUser(user.userId ?? parsedId ?? undefined);
+  const matrixL1 = useLaeMatrixLevelForUser(user.walletAddress, user.userId ?? parsedId ?? undefined, 1);
+  const matrix = useLaeMatrixLevelForUser(user.walletAddress, user.userId ?? parsedId ?? undefined, matrixLevel);
+  const team = useLaeDirectTeamForUser(user.userId ?? parsedId ?? undefined);
   const rewards = useLaeRewardSummaryForAddress(user.walletAddress);
-  const events = useLaeUserEventsForUser(user.userId, user.walletAddress);
+  const events = useLaeUserEventsForUser(user.userId ?? parsedId ?? undefined, user.walletAddress);
   const vesting = useLaeVestingDirectRequirement(user.registeredAt);
 
   const incomeEvents = (events.data ?? []).filter((e) => e.eventName === "TokenReceived");
@@ -58,6 +60,14 @@ export function PublicUserDashboard({ userId }: { userId: string }) {
   const totalMatrix = incomeEvents.reduce((s, e) => s + ((e.args.amount as bigint) ?? 0n), 0n);
   const totalRoyal = royalEvents.reduce((s, e) => s + ((e.args.amount as bigint) ?? 0n), 0n);
   const recycleCount = (events.data ?? []).filter((e) => e.eventName === "Reinvest").length;
+
+  if (!parsedId) {
+    return (
+      <Panel title="Invalid user ID">
+        <p className="text-sm text-slate-400">Enter a valid numeric ID (1, 2, 3…).</p>
+      </Panel>
+    );
+  }
 
   if (user.isLoading) {
     return <QueryLoading label="Loading user from blockchain…" />;
@@ -72,19 +82,8 @@ export function PublicUserDashboard({ userId }: { userId: string }) {
     );
   }
 
-  if (user.notFound || !user.registered) {
-    return (
-      <Panel title="User not found">
-        <p className="text-sm text-slate-400">
-          No registered user with ID #{userId} on LAE Club Matrix.
-        </p>
-        <Link href={withBasePath("/register")} className="btn-primary mt-4 inline-flex">
-          Register
-        </Link>
-      </Panel>
-    );
-  }
-
+  const isOnChain = user.registered && !user.notFound;
+  const displayId = user.userId ?? parsedId;
   const royalRank =
     (user.activeLevels ?? 0) >= 12 ? 4 : (user.activeLevels ?? 0) >= 9 ? 3 : (user.activeLevels ?? 0) >= 6 ? 2 : (user.activeLevels ?? 0) >= 3 ? 1 : 0;
 
@@ -95,14 +94,31 @@ export function PublicUserDashboard({ userId }: { userId: string }) {
           <Pill tone="gold" className="mb-2">
             Read-only · no wallet
           </Pill>
+          {!isOnChain && (
+            <Pill tone="slate" className="mb-2 ml-2">
+              ID #{String(displayId)} — not registered on-chain yet
+            </Pill>
+          )}
           <h1 className="font-display text-xl font-bold text-white sm:text-2xl">
-            User #{String(user.userId)} ·{" "}
-            <span className="font-mono text-brand-300">
-              {truncateAddress(user.userAddress ?? "", 6, 4)}
-            </span>
+            User #{String(displayId)}
+            {isOnChain && user.userAddress ? (
+              <>
+                {" · "}
+                <span className="font-mono text-brand-300">
+                  {truncateAddress(user.userAddress, 6, 4)}
+                </span>
+              </>
+            ) : null}
           </h1>
           <p className="mt-1 text-sm text-slate-400">
-            Sponsor #{String(user.sponsorId ?? "—")} · {levels.isLoading ? "…" : `${levels.activeCount} active levels`}
+            {isOnChain ? (
+              <>
+                Sponsor #{String(user.sponsorId ?? "—")} ·{" "}
+                {levels.isLoading ? "…" : `${levels.activeCount} active levels`}
+              </>
+            ) : (
+              "This ID slot is available — no wallet registered yet."
+            )}
           </p>
           {user.userAddress && (
             <a
@@ -289,7 +305,7 @@ export function PublicUserDashboard({ userId }: { userId: string }) {
       {tab === "overview" && (
         <Panel title="Referral link" className="mt-4">
           <code className="block break-all rounded bg-black/30 p-2 text-xs text-brand-200">
-            {referralLinkByUserId(user.userId) || "—"}
+            {isOnChain ? referralLinkByUserId(displayId) || "—" : `${typeof window !== "undefined" ? window.location.origin : ""}${withBasePath("/register")}?ref=${String(displayId)}`}
           </code>
         </Panel>
       )}

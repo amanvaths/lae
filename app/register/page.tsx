@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { UserPlus } from "lucide-react";
-import { RegisterGate } from "@/components/auth/RegisterGate";
+import { Suspense } from "react";
 import { LaeRegisterPanel } from "@/components/lae-club/LaeRegisterPanel";
 import { ViewUserIdPanel } from "@/components/lae-club/ViewUserIdPanel";
 import { BrandLogo } from "@/components/ui/BrandLogo";
@@ -35,9 +35,9 @@ export default function RegisterPage() {
             </p>
           </div>
 
-          <RegisterGate>
+          <Suspense fallback={<p className="text-sm text-slate-500">Loading…</p>}>
             <LaeRegisterPanel />
-          </RegisterGate>
+          </Suspense>
 
           <p className="mt-5 text-center text-xs text-slate-500">
             Already registered?{" "}

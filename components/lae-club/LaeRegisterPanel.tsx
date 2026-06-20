@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useAccount, useBalance, usePublicClient, useReadContract, useWriteContract } from "wagmi";
 import { Loader2 } from "lucide-react";
@@ -14,6 +15,7 @@ import { useRouter } from "next/navigation";
 import { withBasePath } from "@/lib/paths";
 import { useToast } from "@/providers/ToastProvider";
 import { formatWalletError } from "@/lib/wallet/errors";
+import { ConnectWallet } from "@/components/web3/ConnectWallet";
 
 const MAX_UINT256 = 2n ** 256n - 1n;
 const REG_GAS_LIMIT = 12_000_000n;
@@ -72,7 +74,7 @@ export function LaeRegisterPanel() {
 
   const level1Price = prices.prices?.find((p) => p.level === 1)?.price;
 
-  if (user.isLoading || prices.isLoading) {
+  if (prices.isLoading) {
     return (
       <Panel title="Registration">
         <div className="flex items-center gap-2 text-slate-400">
@@ -82,10 +84,35 @@ export function LaeRegisterPanel() {
     );
   }
 
+  if (!address) {
+    return (
+      <Panel title="Registration">
+        <p className="mb-4 text-sm text-slate-400">
+          Connect your wallet to register — or use <strong className="text-white">View by User ID</strong> on the
+          right to browse any ID without a wallet.
+        </p>
+        <ConnectWallet />
+      </Panel>
+    );
+  }
+
+  if (address && user.isLoading) {
+    return (
+      <Panel title="Registration">
+        <div className="flex items-center gap-2 text-slate-400">
+          <Loader2 className="h-4 w-4 animate-spin" /> Checking wallet…
+        </div>
+      </Panel>
+    );
+  }
+
   if (user.registered) {
     return (
       <Panel title="Registration">
         <p className="text-emerald-400">Registered · User ID #{String(user.userId)}</p>
+        <Link href={withBasePath("/dashboard")} className="btn-primary mt-4 inline-flex text-sm">
+          Open your dashboard
+        </Link>
       </Panel>
     );
   }

@@ -31,7 +31,7 @@ export function ViewUserIdPanel({ initialId = "" }: { initialId?: string }) {
   return (
     <Panel title="View by User ID">
       <p className="mb-3 text-sm text-slate-400">
-        Open any member&apos;s live on-chain dashboard — no wallet required.
+        Browse any user ID on-chain — registered or not. No wallet required.
       </p>
       <label className="mb-3 block text-xs text-slate-500">
         User ID
