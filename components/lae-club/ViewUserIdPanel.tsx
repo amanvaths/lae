@@ -1,15 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, Loader2 } from "lucide-react";
 import { Panel } from "@/components/dashboard/ui";
 import { withBasePath } from "@/lib/paths";
 import { parseLaeUserId } from "@/lib/lae-club/hooks";
 
-export function ViewUserIdPanel() {
+export function ViewUserIdPanel({ initialId = "" }: { initialId?: string }) {
   const router = useRouter();
-  const [userId, setUserId] = useState("");
+  const [userId, setUserId] = useState(initialId);
+
+  useEffect(() => {
+    setUserId(initialId);
+  }, [initialId]);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -21,7 +25,7 @@ export function ViewUserIdPanel() {
       return;
     }
     setPending(true);
-    router.push(withBasePath(`/view/${id.toString()}`));
+    router.push(withBasePath(`/view?id=${id.toString()}`));
   }
 
   return (

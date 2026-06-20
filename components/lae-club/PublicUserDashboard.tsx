@@ -232,7 +232,7 @@ export function PublicUserDashboard({ userId }: { userId: string }) {
             ) : (
               team.addresses.map((addr, i) => (
                 <div key={addr} className="flex flex-wrap items-center justify-between gap-2 border-b border-white/5 py-3 text-sm">
-                  <Link href={withBasePath(`/view/${String(team.ids[i] ?? "")}`)} className="font-mono text-brand-300 hover:underline">
+                  <Link href={withBasePath(`/view?id=${String(team.ids[i] ?? "")}`)} className="font-mono text-brand-300 hover:underline">
                     ID #{String(team.ids[i] ?? "—")} · {truncateAddress(addr)}
                   </Link>
                 </div>
