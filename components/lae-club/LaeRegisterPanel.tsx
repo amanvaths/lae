@@ -48,6 +48,13 @@ export function LaeRegisterPanel() {
     args: address ? [address] : undefined,
     query: { enabled: !!address, staleTime: 10_000 },
   });
+  const tokenAllowance = useReadContract({
+    address: LAE_CONTRACTS.payment,
+    abi: erc20Abi,
+    functionName: "allowance",
+    args: address ? [address, LAE_CONTRACTS.matrix] : undefined,
+    query: { enabled: !!address, staleTime: 10_000 },
+  });
   const nativeBalance = useBalance({ address, query: { enabled: !!address, staleTime: 10_000 } });
   const [pending, setPending] = useState(false);
   const [step, setStep] = useState<string | null>(null);
@@ -84,7 +91,9 @@ export function LaeRegisterPanel() {
   }
 
   const paymentBal = tokenBalance.data ?? 0n;
+  const allowance = tokenAllowance.data ?? 0n;
   const hasEnoughToken = level1Price != null && paymentBal >= level1Price;
+  const hasAllowance = level1Price != null && allowance >= level1Price;
   const hasGas = (nativeBalance.data?.value ?? 0n) > parseEther("0.001");
 
   async function handleFaucet() {
@@ -129,26 +138,32 @@ export function LaeRegisterPanel() {
     try {
       const refId = BigInt(referrerId || "1");
 
-      await client.simulateContract({
-        account: address,
-        address: LAE_CONTRACTS.matrix,
-        abi: laeClubMatrixAbi,
-        functionName: "registrationExt",
-        args: [refId],
-      });
+      let currentAllowance = allowance;
+      if (currentAllowance < level1Price) {
+        setStep("Approve BUSD in MetaMask (step 1 of 2)…");
+        push("Confirm token approval in MetaMask…", "info");
+        const approveHash = await writeContractAsync({
+          address: LAE_CONTRACTS.payment,
+          abi: erc20Abi,
+          functionName: "approve",
+          args: [LAE_CONTRACTS.matrix, MAX_UINT256],
+        });
+        await client.waitForTransactionReceipt({ hash: approveHash });
+        currentAllowance = await client.readContract({
+          address: LAE_CONTRACTS.payment,
+          abi: erc20Abi,
+          functionName: "allowance",
+          args: [address, LAE_CONTRACTS.matrix],
+        });
+        await tokenAllowance.refetch();
+      }
 
-      setStep("Approve payment token in your wallet…");
-      push("Approve payment token…", "info");
-      const approveHash = await writeContractAsync({
-        address: LAE_CONTRACTS.payment,
-        abi: erc20Abi,
-        functionName: "approve",
-        args: [LAE_CONTRACTS.matrix, MAX_UINT256],
-      });
-      await client.waitForTransactionReceipt({ hash: approveHash });
+      if (currentAllowance < level1Price) {
+        throw new Error("Approval did not complete — try again");
+      }
 
-      setStep("Confirm registration in your wallet…");
-      push("Register on LAE Club…", "info");
+      setStep("Confirm registration in MetaMask (step 2 of 2)…");
+      push("Confirm registration in MetaMask…", "info");
       const regHash = await writeContractAsync({
         address: LAE_CONTRACTS.matrix,
         abi: laeClubMatrixAbi,
@@ -187,8 +202,7 @@ export function LaeRegisterPanel() {
       </p>
       <div className="mb-4 rounded-xl border border-white/10 bg-white/[0.03] p-3 text-sm">
         <p className="text-slate-300">
-          Registration fee: <span className="font-semibold text-brand-200">{priceLabel} BUSD</span>{" "}
-          <span className="text-slate-500">(levelTokenCost(1) on-chain)</span>
+          Registration fee: <span className="font-semibold text-brand-200">{priceLabel} BUSD</span>
         </p>
         <p className="mt-1 text-slate-400">
           Your BUSD balance:{" "}
@@ -196,10 +210,16 @@ export function LaeRegisterPanel() {
             {level1Price ? formatEther(paymentBal) : "—"} BUSD
           </span>
         </p>
+        <p className="mt-1 text-slate-400">
+          Matrix allowance:{" "}
+          <span className={hasAllowance ? "text-emerald-400" : "text-amber-300"}>
+            {hasAllowance ? "Ready" : "Needs approval (MetaMask step 1)"}
+          </span>
+        </p>
         {!hasEnoughToken && level1Price && (
           <div className="mt-3 space-y-2">
             <p className="text-xs text-amber-300/90">
-              Approval alone is not enough — you must hold at least {priceLabel} BUSD before registering.
+              You must hold at least {priceLabel} BUSD before registering.
             </p>
             <button
               type="button"
