@@ -3,16 +3,13 @@
 export const CHAIN_ID = Number(process.env.NEXT_PUBLIC_CHAIN_ID ?? "97");
 
 export const CONTRACTS = {
-  senso: (process.env.NEXT_PUBLIC_SENSO_CONTRACT ??
+  lae: (process.env.NEXT_PUBLIC_LAE_CONTRACT ??
+    process.env.NEXT_PUBLIC_SENSO_CONTRACT ??
     "0x6521619C38fe4be6B800263CC783d9524ED4F7BA") as `0x${string}`,
   dai: (process.env.NEXT_PUBLIC_DAI_CONTRACT ??
     "0xf8E556996042b34cc706F040c59955abB678995e") as `0x${string}`,
   slt: (process.env.NEXT_PUBLIC_SLT_CONTRACT ??
     "0xc842c083E703ecf82496813cc3BFe6d36c0A49b0") as `0x${string}`,
-  spin: (process.env.NEXT_PUBLIC_SPIN_CONTRACT ??
-    "0xF9bdE4a2Ca487b18DA8546124b63Ec9e938ea1aE") as `0x${string}`,
-  staking: (process.env.NEXT_PUBLIC_STAKING_CONTRACT ??
-    "0xdb25Af21346aD358D5e52835934AF5f326169984") as `0x${string}`,
 } as const;
 
 export const MAX_UINT256 =

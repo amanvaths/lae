@@ -36,12 +36,11 @@ export function Footer() {
             <a href="#top" className="flex items-center gap-3">
               <BrandLogo />
               <span className="font-display text-lg font-semibold text-white">
-                LAE Protocol
+                LAE<span className="font-normal text-slate-400"> Club</span>
               </span>
             </a>
             <p className="max-w-xs text-sm leading-relaxed text-slate-500">
-              The decentralized network token. Build your network, earn in $LAE,
-              own your growth — fully on-chain.
+              Decentralized business networking platform. Matrix income on-chain.
             </p>
           </div>
 
@@ -84,7 +83,7 @@ export function Footer() {
         </div>
 
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-white/5 pt-8 text-sm text-slate-600 sm:flex-row">
-          <p>© 2026 LAE Protocol. All rights reserved.</p>
+          <p>© 2026 LAE Club. All rights reserved.</p>
           <div className="flex items-center gap-6">
             <Link href={withBasePath("/privacy")} className="hover:text-brand-400">Privacy</Link>
             <Link href={withBasePath("/terms")} className="hover:text-brand-400">Terms</Link>

@@ -226,7 +226,7 @@ export default function DashboardHome() {
           { href: "/dashboard/matrix", icon: Layers, label: "Matrix", desc: "12 levels · 14 spots" },
           { href: "/dashboard/income", icon: TrendingUp, label: "Income", desc: "TokenReceived events" },
           { href: "/dashboard/royal-pool", icon: Crown, label: "Royal Pool", desc: "TreasuryPool income" },
-          { href: "/dashboard/staking", icon: Sparkles, label: "Staking", desc: "Live stake status" },
+          { href: "/dashboard/rewards", icon: Sparkles, label: "Rewards", desc: "LAE token rewards" },
         ].map((a) => (
           <Link
             key={a.href}

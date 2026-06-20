@@ -2,14 +2,10 @@ import type { Address, PublicClient } from "viem";
 import { getAddress, isAddressEqual } from "viem";
 import { CONTRACTS, LOG_LOOKBACK_BLOCKS } from "../config";
 import {
-  sensoLimitlessAbi,
+  laeLimitlessAbi,
   CLUB_LEVELS,
   PILOT_LEVELS,
-  CLUB_SLOTS,
-  PILOT_SLOTS,
 } from "../abis";
-import { sensoSpinAbi } from "../abis/sensoSpin";
-import { sensoStakingAbi } from "../abis/sensoStaking";
 import { erc20Abi } from "../abis/erc20";
 
 function sameAddr(a: unknown, b: Address): boolean {
@@ -30,7 +26,7 @@ async function getEventFromBlock(client: PublicClient): Promise<bigint> {
   }
 }
 
-export interface SensoUser {
+export interface LaeUser {
   sponsor: Address;
   registered: boolean;
   registeredAt: bigint;
@@ -78,13 +74,6 @@ export interface WalletSnapshot {
   totalWithdrawals: bigint;
 }
 
-export interface StakeView {
-  index: number;
-  amount: bigint;
-  lockEnd: bigint;
-  released: boolean;
-}
-
 export interface ChainEventRow {
   id: string;
   eventName: string;
@@ -95,13 +84,13 @@ export interface ChainEventRow {
 
 const ZERO = "0x0000000000000000000000000000000000000000" as Address;
 
-export async function readSensoUser(
+export async function readLaeUser(
   client: PublicClient,
   address: Address
-): Promise<SensoUser> {
+): Promise<LaeUser> {
   const [sponsor, registered, registeredAt] = await client.readContract({
-    address: CONTRACTS.senso,
-    abi: sensoLimitlessAbi,
+    address: CONTRACTS.lae,
+    abi: laeLimitlessAbi,
     functionName: "users",
     args: [address],
   });
@@ -115,15 +104,15 @@ export async function readClubPackages(
   const results: PackageState[] = [];
   for (let level = 1; level <= CLUB_LEVELS; level++) {
     const [owned, isManual, cyclesCompleted] = await client.readContract({
-      address: CONTRACTS.senso,
-      abi: sensoLimitlessAbi,
+      address: CONTRACTS.lae,
+      abi: laeLimitlessAbi,
       functionName: "clubPackages",
       args: [address, level],
     });
     const activeMatrixId = owned
       ? await client.readContract({
-          address: CONTRACTS.senso,
-          abi: sensoLimitlessAbi,
+          address: CONTRACTS.lae,
+          abi: laeLimitlessAbi,
           functionName: "activeClubMatrix",
           args: [address, level],
         })
@@ -146,15 +135,15 @@ export async function readPilotPackages(
   const results: PackageState[] = [];
   for (let level = 1; level <= PILOT_LEVELS; level++) {
     const [owned, isManual, cyclesCompleted] = await client.readContract({
-      address: CONTRACTS.senso,
-      abi: sensoLimitlessAbi,
+      address: CONTRACTS.lae,
+      abi: laeLimitlessAbi,
       functionName: "pilotPackages",
       args: [address, level],
     });
     const activeMatrixId = owned
       ? await client.readContract({
-          address: CONTRACTS.senso,
-          abi: sensoLimitlessAbi,
+          address: CONTRACTS.lae,
+          abi: laeLimitlessAbi,
           functionName: "activePilotMatrix",
           args: [address, level],
         })
@@ -186,15 +175,15 @@ export async function readClubMatrix(
     cycleNumber,
     createdAt,
   ] = await client.readContract({
-    address: CONTRACTS.senso,
-    abi: sensoLimitlessAbi,
+    address: CONTRACTS.lae,
+    abi: laeLimitlessAbi,
     functionName: "clubMatrices",
     args: [matrixId],
   });
   void owner;
   const slots = await client.readContract({
-    address: CONTRACTS.senso,
-    abi: sensoLimitlessAbi,
+    address: CONTRACTS.lae,
+    abi: laeLimitlessAbi,
     functionName: "clubSlotUsers",
     args: [matrixId],
   });
@@ -228,15 +217,15 @@ export async function readPilotMatrix(
     cycleNumber,
     createdAt,
   ] = await client.readContract({
-    address: CONTRACTS.senso,
-    abi: sensoLimitlessAbi,
+    address: CONTRACTS.lae,
+    abi: laeLimitlessAbi,
     functionName: "pilotMatrices",
     args: [matrixId],
   });
   void owner;
   const slots = await client.readContract({
-    address: CONTRACTS.senso,
-    abi: sensoLimitlessAbi,
+    address: CONTRACTS.lae,
+    abi: laeLimitlessAbi,
     functionName: "pilotSlotUsers",
     args: [matrixId],
   });
@@ -283,20 +272,20 @@ export async function readActivePilotMatrices(
 export async function readReferrals(client: PublicClient, address: Address) {
   const [direct, qualifiedClub, qualifiedPilot] = await Promise.all([
     client.readContract({
-      address: CONTRACTS.senso,
-      abi: sensoLimitlessAbi,
+      address: CONTRACTS.lae,
+      abi: laeLimitlessAbi,
       functionName: "directReferrals",
       args: [address],
     }),
     client.readContract({
-      address: CONTRACTS.senso,
-      abi: sensoLimitlessAbi,
+      address: CONTRACTS.lae,
+      abi: laeLimitlessAbi,
       functionName: "countQualifiedDirectReferrals",
       args: [address, 0],
     }),
     client.readContract({
-      address: CONTRACTS.senso,
-      abi: sensoLimitlessAbi,
+      address: CONTRACTS.lae,
+      abi: laeLimitlessAbi,
       functionName: "countQualifiedDirectReferrals",
       args: [address, 1],
     }),
@@ -321,14 +310,14 @@ export async function readWalletSnapshot(
         args: [address],
       }),
       client.readContract({
-        address: CONTRACTS.senso,
-        abi: sensoLimitlessAbi,
+        address: CONTRACTS.lae,
+        abi: laeLimitlessAbi,
         functionName: "getDaiBalance",
         args: [address],
       }),
       client.readContract({
-        address: CONTRACTS.senso,
-        abi: sensoLimitlessAbi,
+        address: CONTRACTS.lae,
+        abi: laeLimitlessAbi,
         functionName: "getSltBalance",
         args: [address],
       }),
@@ -348,7 +337,7 @@ async function sumIncomePaid(client: PublicClient, address: Address): Promise<bi
   try {
     const fromBlock = await getEventFromBlock(client);
     const logs = await client.getLogs({
-      address: CONTRACTS.senso,
+      address: CONTRACTS.lae,
       event: {
         type: "event",
         name: "IncomePaid",
@@ -378,7 +367,7 @@ async function sumWithdrawals(client: PublicClient, address: Address): Promise<b
   try {
     const fromBlock = await getEventFromBlock(client);
     const logs = await client.getLogs({
-      address: CONTRACTS.senso,
+      address: CONTRACTS.lae,
       event: {
         type: "event",
         name: "Withdraw",
@@ -453,8 +442,8 @@ export async function readUserEvents(
   async function fetchLogs(name: (typeof eventNames)[number], args?: Record<string, Address>) {
     try {
       return await client.getContractEvents({
-        abi: sensoLimitlessAbi,
-        address: CONTRACTS.senso,
+        abi: laeLimitlessAbi,
+        address: CONTRACTS.lae,
         eventName: name,
         args,
         fromBlock,
@@ -479,7 +468,6 @@ export async function readUserEvents(
     }
   }
 
-  // Referrals where this wallet is sponsor (not covered by user filter above).
   const sponsorRegs = await fetchLogs("UserRegistered", { sponsor: user });
   for (const log of sponsorRegs) {
     const args = log.args as Record<string, unknown>;
@@ -511,8 +499,8 @@ export async function readPackagePrices(client: PublicClient) {
   const pilot: { level: number; amount: bigint }[] = [];
   for (let i = 0; i < CLUB_LEVELS; i++) {
     const amount = await client.readContract({
-      address: CONTRACTS.senso,
-      abi: sensoLimitlessAbi,
+      address: CONTRACTS.lae,
+      abi: laeLimitlessAbi,
       functionName: "clubAmounts",
       args: [BigInt(i)],
     });
@@ -520,8 +508,8 @@ export async function readPackagePrices(client: PublicClient) {
   }
   for (let i = 0; i < PILOT_LEVELS; i++) {
     const amount = await client.readContract({
-      address: CONTRACTS.senso,
-      abi: sensoLimitlessAbi,
+      address: CONTRACTS.lae,
+      abi: laeLimitlessAbi,
       functionName: "pilotAmounts",
       args: [BigInt(i)],
     });
@@ -530,75 +518,10 @@ export async function readPackagePrices(client: PublicClient) {
   return { club, pilot };
 }
 
-export async function readSpinCoupons(client: PublicClient, address: Address) {
-  return client.readContract({
-    address: CONTRACTS.spin,
-    abi: sensoSpinAbi,
-    functionName: "spinCoupons",
-    args: [address],
-  });
-}
-
-export async function readSpinHistory(client: PublicClient, address: Address) {
-  try {
-    const fromBlock = await getEventFromBlock(client);
-    const logs = await client.getContractEvents({
-      abi: sensoSpinAbi,
-      address: CONTRACTS.spin,
-      eventName: "SpinExecuted",
-      args: { user: getAddress(address) },
-      fromBlock,
-      toBlock: "latest",
-    });
-    return logs
-      .map((log) => ({
-        id: `${log.transactionHash}-${log.logIndex}`,
-        tier: Number((log.args as { tier?: number }).tier ?? 0),
-        sltAmount: (log.args as { laeAmount?: bigint; sltAmount?: bigint }).laeAmount
-          ?? (log.args as { sltAmount?: bigint }).sltAmount
-          ?? 0n,
-        nonce: (log.args as { nonce?: bigint }).nonce ?? 0n,
-        transactionHash: log.transactionHash ?? "",
-        blockNumber: log.blockNumber ?? 0n,
-      }))
-      .reverse();
-  } catch {
-    return [];
-  }
-}
-
-export async function readStakes(
-  client: PublicClient,
-  address: Address
-): Promise<StakeView[]> {
-  const count = await client.readContract({
-    address: CONTRACTS.staking,
-    abi: sensoStakingAbi,
-    functionName: "stakeCount",
-    args: [address],
-  });
-  const stakes: StakeView[] = [];
-  for (let i = 0; i < Number(count); i++) {
-    const s = await client.readContract({
-      address: CONTRACTS.staking,
-      abi: sensoStakingAbi,
-      functionName: "stakes",
-      args: [address, BigInt(i)],
-    });
-    stakes.push({
-      index: i,
-      amount: s[0],
-      lockEnd: s[1],
-      released: s[2],
-    });
-  }
-  return stakes;
-}
-
 export async function readPendingLength(client: PublicClient): Promise<bigint> {
   return client.readContract({
-    address: CONTRACTS.senso,
-    abi: sensoLimitlessAbi,
+    address: CONTRACTS.lae,
+    abi: laeLimitlessAbi,
     functionName: "pendingLength",
   });
 }
@@ -606,13 +529,13 @@ export async function readPendingLength(client: PublicClient): Promise<bigint> {
 export async function readProtocolStatus(client: PublicClient) {
   const [activated, rootSponsor, pending] = await Promise.all([
     client.readContract({
-      address: CONTRACTS.senso,
-      abi: sensoLimitlessAbi,
+      address: CONTRACTS.lae,
+      abi: laeLimitlessAbi,
       functionName: "activated",
     }),
     client.readContract({
-      address: CONTRACTS.senso,
-      abi: sensoLimitlessAbi,
+      address: CONTRACTS.lae,
+      abi: laeLimitlessAbi,
       functionName: "rootSponsor",
     }),
     readPendingLength(client),
@@ -620,4 +543,4 @@ export async function readProtocolStatus(client: PublicClient) {
   return { activated, rootSponsor: rootSponsor as Address, pending, rootSponsorIsZero: rootSponsor === ZERO };
 }
 
-export { CLUB_SLOTS, PILOT_SLOTS };
+export { CLUB_SLOTS, PILOT_SLOTS } from "../abis";

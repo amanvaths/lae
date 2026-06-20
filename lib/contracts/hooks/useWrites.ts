@@ -10,10 +10,8 @@ import {
 } from "wagmi";
 import { parseEther, type Address } from "viem";
 import { CONTRACTS, MAX_UINT256 } from "../addresses";
-import { sensoLimitlessAbi } from "../abis";
+import { laeLimitlessAbi } from "../abis";
 import { erc20Abi } from "../abis/erc20";
-import { sensoSpinAbi } from "../abis/sensoSpin";
-import { sensoStakingAbi } from "../abis/sensoStaking";
 import { makeWithdrawRef, getSponsorFromUrl } from "../services/utils";
 import { useInvalidateOnChain, usePendingQueue } from "./useReads";
 import { useToast } from "@/providers/ToastProvider";
@@ -28,7 +26,7 @@ function useTxToast() {
   };
 }
 
-export function useDaiAllowance(spender: Address = CONTRACTS.senso) {
+export function useDaiAllowance(spender: Address = CONTRACTS.lae) {
   const { address } = useAccount();
   return useReadContract({
     address: CONTRACTS.dai,
@@ -39,7 +37,7 @@ export function useDaiAllowance(spender: Address = CONTRACTS.senso) {
   });
 }
 
-export function useSltAllowance(spender: Address = CONTRACTS.staking) {
+export function useSltAllowance(spender: Address = CONTRACTS.slt) {
   const { address } = useAccount();
   return useReadContract({
     address: CONTRACTS.slt,
@@ -61,16 +59,16 @@ export function useRegisterOnChain() {
       let target = sponsor ?? getSponsorFromUrl();
       if (!target && client) {
         target = await client.readContract({
-          address: CONTRACTS.senso,
-          abi: sensoLimitlessAbi,
+          address: CONTRACTS.lae,
+          abi: laeLimitlessAbi,
           functionName: "rootSponsor",
         });
       }
       if (!target) throw new Error("Sponsor address required");
       toast.onSubmit("Register");
       const hash = await writeContractAsync({
-        address: CONTRACTS.senso,
-        abi: sensoLimitlessAbi,
+        address: CONTRACTS.lae,
+        abi: laeLimitlessAbi,
         functionName: "register",
         args: [target],
       });
@@ -129,7 +127,7 @@ export function useApproveDai() {
   const toast = useTxToast();
 
   return useCallback(
-    async (spender: Address = CONTRACTS.senso) => {
+    async (spender: Address = CONTRACTS.lae) => {
       toast.onSubmit("DAI approve");
       const hash = await writeContractAsync({
         address: CONTRACTS.dai,
@@ -149,7 +147,7 @@ export function useApproveDaiAndWait() {
   const approve = useApproveDai();
   const client = usePublicClient();
   return useCallback(
-    async (spender: Address = CONTRACTS.senso) => {
+    async (spender: Address = CONTRACTS.lae) => {
       const hash = await approve(spender);
       if (client && hash) {
         await client.waitForTransactionReceipt({ hash });
@@ -166,7 +164,7 @@ export function useApproveSlt() {
   const toast = useTxToast();
 
   return useCallback(
-    async (spender: Address = CONTRACTS.staking) => {
+    async (spender: Address = CONTRACTS.slt) => {
       toast.onSubmit("LAE approve");
       const hash = await writeContractAsync({
         address: CONTRACTS.slt,
@@ -191,8 +189,8 @@ export function usePurchaseClub() {
     async (level: number) => {
       toast.onSubmit(`Club L${level} purchase`);
       const hash = await writeContractAsync({
-        address: CONTRACTS.senso,
-        abi: sensoLimitlessAbi,
+        address: CONTRACTS.lae,
+        abi: laeLimitlessAbi,
         functionName: "purchaseClub",
         args: [level],
       });
@@ -228,8 +226,8 @@ export function usePurchasePilot() {
     async (level: number) => {
       toast.onSubmit(`Pilot L${level} purchase`);
       const hash = await writeContractAsync({
-        address: CONTRACTS.senso,
-        abi: sensoLimitlessAbi,
+        address: CONTRACTS.lae,
+        abi: laeLimitlessAbi,
         functionName: "purchasePilot",
         args: [level],
       });
@@ -257,16 +255,16 @@ export function useProcessPending() {
     try {
       let remaining = Number(
         await client.readContract({
-          address: CONTRACTS.senso,
-          abi: sensoLimitlessAbi,
+          address: CONTRACTS.lae,
+          abi: laeLimitlessAbi,
           functionName: "pendingLength",
         })
       );
       while (remaining > 0) {
         toast.onSubmit(`Processing queue (${remaining} pending)`);
         const hash = await writeContractAsync({
-          address: CONTRACTS.senso,
-          abi: sensoLimitlessAbi,
+          address: CONTRACTS.lae,
+          abi: laeLimitlessAbi,
           functionName: "processPending",
           args: [10n],
         });
@@ -276,8 +274,8 @@ export function useProcessPending() {
         setProcessedTotal((n) => n + Math.min(remaining, 10));
         remaining = Number(
           await client.readContract({
-            address: CONTRACTS.senso,
-            abi: sensoLimitlessAbi,
+            address: CONTRACTS.lae,
+            abi: laeLimitlessAbi,
             functionName: "pendingLength",
           })
         );
@@ -308,8 +306,8 @@ export function useWithdrawOnChain() {
       const withdrawRef = makeWithdrawRef(address);
       toast.onSubmit("Withdraw");
       const hash = await writeContractAsync({
-        address: CONTRACTS.senso,
-        abi: sensoLimitlessAbi,
+        address: CONTRACTS.lae,
+        abi: laeLimitlessAbi,
         functionName: "withdraw",
         args: [amount, withdrawRef],
       });
@@ -318,68 +316,6 @@ export function useWithdrawOnChain() {
       return hash;
     },
     [address, writeContractAsync, invalidate, toast]
-  );
-}
-
-export function useExecuteSpin() {
-  const { writeContractAsync } = useWriteContract();
-  const invalidate = useInvalidateOnChain();
-  const toast = useTxToast();
-
-  return useCallback(async () => {
-    toast.onSubmit("Spin");
-    const hash = await writeContractAsync({
-      address: CONTRACTS.spin,
-      abi: sensoSpinAbi,
-      functionName: "spin",
-    });
-    toast.onSuccess("Spin");
-    invalidate();
-    return hash;
-  }, [writeContractAsync, invalidate, toast]);
-}
-
-export function useStakeOnChain() {
-  const { writeContractAsync } = useWriteContract();
-  const invalidate = useInvalidateOnChain();
-  const toast = useTxToast();
-
-  return useCallback(
-    async (amountEth: string) => {
-      toast.onSubmit("Stake LAE");
-      const hash = await writeContractAsync({
-        address: CONTRACTS.staking,
-        abi: sensoStakingAbi,
-        functionName: "stake",
-        args: [parseEther(amountEth)],
-      });
-      toast.onSuccess("Stake");
-      invalidate();
-      return hash;
-    },
-    [writeContractAsync, invalidate, toast]
-  );
-}
-
-export function useReleaseStake() {
-  const { writeContractAsync } = useWriteContract();
-  const invalidate = useInvalidateOnChain();
-  const toast = useTxToast();
-
-  return useCallback(
-    async (index: number) => {
-      toast.onSubmit("Release stake");
-      const hash = await writeContractAsync({
-        address: CONTRACTS.staking,
-        abi: sensoStakingAbi,
-        functionName: "release",
-        args: [BigInt(index)],
-      });
-      toast.onSuccess("Stake released");
-      invalidate();
-      return hash;
-    },
-    [writeContractAsync, invalidate, toast]
   );
 }
 

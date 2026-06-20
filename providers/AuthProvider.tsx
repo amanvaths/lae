@@ -52,7 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { data: me, isLoading: meLoading, isError } = useMe(hasToken && bootstrapped);
 
   const login = useCallback(
-    async (referralCode = "SENSOROOT") => {
+    async (referralCode = "LAEROOT") => {
       if (!address) throw new Error("Wallet not connected");
       setLoginPending(true);
       setError(null);

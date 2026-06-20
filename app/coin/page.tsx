@@ -44,8 +44,8 @@ export default function CoinLandingPage() {
             decentralized governance — all on-chain.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Link href={withBasePath("/dashboard/staking")} className="btn-primary group">
-              Stake LAE
+            <Link href={withBasePath("/dashboard")} className="btn-primary group">
+              Enter Dashboard
               <ArrowRight className="h-4 w-4 group-hover:translate-x-1" />
             </Link>
             <Link href={withBasePath("/")} className="btn-ghost">

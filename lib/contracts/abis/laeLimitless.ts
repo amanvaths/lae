@@ -1,4 +1,4 @@
-export const sensoLimitlessAbi = [
+export const laeLimitlessAbi = [
   {
     type: "function",
     name: "register",

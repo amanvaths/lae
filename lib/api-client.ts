@@ -26,19 +26,19 @@ export function setTokens(access: string | null, refresh: string | null = null) 
   if (refresh !== null) refreshToken = refresh;
   if (typeof window !== "undefined") {
     if (access) {
-      localStorage.setItem("senso_access_token", access);
-      if (refresh) localStorage.setItem("senso_refresh_token", refresh);
+      localStorage.setItem("lae_access_token", access);
+      if (refresh) localStorage.setItem("lae_refresh_token", refresh);
     } else {
-      localStorage.removeItem("senso_access_token");
-      localStorage.removeItem("senso_refresh_token");
+      localStorage.removeItem("lae_access_token");
+      localStorage.removeItem("lae_refresh_token");
     }
   }
 }
 
 export function loadStoredTokens() {
   if (typeof window === "undefined") return;
-  accessToken = localStorage.getItem("senso_access_token");
-  refreshToken = localStorage.getItem("senso_refresh_token");
+  accessToken = localStorage.getItem("lae_access_token");
+  refreshToken = localStorage.getItem("lae_refresh_token");
 }
 
 export function getAccessToken() {

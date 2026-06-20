@@ -5,9 +5,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAccount, usePublicClient, useWatchContractEvent } from "wagmi";
 import { contractKeys } from "../query-keys";
 import { CONTRACTS } from "../addresses";
-import { sensoLimitlessAbi } from "../abis";
+import { laeLimitlessAbi } from "../abis";
 import {
-  readSensoUser,
+  readLaeUser,
   readClubPackages,
   readPilotPackages,
   readActiveClubMatrices,
@@ -16,9 +16,6 @@ import {
   readWalletSnapshot,
   readUserEvents,
   readPackagePrices,
-  readSpinCoupons,
-  readSpinHistory,
-  readStakes,
   readPendingLength,
   readProtocolStatus,
 } from "../services/reader";
@@ -45,20 +42,18 @@ export function useInvalidateOnChain() {
         qc.invalidateQueries({ queryKey: contractKeys.pilot(address) });
         qc.invalidateQueries({ queryKey: contractKeys.referrals(address) });
         qc.invalidateQueries({ queryKey: contractKeys.events(address) });
-        qc.invalidateQueries({ queryKey: contractKeys.spin(address) });
-        qc.invalidateQueries({ queryKey: contractKeys.staking(address) });
       }
       qc.invalidateQueries({ queryKey: contractKeys.pending() });
     }, 2_000);
   }, [qc, address]);
 }
 
-/** Watch all LAELimitless events and refresh queries */
-export function useSensoEventWatcher(enabled = true) {
+/** Watch all LAE contract events and refresh queries */
+export function useLaeEventWatcher(enabled = true) {
   const invalidate = useInvalidateOnChain();
   useWatchContractEvent({
-    address: CONTRACTS.senso,
-    abi: sensoLimitlessAbi,
+    address: CONTRACTS.lae,
+    abi: laeLimitlessAbi,
     enabled,
     onLogs: () => invalidate(),
   });
@@ -76,12 +71,12 @@ export function useProtocolStatus() {
   });
 }
 
-export function useSensoUser() {
+export function useLaeOnChainUser() {
   const client = usePublicClient();
   const { address, enabled } = useEnabledAddress();
   return useQuery({
     queryKey: contractKeys.user(address),
-    queryFn: () => readSensoUser(client!, address!),
+    queryFn: () => readLaeUser(client!, address!),
     enabled: enabled && !!client,
     retry: 2,
     staleTime: 60_000,
@@ -196,35 +191,6 @@ export function usePendingQueue() {
   });
 }
 
-export function useSpinOnChain() {
-  const client = usePublicClient();
-  const { address, enabled } = useEnabledAddress();
-  const coupons = useQuery({
-    queryKey: [...contractKeys.spin(address), "coupons"],
-    queryFn: () => readSpinCoupons(client!, address!),
-    enabled: enabled && !!client,
-    retry: 2,
-  });
-  const history = useQuery({
-    queryKey: [...contractKeys.spin(address), "history"],
-    queryFn: () => readSpinHistory(client!, address!),
-    enabled: enabled && !!client,
-    retry: 2,
-  });
-  return { coupons, history };
-}
-
-export function useStakingOnChain() {
-  const client = usePublicClient();
-  const { address, enabled } = useEnabledAddress();
-  return useQuery({
-    queryKey: contractKeys.staking(address),
-    queryFn: () => readStakes(client!, address!),
-    enabled: enabled && !!client,
-    retry: 2,
-  });
-}
-
 export function useIsRootAdmin() {
   const client = usePublicClient();
   const { address, enabled } = useEnabledAddress();
@@ -232,8 +198,8 @@ export function useIsRootAdmin() {
     queryKey: [...contractKeys.all, "root-admin", address],
     queryFn: async () => {
       const root = await client!.readContract({
-        address: CONTRACTS.senso,
-        abi: sensoLimitlessAbi,
+        address: CONTRACTS.lae,
+        abi: laeLimitlessAbi,
         functionName: "rootSponsor",
       });
       return root.toLowerCase() === address!.toLowerCase();

@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { withBasePath } from "@/lib/paths";
 
-/** Legacy Senso register path — redirect to LAE Club registration. */
+/** Legacy register path — redirect to LAE Club registration. */
 export default function LegacyRegisterRedirect() {
   const router = useRouter();
   const searchParams = useSearchParams();

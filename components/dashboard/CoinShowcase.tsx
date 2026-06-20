@@ -1,26 +1,15 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowUpRight, Coins, TrendingUp } from "lucide-react";
-import { useWalletOnChain } from "@/lib/contracts/hooks";
+import { useLaeCoinStats } from "@/lib/lae-club/hooks";
 import { fmtEther } from "@/lib/contracts/format";
 import { withBasePath } from "@/lib/paths";
-
-const LaeCoin = dynamic(() => import("@/components/three/LaeCoin"), {
-  ssr: false,
-  loading: () => (
-    <div className="grid h-full w-full place-items-center">
-      <div className="h-28 w-28 animate-pulse-glow rounded-full bg-gold-400/25 blur-2xl" />
-    </div>
-  ),
-});
+import { BrandLogo } from "@/components/ui/BrandLogo";
 
 export function CoinShowcase() {
-  const wallet = useWalletOnChain();
-  const slt = wallet.data?.sltBalance ?? 0n;
-  const mdai = wallet.data?.daiInternal ?? 0n;
+  const coin = useLaeCoinStats();
 
   return (
     <motion.div
@@ -29,56 +18,39 @@ export function CoinShowcase() {
       transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
       className="glass relative mb-4 overflow-hidden p-4 sm:mb-5 sm:p-6 md:p-7"
     >
-      <div className="pointer-events-none absolute -right-10 -top-16 h-56 w-56 rounded-full bg-gold-400/15 blur-3xl" />
-      <div className="pointer-events-none absolute -left-10 bottom-0 h-40 w-40 rounded-full bg-brand-500/15 blur-3xl" />
-
-      <div className="relative grid items-center gap-5 sm:grid-cols-[1fr_auto] sm:gap-4">
-        <div className="flex min-w-0 flex-col gap-3 sm:gap-4">
-          <span className="chip w-fit">
-            <Coins className="h-3.5 w-3.5 text-gold-400" /> LAE Matrix
-          </span>
-
-          <div className="flex flex-wrap items-end gap-x-6 gap-y-2">
-            <div>
-              <p className="text-xs uppercase tracking-widest text-slate-500">
-                Your LAE balance
-              </p>
-              <p className="font-display text-2xl font-bold text-white sm:text-3xl md:text-4xl">
-                {wallet.isLoading ? "…" : fmtEther(slt, 0)}{" "}
-                <span className="text-gradient-gold">LAE</span>
-              </p>
-              <p className="mt-1 text-sm text-slate-400">
-                Internal mDAI: {wallet.isLoading ? "…" : fmtEther(mdai)}
-              </p>
-            </div>
-            <div className="rounded-xl border border-white/8 bg-white/[0.03] px-4 py-2.5">
-              <p className="text-xs text-slate-500">Network</p>
-              <p className="font-mono text-lg font-semibold text-white">BSC Testnet</p>
-              <p className="flex items-center gap-1 text-xs font-medium text-emerald-400">
-                <TrendingUp className="h-3 w-3" /> On-chain live
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            <Link
-              href={withBasePath("/dashboard/deposit")}
-              className="btn-primary w-full justify-center !px-5 !py-2.5 sm:w-auto"
-            >
-              Activate / Deposit
-            </Link>
-            <Link
-              href={withBasePath("/dashboard/slots")}
-              className="btn-ghost w-full justify-center !px-5 !py-2.5 sm:w-auto"
-            >
-              My matrices <ArrowUpRight className="h-4 w-4" />
-            </Link>
-          </div>
+      <div className="flex items-center gap-4">
+        <BrandLogo variant="coin" size={56} />
+        <div>
+          <h3 className="font-display text-lg font-bold text-white">LAE Coin</h3>
+          <p className="text-xs text-slate-400">Reward token · BEP-20</p>
         </div>
+      </div>
 
-        <div className="relative mx-auto hidden h-40 w-40 shrink-0 min-[400px]:block sm:h-44 sm:w-44 md:h-52 md:w-52">
-          <div className="absolute inset-0 rounded-full bg-gold-400/10 blur-2xl" />
-          <LaeCoin radius={2.1} />
+      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <div className="rounded-xl border border-white/5 bg-white/[0.02] p-3">
+          <div className="flex items-center gap-1 text-xs text-slate-500">
+            <Coins className="h-3 w-3" /> Total Supply
+          </div>
+          <p className="mt-1 font-mono text-sm font-semibold text-white">
+            {coin.totalSupply ? fmtEther(coin.totalSupply, 0) : "500,000"}
+          </p>
+        </div>
+        <div className="rounded-xl border border-white/5 bg-white/[0.02] p-3">
+          <div className="flex items-center gap-1 text-xs text-slate-500">
+            <TrendingUp className="h-3 w-3" /> Reward Pool
+          </div>
+          <p className="mt-1 font-mono text-sm font-semibold text-brand-300">
+            400,000 LAE
+          </p>
+        </div>
+        <div className="col-span-2 rounded-xl border border-white/5 bg-white/[0.02] p-3 sm:col-span-1">
+          <Link
+            href={withBasePath("/p2p")}
+            className="flex items-center gap-1 text-xs text-brand-400 hover:text-brand-300"
+          >
+            P2P Market <ArrowUpRight className="h-3 w-3" />
+          </Link>
+          <p className="mt-1 text-xs text-slate-500">Trade LAE rewards</p>
         </div>
       </div>
     </motion.div>

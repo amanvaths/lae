@@ -17,7 +17,7 @@ const links = [
   { label: "Home", href: "/#top" },
   { label: "Club", href: "/#about" },
   { label: "Matrix", href: "/#network" },
-  { label: "Rewards", href: withBasePath("/dashboard/rewards") },
+  { label: "Rewards", href: "/#rewards" },
   { label: "Token", href: "/#tokenomics" },
   { label: "FAQ", href: "/#faq" },
 ].map((l) => ({ ...l, href: l.href.startsWith("/#") ? withBasePath(l.href) : l.href }));

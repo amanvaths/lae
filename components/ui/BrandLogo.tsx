@@ -5,7 +5,7 @@ export type LogoVariant = "club" | "coin";
 
 const LOGO_SRC = {
   club: "/lae-club-logo.png",
-  coin: "/lae-coin.png",
+  coin: "/lae-coin-logo.png",
 } as const;
 
 export function BrandLogo({
@@ -25,7 +25,9 @@ export function BrandLogo({
     <span
       className={cn(
         "relative inline-flex shrink-0 items-center justify-center overflow-hidden",
-        isCoin ? "rounded-full" : "rounded-xl ring-1 ring-brand-500/20",
+        isCoin
+          ? "rounded-full border border-brand-500/20"
+          : "rounded-xl border border-brand-500/20",
         className
       )}
       style={{ width: size, height: size }}
@@ -37,7 +39,7 @@ export function BrandLogo({
         width={size}
         height={size}
         className={cn(
-          "h-full w-full object-contain",
+          "h-full w-full object-cover",
           isCoin
             ? "drop-shadow-[0_0_24px_rgba(255,195,26,0.45)]"
             : "drop-shadow-[0_0_14px_rgba(255,195,26,0.35)]"

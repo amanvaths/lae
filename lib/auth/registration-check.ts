@@ -1,10 +1,10 @@
 import type { UseQueryResult } from "@tanstack/react-query";
-import type { SensoUser } from "@/lib/contracts/services/reader";
+import type { LaeUser } from "@/lib/contracts/services/reader";
 
 /** True while the first on-chain registration read has not completed (React Query v5 safe). */
 export function isCheckingRegistration(
   query: Pick<
-    UseQueryResult<SensoUser, Error>,
+    UseQueryResult<LaeUser, Error>,
     "isPending" | "isError" | "data"
   >
 ): boolean {
@@ -13,7 +13,7 @@ export function isCheckingRegistration(
 
 /** True when registration read failed — do not treat as unregistered. */
 export function registrationReadFailed(
-  query: Pick<UseQueryResult<SensoUser, Error>, "isError" | "data">
+  query: Pick<UseQueryResult<LaeUser, Error>, "isError" | "data">
 ): boolean {
   return query.isError && query.data === undefined;
 }

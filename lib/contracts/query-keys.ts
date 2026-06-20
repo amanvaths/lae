@@ -7,7 +7,5 @@ export const contractKeys = {
   pending: () => [...contractKeys.all, "pending"] as const,
   referrals: (address?: string) => [...contractKeys.all, "referrals", address] as const,
   events: (address?: string) => [...contractKeys.all, "events", address] as const,
-  spin: (address?: string) => [...contractKeys.all, "spin", address] as const,
-  staking: (address?: string) => [...contractKeys.all, "staking", address] as const,
   prices: () => [...contractKeys.all, "prices"] as const,
 };
