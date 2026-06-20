@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { Wallet } from "lucide-react";
 import { useAccount } from "wagmi";
@@ -8,6 +9,7 @@ import { useWeb3Loaded } from "@/app/providers";
 import { withBasePath } from "@/lib/paths";
 import { useClientMounted } from "@/lib/useClientMounted";
 import { truncateAddress } from "@/lib/format";
+import { WalletAccountMenu } from "./WalletAccountMenu";
 
 export function ConnectWallet({
   full = false,
@@ -21,7 +23,8 @@ export function ConnectWallet({
 }) {
   const web3Ready = useWeb3Loaded();
   const mounted = useClientMounted();
-  const { isConnected } = useAccount();
+  const { isConnected, address } = useAccount();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const connectLink = (
     <a
@@ -29,10 +32,10 @@ export function ConnectWallet({
       className={cn(
         variant === "primary" ? "btn-primary" : "btn-ghost",
         full && "w-full justify-center",
-        "inline-flex items-center gap-2"
+        "inline-flex items-center gap-2 text-xs sm:text-sm"
       )}
     >
-      <Wallet className="h-4 w-4" />
+      <Wallet className="h-4 w-4 shrink-0" />
       {variant === "primary" ? "Connect Wallet" : "Connect"}
     </a>
   );
@@ -43,10 +46,10 @@ export function ConnectWallet({
         className={cn(
           variant === "primary" ? "btn-primary" : "btn-ghost",
           full && "w-full justify-center",
-          "inline-flex items-center gap-2 opacity-50"
+          "inline-flex items-center gap-2 opacity-50 text-xs sm:text-sm"
         )}
       >
-        <Wallet className="h-4 w-4" />
+        <Wallet className="h-4 w-4 shrink-0" />
         {variant === "primary" ? "Connect Wallet" : "Connect"}
       </div>
     );
@@ -57,67 +60,73 @@ export function ConnectWallet({
   }
 
   return (
-    <ConnectButton.Custom>
-      {({
-        account,
-        chain,
-        openAccountModal,
-        openConnectModal,
-        authenticationStatus,
-        mounted: rkMounted,
-      }) => {
-        const ready = rkMounted && authenticationStatus !== "loading";
-        const connected =
-          ready &&
-          account &&
-          chain &&
-          (!authenticationStatus || authenticationStatus === "authenticated");
+    <>
+      <ConnectButton.Custom>
+        {({
+          account,
+          chain,
+          openConnectModal,
+          authenticationStatus,
+          mounted: rkMounted,
+        }) => {
+          const ready = rkMounted && authenticationStatus !== "loading";
+          const connected =
+            ready &&
+            account &&
+            chain &&
+            (!authenticationStatus || authenticationStatus === "authenticated");
 
-        return (
-          <div className={cn("flex items-center", full && "w-full")}>
-            {!ready ? (
-              <button
-                type="button"
-                disabled
-                className={cn(
-                  variant === "primary" ? "btn-primary" : "btn-ghost",
-                  full && "w-full justify-center",
-                  "opacity-60"
-                )}
-              >
-                <Wallet className="h-4 w-4" />
-                {variant === "primary" ? "Connect Wallet" : "Connect"}
-              </button>
-            ) : !connected ? (
-              <button
-                type="button"
-                onClick={openConnectModal}
-                className={cn(
-                  variant === "primary" ? "btn-primary" : "btn-ghost",
-                  full && "w-full justify-center"
-                )}
-              >
-                <Wallet className="h-4 w-4" />
-                {variant === "primary" ? "Connect Wallet" : "Connect"}
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={openAccountModal}
-                className={cn(
-                  "inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 text-sm font-medium text-white transition-colors hover:border-white/20",
-                  full && "w-full justify-center"
-                )}
-              >
-                <Wallet className="h-4 w-4 text-brand-300" />
-                <span className="font-mono">
-                  {truncateAddress(account.address, 6, 4)}
-                </span>
-              </button>
-            )}
-          </div>
-        );
-      }}
-    </ConnectButton.Custom>
+          return (
+            <div className={cn("flex items-center", full && "w-full")}>
+              {!ready ? (
+                <button
+                  type="button"
+                  disabled
+                  className={cn(
+                    variant === "primary" ? "btn-primary" : "btn-ghost",
+                    full && "w-full justify-center",
+                    "opacity-60 text-xs sm:text-sm"
+                  )}
+                >
+                  <Wallet className="h-4 w-4 shrink-0" />
+                  {variant === "primary" ? "Connect Wallet" : "Connect"}
+                </button>
+              ) : !connected ? (
+                <button
+                  type="button"
+                  onClick={openConnectModal}
+                  className={cn(
+                    variant === "primary" ? "btn-primary" : "btn-ghost",
+                    full && "w-full justify-center",
+                    "text-xs sm:text-sm"
+                  )}
+                >
+                  <Wallet className="h-4 w-4 shrink-0" />
+                  {variant === "primary" ? "Connect Wallet" : "Connect"}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setMenuOpen(true)}
+                  className={cn(
+                    "inline-flex max-w-[11rem] items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-2 text-xs font-medium text-white transition-colors hover:border-white/20 sm:max-w-none sm:gap-2 sm:px-3 sm:text-sm",
+                    full && "w-full max-w-none justify-center"
+                  )}
+                >
+                  <Wallet className="h-4 w-4 shrink-0 text-brand-300" />
+                  <span className="truncate font-mono">
+                    {truncateAddress(account.address, 4, 4)}
+                  </span>
+                </button>
+              )}
+            </div>
+          );
+        }}
+      </ConnectButton.Custom>
+
+      {menuOpen && address && (
+        <WalletAccountMenu address={address} onClose={() => setMenuOpen(false)} />
+      )}
+    </>
   );
 }

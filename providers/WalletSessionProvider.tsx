@@ -15,7 +15,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useClientMounted } from "@/lib/useClientMounted";
 import { CHAIN_ID } from "@/lib/contracts/config";
 import { withBasePath } from "@/lib/paths";
-import { clearWalletSession } from "@/lib/wallet/clear-session";
+import { clearWalletSession, clearWalletStorage } from "@/lib/wallet/clear-session";
 import { contractKeys } from "@/lib/contracts/query-keys";
 
 interface WalletSessionContextValue {
@@ -24,7 +24,7 @@ interface WalletSessionContextValue {
   isReady: boolean;
   isWrongNetwork: boolean;
   resetSession: () => void;
-  disconnectWallet: () => void;
+  disconnectWallet: () => void | Promise<void>;
 }
 
 const WalletSessionContext = createContext<WalletSessionContextValue | null>(null);
@@ -34,8 +34,8 @@ export function WalletSessionProvider({ children }: { children: ReactNode }) {
   const qc = useQueryClient();
   const mounted = useClientMounted();
   const chainId = useChainId();
-  const { address, isConnected, isConnecting, isReconnecting } = useAccount();
-  const { disconnect } = useDisconnect();
+  const { address, isConnected, isConnecting, isReconnecting, connector } = useAccount();
+  const { disconnectAsync, disconnect } = useDisconnect();
 
   const isReady = mounted && !isConnecting && !isReconnecting;
   const isWrongNetwork = isConnected && chainId !== CHAIN_ID;
@@ -44,11 +44,20 @@ export function WalletSessionProvider({ children }: { children: ReactNode }) {
     clearWalletSession(qc);
   }, [qc]);
 
-  const disconnectWallet = useCallback(() => {
+  const disconnectWallet = useCallback(async () => {
     resetSession();
-    disconnect();
+    clearWalletStorage();
+    try {
+      if (connector) {
+        await disconnectAsync({ connector });
+      } else {
+        await disconnectAsync();
+      }
+    } catch {
+      disconnect();
+    }
     router.replace(withBasePath("/login"));
-  }, [resetSession, disconnect, router]);
+  }, [resetSession, disconnectAsync, disconnect, connector, router]);
 
   const prevAddress = useRef<string | undefined>(undefined);
   const prevChainId = useRef<number | undefined>(undefined);

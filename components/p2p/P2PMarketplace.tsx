@@ -36,9 +36,9 @@ type OrderRow = {
 };
 
 const TABS = [
-  { id: "sell", label: "Sell LAE", icon: Tag },
-  { id: "buy", label: "Buy LAE", icon: ShoppingCart },
-  { id: "my", label: "My Orders", icon: Wallet },
+  { id: "sell", label: "Sell LAE", short: "Sell", icon: Tag },
+  { id: "buy", label: "Buy LAE", short: "Buy", icon: ShoppingCart },
+  { id: "my", label: "My Orders", short: "Mine", icon: Wallet },
 ] as const;
 type TabId = (typeof TABS)[number]["id"];
 
@@ -53,26 +53,30 @@ export function P2PMarketplace() {
   });
 
   return (
-    <section className="relative px-4 pt-28 pb-16 sm:px-6 sm:pt-32 lg:px-8">
+    <section className="relative px-3 pt-24 pb-20 sm:px-6 sm:pt-32 sm:pb-16 lg:px-8">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_60%_40%_at_50%_0%,rgba(255,195,26,0.06),transparent)]" />
 
       <div className="relative mx-auto max-w-5xl">
         {/* Hero header */}
-        <div className="mb-10 flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-4">
-            <span className="grid h-14 w-14 place-items-center rounded-2xl border border-brand-500/30 bg-brand-500/10">
-              <ArrowLeftRight className="h-7 w-7 text-brand-400" />
+        <div className="mb-10 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+          <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-brand-500/30 bg-brand-500/10 sm:h-14 sm:w-14">
+              <ArrowLeftRight className="h-6 w-6 text-brand-400 sm:h-7 sm:w-7" />
             </span>
-            <div>
-              <h1 className="font-display text-2xl font-bold text-white sm:text-3xl">
+            <div className="min-w-0">
+              <h1 className="font-display text-xl font-bold text-white sm:text-3xl">
                 P2P Marketplace
               </h1>
-              <p className="mt-0.5 text-sm text-slate-400">
+              <p className="mt-0.5 text-xs text-slate-400 sm:text-sm">
                 Trade LAE tokens directly with club members
               </p>
             </div>
           </div>
-          {!isConnected && <ConnectWallet />}
+          {!isConnected && (
+            <div className="w-full sm:w-auto">
+              <ConnectWallet full />
+            </div>
+          )}
         </div>
 
         {/* Stats bar */}
@@ -101,7 +105,7 @@ export function P2PMarketplace() {
               key={t.id}
               onClick={() => setTab(t.id)}
               className={cn(
-                "relative flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-medium transition-all",
+                "relative flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-3 text-xs font-medium transition-all sm:gap-2 sm:px-4 sm:text-sm",
                 tab === t.id
                   ? "text-white"
                   : "text-slate-400 hover:text-white"
@@ -114,8 +118,9 @@ export function P2PMarketplace() {
                   transition={{ type: "spring", stiffness: 400, damping: 30 }}
                 />
               )}
-              <t.icon className="relative h-4 w-4" />
-              <span className="relative hidden sm:inline">{t.label}</span>
+              <t.icon className="relative h-4 w-4 shrink-0" />
+              <span className="relative truncate">{t.short}</span>
+              <span className="relative hidden truncate sm:inline">{t.label}</span>
             </button>
           ))}
         </div>
