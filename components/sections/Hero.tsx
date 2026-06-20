@@ -6,62 +6,108 @@ import { ArrowRight } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { withBasePath } from "@/lib/paths";
-import { CoinFallback } from "@/components/three/CoinFallback";
-import { useDeferredReady, useIsMobile, usePrefersReducedMotion } from "@/lib/useDeferredReady";
+import { usePrefersReducedMotion } from "@/lib/useDeferredReady";
 import { useWeb3Loaded } from "@/app/providers";
 import { useAccount } from "wagmi";
-import { useSensoUser } from "@/lib/contracts/hooks";
+import { useLaeUser } from "@/lib/lae-club/hooks";
 
 const NetworkCanvas = dynamic(
   () => import("@/components/ui/NetworkCanvas").then((m) => m.NetworkCanvas),
   { ssr: false }
 );
 
-const LaeCoin = dynamic(() => import("@/components/three/LaeCoin"), {
-  ssr: false,
-  loading: () => <CoinFallback spin={false} className="h-full w-full" />,
-});
-
 const SLIDE_MS = 6000;
 
 const slides = [
   {
-    label: "Decentralization revolution of network rewards",
+    label: "LAE Club · On-chain matrix",
     title: (
       <>
-        Your Network,
+        LAE Club
         <br />
-        <span className="text-shimmer">Now An Asset.</span>
+        <span className="text-shimmer">Matrix Business</span>
       </>
     ),
     desc: (
       <>
-        <strong className="text-white">$LAE</strong> is a decentralised on-chain
-        network token — fully open, fully transparent. Build your tree, earn on
-        every level, and own your growth with no middlemen.
+        Join the <strong className="text-white">LAE Club Matrix</strong> — a transparent 14-spot,
+        12-level referral system. Matrix income is paid in BTC/USDT directly from the smart contract.
       </>
     ),
-    primary: { href: "#cta", label: "Get $LAE" },
-    secondary: { href: "#network", label: "Explore Plan" },
+    primary: { href: withBasePath("/register"), label: "Join LAE Club" },
+    secondary: { href: "#network", label: "View Matrix" },
   },
   {
-    label: "Network-to-earn · Web3",
+    label: "12 levels · auto upgrade",
     title: (
       <>
-        LAE Tech
+        12 Levels
         <br />
-        <span className="text-shimmer">Change The World</span>
+        <span className="text-shimmer">Auto Upgrade</span>
       </>
     ),
     desc: (
       <>
-        Every connection strengthens the protocol and pays you in $LAE —
-        automatically, on every level of your tree. No hidden ledgers, no
-        back-office delays.
+        Each level doubles in entry cost. Spot 5 triggers automatic level upgrades. Royal rank NFTs
+        unlock at levels 3, 6, 9, and 12.
       </>
     ),
     primary: { href: withBasePath("/login"), label: "Connect Wallet" },
+    secondary: { href: withBasePath("/dashboard/matrix"), label: "Open Matrix" },
+  },
+  {
+    label: "14-spot BTitan system",
+    title: (
+      <>
+        14 Spot
+        <br />
+        <span className="text-shimmer">Matrix System</span>
+      </>
+    ),
+    desc: (
+      <>
+        Upline spill, downline spill-under, recycle on spot 14, and royal pool routing — identical
+        BTitan placement logic, deployed on BNB Chain.
+      </>
+    ),
+    primary: { href: "#network", label: "Explore 14 Spots" },
     secondary: { href: withBasePath("/whitepaper"), label: "Whitepaper" },
+  },
+  {
+    label: "Club business model",
+    title: (
+      <>
+        Club
+        <br />
+        <span className="text-shimmer">Business</span>
+      </>
+    ),
+    desc: (
+      <>
+        90% of registration payment funds matrix distribution. 10% goes to liquidity. Build your team,
+        earn matrix income, and grow through spillover placement.
+      </>
+    ),
+    primary: { href: withBasePath("/register"), label: "Register Now" },
+    secondary: { href: withBasePath("/dashboard/team"), label: "My Team" },
+  },
+  {
+    label: "LAE reward layer",
+    title: (
+      <>
+        LAE
+        <br />
+        <span className="text-shimmer">Rewards</span>
+      </>
+    ),
+    desc: (
+      <>
+        LAE Coin is a separate reward layer — locked 20 months, 5% monthly release, direct
+        qualification required. Claim from your dashboard when eligible.
+      </>
+    ),
+    primary: { href: withBasePath("/dashboard/rewards"), label: "LAE Rewards" },
+    secondary: { href: withBasePath("/coin"), label: "About LAE Coin" },
   },
 ];
 
@@ -112,8 +158,8 @@ function HeroConnectSlideActions({
   secondary: { href: string; label: string };
 }) {
   const { isConnected } = useAccount();
-  const user = useSensoUser();
-  const registered = user.data?.registered;
+  const user = useLaeUser();
+  const registered = user.registered;
 
   if (isConnected && registered) {
     return (
@@ -173,15 +219,34 @@ function useHeroConnectFocus(goTo: (index: number) => void) {
   }, [isConnected, goTo]);
 }
 
-function HeroCoin() {
-  const deferred = useDeferredReady(2000);
-  const mobile = useIsMobile();
-  const reduced = usePrefersReducedMotion();
-
-  if (mobile || reduced || !deferred) {
-    return <CoinFallback spin={false} className="h-full w-full" />;
-  }
-  return <LaeCoin className="h-full w-full" />;
+function HeroMatrixVisual() {
+  const spots = [
+    "U1", "U2", "You", "Royal", "Upg", "You", "Dn1", "You", "You", "Dn1", "You", "You", "Dn2", "Cycle",
+  ];
+  return (
+    <div className="relative flex h-full w-full flex-col items-center justify-center rounded-2xl border border-brand-500/20 bg-ink-950/80 p-6 backdrop-blur-md">
+      <p className="text-xs font-semibold uppercase tracking-widest text-brand-400">LAE Club Matrix</p>
+      <p className="mt-1 font-display text-2xl font-bold text-white">12 Levels · 14 Spots</p>
+      <div className="mt-6 grid grid-cols-7 gap-1.5 sm:gap-2">
+        {spots.map((label, i) => (
+          <div
+            key={i}
+            className="flex h-9 w-9 items-center justify-center rounded-md border border-white/10 bg-white/[0.04] text-[0.55rem] font-semibold text-slate-300 sm:h-10 sm:w-10 sm:text-[0.6rem]"
+            title={`Spot ${i + 1}`}
+          >
+            {i + 1}
+          </div>
+        ))}
+      </div>
+      <div className="mt-4 flex flex-wrap justify-center gap-2 text-[0.65rem] text-slate-500">
+        <span>90% matrix</span>
+        <span>·</span>
+        <span>10% liquidity</span>
+        <span>·</span>
+        <span>LAE rewards locked</span>
+      </div>
+    </div>
+  );
 }
 
 export function Hero() {
@@ -323,7 +388,7 @@ export function Hero() {
             </>
           )}
           <div className="absolute inset-0 rounded-full bg-brand-500/10 blur-3xl" />
-          <HeroCoin />
+          <HeroMatrixVisual />
           {!reduced && (
             <>
               <motion.div
@@ -331,17 +396,17 @@ export function Hero() {
                 transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
                 className="absolute left-0 top-8 border border-brand-500/20 bg-ink-950/90 px-4 py-3 backdrop-blur-md"
               >
-                <p className="text-xs text-slate-500">Launch price</p>
-                <p className="font-mono text-lg font-bold text-white">$0.10</p>
-                <p className="text-xs font-medium text-emerald-400">500K supply</p>
+                <p className="text-xs text-slate-500">Matrix levels</p>
+                <p className="font-mono text-lg font-bold text-white">12</p>
+                <p className="text-xs font-medium text-emerald-400">Auto upgrade</p>
               </motion.div>
               <motion.div
                 animate={{ y: [0, 12, 0] }}
                 transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
                 className="absolute bottom-10 right-0 border border-brand-500/20 bg-ink-950/90 px-4 py-3 backdrop-blur-md"
               >
-                <p className="text-xs text-slate-500">Ecosystem target</p>
-                <p className="font-mono text-lg font-bold text-brand-400">Up To 1 BTC</p>
+                <p className="text-xs text-slate-500">Spots per cycle</p>
+                <p className="font-mono text-lg font-bold text-brand-400">14</p>
               </motion.div>
             </>
           )}

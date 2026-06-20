@@ -21,7 +21,22 @@ export const STAKING_EVENTS = [
     "event Staked(address indexed user, uint256 amount, uint64 lockEnd, uint256 stakeIndex)",
     "event Released(address indexed user, uint256 amount, uint256 stakeIndex)",
 ];
+/** BTitanXMatrix / LAE Club Matrix events */
+export const LAE_MATRIX_EVENTS = [
+    "event Registration(uint256 indexed userId, uint256 indexed referrerId, address indexed userAddress)",
+    "event TokenReceived(uint256 indexed receiverId, uint256 indexed fromId, address indexed from, uint8 level, uint256 amount)",
+    "event TreasuryPool(uint256 indexed refId, uint256 indexed userId, uint256 amount, uint8 level)",
+    "event NewUserPlace(uint256 indexed user, uint256 indexed referrer, uint8 level, uint256 cycle, uint8 spot)",
+    "event Spillover(uint256 indexed referrerId, uint256 indexed receiverId, uint8 level, uint256 cycle, uint8 virtualSpot)",
+    "event Reinvest(uint256 indexed userId, uint256 indexed newReferrerId, uint256 indexed callerId, uint8 level)",
+    "event Upgrade(uint256 indexed userId, uint256 indexed newReferrerId, uint8 level)",
+    "event MissedIncome(uint256 indexed receiverId, uint256 indexed userId, uint8 level)",
+    "event LaeRewardAllocated(address indexed user, uint256 indexed scheduleIndex, uint256 laeAmount, uint256 liquidityContribution, uint8 level)",
+    "event LaeRewardClaimed(address indexed user, uint256 amount)",
+    "event PoolAddressesUpdated(address indexed newRoyalPool, address indexed newTreasuryPool)",
+];
 export const ALL_INDEXER_EVENTS = [
+    ...LAE_MATRIX_EVENTS,
     ...SENSO_LIMITLESS_EVENTS,
     ...SPIN_EVENTS,
     ...STAKING_EVENTS,

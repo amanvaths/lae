@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import HomePage from "./home/home-page";
 
 export const metadata: Metadata = {
-  title: "LAE — The Decentralized Network Token",
+  title: "LAE Club — 12-Level Matrix Business",
   description:
-    "LAE turns the power of networking into a transparent, on-chain rewards economy. Build your network, earn in $LAE, own your growth.",
+    "LAE Club Matrix: 14-spot BTitan system on BNB Chain. Build your team, earn matrix income on-chain, and unlock LAE rewards.",
 };
 
 export default function RootPage() {

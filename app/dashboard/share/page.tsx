@@ -1,74 +1,73 @@
 "use client";
 
-import { useAccount } from "wagmi";
-import Link from "next/link";
 import { Panel } from "@/components/dashboard/ui";
 import { QueryLoading } from "@/components/dashboard/QueryState";
-import { useReferralsOnChain, useSensoUser } from "@/lib/contracts/hooks";
-import { referralLink } from "@/lib/contracts/services/utils";
+import {
+  referralLinkByUserId,
+  useLaeDirectTeam,
+  useLaeUser,
+} from "@/lib/lae-club/hooks";
 import { truncateAddress } from "@/lib/format";
 
 export default function SharePage() {
-  const { address } = useAccount();
-  const user = useSensoUser();
-  const referrals = useReferralsOnChain();
+  const user = useLaeUser();
+  const team = useLaeDirectTeam();
+  const link = referralLinkByUserId(user.userId);
 
-  const link = address ? referralLink(address) : "";
+  if (user.isLoading) {
+    return <QueryLoading label="Loading referral data…" />;
+  }
 
   return (
     <div>
       <h1 className="font-display text-2xl font-bold text-white">Share &amp; Refer</h1>
-      <p className="mt-1 text-sm text-slate-400">On-chain referral link — sponsor = your wallet</p>
+      <p className="mt-1 text-sm text-slate-400">
+        BTitan registration uses numeric sponsor ID — share your User ID link
+      </p>
 
       <Panel className="mt-6" title="Your referral link">
-        <code className="block break-all rounded-lg bg-black/30 p-3 text-sm text-brand-200">
-          {link || "Connect wallet"}
-        </code>
-        <p className="mt-2 text-xs text-slate-500">
-          New users register with <code className="text-brand-200">register(yourAddress)</code>
-        </p>
+        {!user.registered ? (
+          <p className="text-sm text-slate-500">Register first to get your User ID link</p>
+        ) : (
+          <>
+            <code className="block break-all rounded-lg bg-black/30 p-3 text-sm text-brand-200">
+              {link}
+            </code>
+            <p className="mt-2 text-xs text-slate-500">
+              New users call <code className="text-brand-200">registrationExt({String(user.userId)})</code>
+            </p>
+          </>
+        )}
       </Panel>
 
-      <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-4 grid gap-4 sm:grid-cols-3">
+        <Panel title="Your User ID">
+          <p className="text-2xl font-bold text-white">{String(user.userId ?? "—")}</p>
+        </Panel>
         <Panel title="Direct referrals">
-          {referrals.isLoading ? (
-            <QueryLoading />
-          ) : (
-            <p className="text-2xl font-bold text-white">{referrals.data?.direct.length ?? 0}</p>
-          )}
-        </Panel>
-        <Panel title="Qualified (Club L4+)">
-          <p className="text-2xl font-bold text-white">{referrals.data?.qualifiedClub ?? 0}</p>
-        </Panel>
-        <Panel title="Qualified (Pilot)">
-          <p className="text-2xl font-bold text-white">{referrals.data?.qualifiedPilot ?? 0}</p>
+          <p className="text-2xl font-bold text-white">{String(user.directCount ?? 0n)}</p>
         </Panel>
         <Panel title="Your sponsor">
           <p className="font-mono text-sm text-white">
-            {user.data?.registered ? truncateAddress(user.data.sponsor) : "—"}
+            #{String(user.sponsorId ?? "—")}{" "}
+            {user.sponsorAddress ? `· ${truncateAddress(user.sponsorAddress)}` : ""}
           </p>
         </Panel>
       </div>
 
-      <Panel className="mt-4" title="Direct referral wallets">
-        {referrals.isLoading ? (
+      <Panel className="mt-4" title="Direct referral IDs">
+        {team.isLoading ? (
           <QueryLoading />
-        ) : (referrals.data?.direct.length ?? 0) === 0 ? (
+        ) : team.ids.length === 0 ? (
           <p className="text-sm text-slate-500">No direct referrals yet</p>
         ) : (
-          <div className="divide-y divide-white/5">
-            {referrals.data!.direct.map((addr) => (
-              <div key={addr} className="py-2 font-mono text-sm text-white">
-                {truncateAddress(addr)}
-              </div>
-            ))}
-          </div>
+          team.ids.map((id) => (
+            <div key={String(id)} className="border-b border-white/5 py-2 text-sm text-white">
+              User #{String(id)}
+            </div>
+          ))
         )}
       </Panel>
-
-      <Link href="/dashboard/referrals" className="btn-ghost mt-4 inline-flex">
-        View all referrals
-      </Link>
     </div>
   );
 }

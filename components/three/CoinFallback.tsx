@@ -21,8 +21,8 @@ export function CoinFallback({
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={withBasePath("/lae-coin.png")}
-          alt="LAE token"
+          src={withBasePath("/lae-coin-logo.png")}
+          alt="LAE Coin"
           className="h-full w-full object-contain drop-shadow-[0_0_48px_rgba(245,195,59,0.35)]"
         />
       </div>

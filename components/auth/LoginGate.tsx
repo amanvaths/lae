@@ -6,8 +6,8 @@ import { useAccount } from "wagmi";
 import { Loader2 } from "lucide-react";
 import { useClientMounted } from "@/lib/useClientMounted";
 import { useWalletSession } from "@/providers/WalletSessionProvider";
-import { useSensoUser } from "@/lib/contracts/hooks";
-import { isCheckingRegistration, registrationReadFailed } from "@/lib/auth/registration-check";
+import { useLaeUser } from "@/lib/lae-club/hooks";
+import { isCheckingLaeRegistration, laeRegistrationFailed } from "@/lib/lae-club/auth-check";
 import { withBasePath } from "@/lib/paths";
 
 const WALLET_CHECK_MS = 2_500;
@@ -19,7 +19,7 @@ export function LoginGate({ children }: { children: ReactNode }) {
   const redirecting = useRef(false);
   const { status, address } = useAccount();
   const { isReady, isWrongNetwork } = useWalletSession();
-  const user = useSensoUser();
+  const user = useLaeUser();
   const [showForm, setShowForm] = useState(false);
 
   useEffect(() => {
@@ -34,12 +34,12 @@ export function LoginGate({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!mounted || !isReady || redirecting.current) return;
     if (status !== "connected" || !address || isWrongNetwork) return;
-    if (isCheckingRegistration(user)) return;
+    if (isCheckingLaeRegistration(user)) return;
 
-    if (registrationReadFailed(user)) return;
+    if (laeRegistrationFailed(user)) return;
 
     redirecting.current = true;
-    if (user.data?.registered) {
+    if (user.registered) {
       router.replace(withBasePath("/dashboard"));
     } else {
       router.replace(withBasePath("/register"));
@@ -50,9 +50,8 @@ export function LoginGate({ children }: { children: ReactNode }) {
     status,
     address,
     isWrongNetwork,
-    user.isPending,
-    user.isError,
-    user.data?.registered,
+    user.isLoading,
+    user.registered,
     router,
   ]);
 
@@ -69,7 +68,7 @@ export function LoginGate({ children }: { children: ReactNode }) {
     status === "connected" &&
     address &&
     !isWrongNetwork &&
-    isCheckingRegistration(user)
+    isCheckingLaeRegistration(user)
   ) {
     return (
       <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3 text-slate-400">

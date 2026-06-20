@@ -3,7 +3,12 @@ const fs = require("fs");
 const path = require("path");
 
 const dir = __dirname;
-const files = ["LAELimitless.sol", "LAEToken.sol", "LAESpin.sol", "LAEStaking.sol"];
+const files = [
+  "LAEClubMatrix.sol",
+  "LAECoin.sol",
+  "LAERegistrationPassNFT.sol",
+  "LAERoyalCardNFT.sol",
+];
 const sources = {};
 for (const f of files) {
   sources[f] = { content: fs.readFileSync(path.join(dir, f), "utf8") };
@@ -28,7 +33,7 @@ for (const e of output.errors || []) {
 }
 
 for (const f of files) {
-  const name = f.replace(".sol", "");
-  const bytes = output.contracts[f][name].evm.bytecode.object.length / 2;
-  console.log(`${name}: ${bytes} bytes ${bytes <= 24576 ? "OK" : "FAIL"}`);
+  const contractName = f.replace(".sol", "");
+  const bytes = output.contracts[f][contractName].evm.bytecode.object.length / 2;
+  console.log(`${contractName}: ${bytes} bytes ${bytes <= 24576 ? "OK" : "FAIL"}`);
 }

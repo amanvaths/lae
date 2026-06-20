@@ -1,31 +1,5 @@
 import { prisma } from "../../lib/prisma.js";
 import { serializeForJson } from "../../lib/serialize.js";
-import { ethers } from "ethers";
-import { CHAIN, CONTRACTS } from "../../config/chains.js";
-
-const sensoReadAbi = [
-  "function countQualifiedDirectReferrals(address sponsor, uint8 matrixType) view returns (uint256)",
-];
-
-async function readQualifiedReferralCounts(wallet: string): Promise<{
-  qualifiedClub: number;
-  qualifiedPilot: number;
-}> {
-  try {
-    const provider = new ethers.JsonRpcProvider(CHAIN.rpcUrl, CHAIN.chainId);
-    const contract = new ethers.Contract(CONTRACTS.senso, sensoReadAbi, provider);
-    const [qualifiedClub, qualifiedPilot] = await Promise.all([
-      contract.countQualifiedDirectReferrals(wallet, 0),
-      contract.countQualifiedDirectReferrals(wallet, 1),
-    ]);
-    return {
-      qualifiedClub: Number(qualifiedClub),
-      qualifiedPilot: Number(qualifiedPilot),
-    };
-  } catch {
-    return { qualifiedClub: 0, qualifiedPilot: 0 };
-  }
-}
 
 function normalizeWallet(wallet: string): string {
   return wallet.toLowerCase();
@@ -101,22 +75,19 @@ export async function getReferrals(wallet: string) {
 
 export async function getTeamStats(wallet: string) {
   const w = normalizeWallet(wallet);
-  const [direct, qualified] = await Promise.all([
-    prisma.indexedReferral.findMany({
-      where: { sponsorAddress: w },
-    }),
-    readQualifiedReferralCounts(w),
-  ]);
-  const teamWallets = direct.map((d) => d.referralAddress);
-  const registeredTeam = await prisma.indexedUser.count({
-    where: { walletAddress: { in: teamWallets } },
+  const direct = await prisma.indexedReferral.findMany({
+    where: { sponsorAddress: w },
   });
+  const teamWallets = direct.map((d) => d.referralAddress);
+  const [registeredDirect, registeredLaeDirect] = await Promise.all([
+    prisma.indexedUser.count({ where: { walletAddress: { in: teamWallets } } }),
+    prisma.indexedLaeUser.count({ where: { walletAddress: { in: teamWallets } } }),
+  ]);
   return serializeForJson({
     wallet: w,
     directCount: direct.length,
-    registeredDirect: registeredTeam,
-    qualifiedClub: qualified.qualifiedClub,
-    qualifiedPilot: qualified.qualifiedPilot,
+    registeredDirect,
+    registeredLaeDirect,
     direct,
   });
 }

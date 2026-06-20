@@ -42,8 +42,8 @@ export default function LoginPage() {
 
         <p className="mt-5 text-center text-[0.65rem] leading-relaxed text-slate-500 sm:mt-6 sm:text-xs">
           Referral link? Use{" "}
-          <code className="text-brand-200">?sponsor=0x…</code> to set on-chain sponsor at
-          registration.
+          <code className="text-brand-200">/register?ref=USER_ID</code> with your sponsor&apos;s
+          on-chain user ID.
         </p>
       </div>
     </main>

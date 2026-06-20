@@ -12,6 +12,9 @@ export const CHAIN = {
 } as const;
 
 export const CONTRACTS = {
+  laeMatrix:
+    process.env.LAE_MATRIX_CONTRACT_ADDRESS ??
+    "0x0000000000000000000000000000000000000000",
   senso:
     process.env.SENSO_CONTRACT_ADDRESS ??
     "0x6521619C38fe4be6B800263CC783d9524ED4F7BA",
@@ -24,4 +27,11 @@ export const CONTRACTS = {
   staking:
     process.env.STAKING_CONTRACT_ADDRESS ??
     "0xdb25Af21346aD358D5e52835934AF5f326169984",
+  laeCoin:
+    process.env.LAE_COIN_CONTRACT_ADDRESS ??
+    "0x0000000000000000000000000000000000000000",
+  paymentToken:
+    process.env.PAYMENT_TOKEN_ADDRESS ??
+    process.env.DAI_CONTRACT_ADDRESS ??
+    "0xf8E556996042b34cc706F040c59955abB678995e",
 } as const;

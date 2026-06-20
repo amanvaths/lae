@@ -8,9 +8,12 @@ export declare const CHAIN: {
     readonly pollMs: number;
 };
 export declare const CONTRACTS: {
+    readonly laeMatrix: string;
     readonly senso: string;
     readonly slt: string;
     readonly spin: string;
     readonly staking: string;
+    readonly laeCoin: string;
+    readonly paymentToken: string;
 };
 //# sourceMappingURL=chains.d.ts.map

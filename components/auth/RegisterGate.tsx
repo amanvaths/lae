@@ -6,11 +6,8 @@ import { useAccount } from "wagmi";
 import { Loader2 } from "lucide-react";
 import { useClientMounted } from "@/lib/useClientMounted";
 import { useWalletSession } from "@/providers/WalletSessionProvider";
-import { useSensoUser } from "@/lib/contracts/hooks";
-import {
-  isCheckingRegistration,
-  registrationReadFailed,
-} from "@/lib/auth/registration-check";
+import { useLaeUser } from "@/lib/lae-club/hooks";
+import { isCheckingLaeRegistration, laeRegistrationFailed } from "@/lib/lae-club/auth-check";
 import { withBasePath } from "@/lib/paths";
 
 const REGISTRATION_CHECK_MS = 8_000;
@@ -22,7 +19,7 @@ export function RegisterGate({ children }: { children: ReactNode }) {
   const redirecting = useRef(false);
   const { status, address } = useAccount();
   const { isReady, isWrongNetwork } = useWalletSession();
-  const user = useSensoUser();
+  const user = useLaeUser();
   const [checkTimedOut, setCheckTimedOut] = useState(false);
 
   useEffect(() => {
@@ -31,10 +28,10 @@ export function RegisterGate({ children }: { children: ReactNode }) {
   }, [address]);
 
   useEffect(() => {
-    if (!isCheckingRegistration(user)) return;
+    if (!isCheckingLaeRegistration(user)) return;
     const t = setTimeout(() => setCheckTimedOut(true), REGISTRATION_CHECK_MS);
     return () => clearTimeout(t);
-  }, [user.isPending, user.data, user.isError, address]);
+  }, [user.isLoading, user.registered, address]);
 
   useEffect(() => {
     if (!mounted || !isReady || redirecting.current) return;
@@ -51,11 +48,10 @@ export function RegisterGate({ children }: { children: ReactNode }) {
       return;
     }
 
-    if (isCheckingRegistration(user) && !checkTimedOut) return;
+    if (isCheckingLaeRegistration(user) && !checkTimedOut) return;
+    if (laeRegistrationFailed(user)) return;
 
-    if (registrationReadFailed(user)) return;
-
-    if (user.data?.registered) {
+    if (user.registered) {
       redirecting.current = true;
       router.replace(withBasePath("/dashboard"));
     }
@@ -65,9 +61,8 @@ export function RegisterGate({ children }: { children: ReactNode }) {
     status,
     address,
     isWrongNetwork,
-    user.isPending,
-    user.isError,
-    user.data?.registered,
+    user.isLoading,
+    user.registered,
     checkTimedOut,
     router,
   ]);
@@ -90,7 +85,7 @@ export function RegisterGate({ children }: { children: ReactNode }) {
     );
   }
 
-  if (isCheckingRegistration(user) && !checkTimedOut) {
+  if (isCheckingLaeRegistration(user) && !checkTimedOut) {
     return (
       <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3 text-slate-400">
         <Loader2 className="h-8 w-8 animate-spin text-brand-400" />
@@ -99,7 +94,7 @@ export function RegisterGate({ children }: { children: ReactNode }) {
     );
   }
 
-  if (user.data?.registered) {
+  if (user.registered) {
     return (
       <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3 text-slate-400">
         <Loader2 className="h-8 w-8 animate-spin text-brand-400" />

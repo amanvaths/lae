@@ -1,6 +1,6 @@
 import type { ethers } from "ethers";
 export interface ParsedLog {
-    contract: "senso" | "spin" | "staking";
+    contract: "laeMatrix" | "senso" | "spin" | "staking";
     eventName: string;
     txHash: string;
     logIndex: number;

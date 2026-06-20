@@ -62,8 +62,7 @@ export declare function getTeamStats(wallet: string): Promise<{
     wallet: string;
     directCount: number;
     registeredDirect: number;
-    qualifiedClub: number;
-    qualifiedPilot: number;
+    registeredLaeDirect: number;
     direct: {
         id: string;
         createdAt: Date;
@@ -168,10 +167,10 @@ export declare function getLeaderboard(limit?: number): Promise<{
 export declare function getIndexerStatus(): Promise<{
     state: {
         id: string;
-        updatedAt: Date;
         chainId: number;
-        lastBlock: bigint;
+        lastBlock: string;
         lastBlockHash: string | null;
+        updatedAt: string;
     } | null;
     eventCount: number;
     mode: string;

@@ -31,11 +31,13 @@ function Coin({
 }) {
   const spin = useRef<THREE.Group>(null);
 
-  const tex = useTexture(withBasePath("/lae-coin.png"));
+  const tex = useTexture(withBasePath("/lae-coin-logo.png"));
   useMemo(() => {
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.anisotropy = 4;
     tex.center.set(0.5, 0.5);
+    // Face UV maps sideways on the cylinder cap — rotate so "LAE" reads upright.
+    tex.rotation = Math.PI / 2;
   }, [tex]);
 
   const edgeMat = useMemo(

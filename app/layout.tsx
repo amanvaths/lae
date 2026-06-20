@@ -12,22 +12,34 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "LAE — The Decentralized Network Token",
+  title: "LAE Club — 12-Level Matrix Business",
   description:
-    "LAE turns the power of networking into a transparent, on-chain rewards economy. Build your network, earn in $LAE, own your growth.",
+    "LAE Club Matrix on BNB Chain: 14-spot BTitan system, on-chain matrix income, and LAE reward layer. Build your team at laeclub.com.",
   keywords: [
-    "LAE",
-    "web3 token",
-    "networking",
-    "DeFi",
-    "tokenomics",
-    "rewards",
+    "LAE Club",
+    "matrix",
+    "BNB Chain",
+    "referral",
+    "web3",
+    "laeclub.com",
   ],
+  icons: {
+    icon: "/lae-club-logo.png",
+    apple: "/lae-club-logo.png",
+  },
   openGraph: {
-    title: "LAE — The Decentralized Network Token",
+    title: "LAE Club — 12-Level Matrix Business",
     description:
-      "Build your network, earn in $LAE, own your growth. A transparent on-chain rewards economy.",
+      "Join the LAE Club Matrix — transparent 14-spot, 12-level business on BNB Chain.",
     type: "website",
+    images: [
+      {
+        url: "/lae-club-logo.png",
+        width: 512,
+        height: 512,
+        alt: "LAE Club logo",
+      },
+    ],
   },
 };
 

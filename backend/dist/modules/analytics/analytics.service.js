@@ -1,26 +1,5 @@
 import { prisma } from "../../lib/prisma.js";
-import { ethers } from "ethers";
-import { CHAIN, CONTRACTS } from "../../config/chains.js";
-const sensoReadAbi = [
-    "function countQualifiedDirectReferrals(address sponsor, uint8 matrixType) view returns (uint256)",
-];
-async function readQualifiedReferralCounts(wallet) {
-    try {
-        const provider = new ethers.JsonRpcProvider(CHAIN.rpcUrl, CHAIN.chainId);
-        const contract = new ethers.Contract(CONTRACTS.senso, sensoReadAbi, provider);
-        const [qualifiedClub, qualifiedPilot] = await Promise.all([
-            contract.countQualifiedDirectReferrals(wallet, 0),
-            contract.countQualifiedDirectReferrals(wallet, 1),
-        ]);
-        return {
-            qualifiedClub: Number(qualifiedClub),
-            qualifiedPilot: Number(qualifiedPilot),
-        };
-    }
-    catch {
-        return { qualifiedClub: 0, qualifiedPilot: 0 };
-    }
-}
+import { serializeForJson } from "../../lib/serialize.js";
 function normalizeWallet(wallet) {
     return wallet.toLowerCase();
 }
@@ -44,7 +23,7 @@ export async function getDashboard(wallet) {
         prisma.indexedClubMatrix.count({ where: { ownerAddress: w } }),
         prisma.indexedPilotMatrix.count({ where: { ownerAddress: w } }),
     ]);
-    return {
+    return serializeForJson({
         wallet: w,
         registered: !!user,
         sponsor: user?.sponsorAddress ?? null,
@@ -55,7 +34,7 @@ export async function getDashboard(wallet) {
         directReferrals: directCount,
         clubEvents: clubCount,
         pilotEvents: pilotCount,
-    };
+    });
 }
 export async function getWalletAnalytics(wallet) {
     const w = normalizeWallet(wallet);
@@ -76,35 +55,32 @@ export async function getWalletAnalytics(wallet) {
             take: 50,
         }),
     ]);
-    return { wallet: w, incomes, withdrawals, tokenRewards: tokens };
+    return serializeForJson({ wallet: w, incomes, withdrawals, tokenRewards: tokens });
 }
 export async function getReferrals(wallet) {
     const w = normalizeWallet(wallet);
-    return prisma.indexedReferral.findMany({
+    return serializeForJson(await prisma.indexedReferral.findMany({
         where: { sponsorAddress: w },
         orderBy: { blockNumber: "desc" },
-    });
+    }));
 }
 export async function getTeamStats(wallet) {
     const w = normalizeWallet(wallet);
-    const [direct, qualified] = await Promise.all([
-        prisma.indexedReferral.findMany({
-            where: { sponsorAddress: w },
-        }),
-        readQualifiedReferralCounts(w),
-    ]);
-    const teamWallets = direct.map((d) => d.referralAddress);
-    const registeredTeam = await prisma.indexedUser.count({
-        where: { walletAddress: { in: teamWallets } },
+    const direct = await prisma.indexedReferral.findMany({
+        where: { sponsorAddress: w },
     });
-    return {
+    const teamWallets = direct.map((d) => d.referralAddress);
+    const [registeredDirect, registeredLaeDirect] = await Promise.all([
+        prisma.indexedUser.count({ where: { walletAddress: { in: teamWallets } } }),
+        prisma.indexedLaeUser.count({ where: { walletAddress: { in: teamWallets } } }),
+    ]);
+    return serializeForJson({
         wallet: w,
         directCount: direct.length,
-        registeredDirect: registeredTeam,
-        qualifiedClub: qualified.qualifiedClub,
-        qualifiedPilot: qualified.qualifiedPilot,
+        registeredDirect,
+        registeredLaeDirect,
         direct,
-    };
+    });
 }
 export async function getMatrices(wallet) {
     const w = normalizeWallet(wallet);
@@ -118,46 +94,46 @@ export async function getMatrices(wallet) {
             orderBy: { blockNumber: "desc" },
         }),
     ]);
-    return { club, pilot };
+    return serializeForJson({ club, pilot });
 }
 export async function getIncomeHistory(wallet, limit = 100) {
     const w = normalizeWallet(wallet);
-    return prisma.indexedIncome.findMany({
+    return serializeForJson(await prisma.indexedIncome.findMany({
         where: { recipientAddress: w },
         orderBy: { blockNumber: "desc" },
         take: limit,
-    });
+    }));
 }
 export async function getRewardHistory(wallet, limit = 100) {
     const w = normalizeWallet(wallet);
-    return prisma.indexedTokenReward.findMany({
+    return serializeForJson(await prisma.indexedTokenReward.findMany({
         where: { recipientAddress: w },
         orderBy: { blockNumber: "desc" },
         take: limit,
-    });
+    }));
 }
 export async function getTransactions(wallet, limit = 100) {
     const w = normalizeWallet(wallet);
-    return prisma.indexedTransaction.findMany({
+    return serializeForJson(await prisma.indexedTransaction.findMany({
         where: { walletAddress: w },
         orderBy: { blockNumber: "desc" },
         take: limit,
-    });
+    }));
 }
 export async function getSpins(wallet, limit = 50) {
     const w = normalizeWallet(wallet);
-    return prisma.indexedSpin.findMany({
+    return serializeForJson(await prisma.indexedSpin.findMany({
         where: { walletAddress: w },
         orderBy: { blockNumber: "desc" },
         take: limit,
-    });
+    }));
 }
 export async function getStakes(wallet) {
     const w = normalizeWallet(wallet);
-    return prisma.indexedStake.findMany({
+    return serializeForJson(await prisma.indexedStake.findMany({
         where: { walletAddress: w },
         orderBy: { blockNumber: "desc" },
-    });
+    }));
 }
 export async function getLeaderboard(limit = 50) {
     const rows = await prisma.indexedIncome.groupBy({
@@ -175,6 +151,18 @@ export async function getLeaderboard(limit = 50) {
 export async function getIndexerStatus() {
     const state = await prisma.indexerState.findUnique({ where: { id: "main" } });
     const eventCount = await prisma.chainEvent.count();
-    return { state, eventCount, mode: "indexer-only" };
+    return {
+        state: state
+            ? {
+                id: state.id,
+                chainId: state.chainId,
+                lastBlock: state.lastBlock.toString(),
+                lastBlockHash: state.lastBlockHash,
+                updatedAt: state.updatedAt.toISOString(),
+            }
+            : null,
+        eventCount,
+        mode: "indexer-only",
+    };
 }
 //# sourceMappingURL=analytics.service.js.map

@@ -1,4 +1,7 @@
 import { prisma } from "../../lib/prisma.js";
+function num(v) {
+    return Number(v ?? 0);
+}
 function lower(v) {
     return typeof v === "string" ? v.toLowerCase() : undefined;
 }
@@ -15,9 +18,11 @@ function tsFromBlock(_blockNumber) {
 /** Idempotent projection from parsed log into analytics tables + event_logs */
 export async function processIndexedLog(log) {
     const { txHash, logIndex, blockNumber, eventName, args } = log;
-    const wallet = lower(args.user) ??
+    const wallet = lower(args.userAddress) ??
+        lower(args.user) ??
         lower(args.owner) ??
         lower(args.recipient) ??
+        lower(args.from) ??
         undefined;
     await prisma.chainEvent.upsert({
         where: { txHash_logIndex: { txHash, logIndex } },
@@ -246,6 +251,122 @@ export async function processIndexedLog(log) {
             });
             break;
         }
+        // ─── LAE Club / BTitan Matrix ───────────────────────────────────────────
+        case "Registration": {
+            const userAddr = lower(args.userAddress);
+            const sponsorId = num(args.referrerId);
+            await prisma.indexedLaeUser.upsert({
+                where: { walletAddress: userAddr },
+                create: {
+                    walletAddress: userAddr,
+                    userId: num(args.userId),
+                    sponsorId,
+                    registeredAt: tsFromBlock(blockNumber),
+                    registeredBlock: BigInt(blockNumber),
+                },
+                update: {
+                    userId: num(args.userId),
+                    sponsorId,
+                },
+            });
+            if (sponsorId > 0) {
+                const sponsor = await prisma.indexedLaeUser.findFirst({ where: { userId: sponsorId } });
+                if (sponsor) {
+                    await prisma.indexedReferral.upsert({
+                        where: { txHash_logIndex: { txHash, logIndex } },
+                        create: {
+                            sponsorAddress: sponsor.walletAddress,
+                            referralAddress: userAddr,
+                            blockNumber: BigInt(blockNumber),
+                            txHash,
+                            logIndex,
+                        },
+                        update: {},
+                    });
+                }
+            }
+            break;
+        }
+        case "TokenReceived": {
+            const receiverId = num(args.receiverId);
+            const receiver = await prisma.indexedLaeUser.findFirst({ where: { userId: receiverId } });
+            await prisma.indexedLaeIncome.upsert({
+                where: { txHash_logIndex: { txHash, logIndex } },
+                create: {
+                    receiverUserId: receiverId,
+                    receiverAddress: receiver?.walletAddress ?? null,
+                    fromUserId: num(args.fromId) || null,
+                    level: num(args.level),
+                    amount: dec(args.amount),
+                    incomeKind: "matrix",
+                    blockNumber: BigInt(blockNumber),
+                    txHash,
+                    logIndex,
+                },
+                update: {},
+            });
+            if (receiver) {
+                await prisma.indexedLaeUser.update({
+                    where: { walletAddress: receiver.walletAddress },
+                    data: { totalIncome: { increment: dec(args.amount) } },
+                });
+            }
+            break;
+        }
+        case "TreasuryPool": {
+            const refId = num(args.refId);
+            const ref = await prisma.indexedLaeUser.findFirst({ where: { userId: refId } });
+            await prisma.indexedLaeIncome.upsert({
+                where: { txHash_logIndex: { txHash, logIndex } },
+                create: {
+                    receiverUserId: refId,
+                    receiverAddress: ref?.walletAddress ?? null,
+                    fromUserId: num(args.userId) || null,
+                    level: num(args.level),
+                    amount: dec(args.amount),
+                    incomeKind: "royal",
+                    blockNumber: BigInt(blockNumber),
+                    txHash,
+                    logIndex,
+                },
+                update: {},
+            });
+            break;
+        }
+        case "NewUserPlace": {
+            await prisma.indexedLaePlacement.upsert({
+                where: { txHash_logIndex: { txHash, logIndex } },
+                create: {
+                    userId: num(args.user),
+                    referrerId: num(args.referrer),
+                    level: num(args.level),
+                    cycle: num(args.cycle),
+                    spot: num(args.spot),
+                    blockNumber: BigInt(blockNumber),
+                    txHash,
+                    logIndex,
+                },
+                update: {},
+            });
+            break;
+        }
+        case "Spillover":
+        case "Reinvest":
+        case "Upgrade":
+        case "MissedIncome":
+            await prisma.indexedTransaction.upsert({
+                where: { txHash_logIndex: { txHash, logIndex } },
+                create: {
+                    walletAddress: wallet ?? "0x0000000000000000000000000000000000000000",
+                    eventName,
+                    blockNumber: BigInt(blockNumber),
+                    txHash,
+                    logIndex,
+                    payload: args,
+                },
+                update: {},
+            });
+            break;
         default:
             if (wallet) {
                 await prisma.indexedTransaction.upsert({

@@ -2,61 +2,103 @@
 
 import { useState } from "react";
 import { parseEther } from "viem";
+import { useAccount, useWriteContract } from "wagmi";
 import { Panel, Pill } from "@/components/dashboard/ui";
 import { QueryLoading } from "@/components/dashboard/QueryState";
-import { useStakingOnChain, useWalletOnChain } from "@/lib/contracts/hooks";
-import {
-  useApproveSlt,
-  useSltAllowance,
-  useStakeOnChain,
-  useReleaseStake,
-} from "@/lib/contracts/hooks/useWrites";
+import { useLaeCoinStats, useLaeStaking } from "@/lib/lae-club/hooks";
+import { LAE_CONTRACTS } from "@/lib/lae-club/contracts";
+import { laeCoinAbi, laeStakingAbi } from "@/lib/lae-club/abis";
 import { fmtEther } from "@/lib/contracts/format";
-import { formatDate } from "@/lib/format";
+import { useToast } from "@/providers/ToastProvider";
 
 export default function StakingPage() {
+  const { address } = useAccount();
+  const { push } = useToast();
+  const staking = useLaeStaking();
+  const coin = useLaeCoinStats();
+  const { writeContractAsync } = useWriteContract();
   const [amount, setAmount] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
-  const stakes = useStakingOnChain();
-  const wallet = useWalletOnChain();
-  const allowance = useSltAllowance();
-  const approve = useApproveSlt();
-  const stake = useStakeOnChain();
-  const release = useReleaseStake();
 
-  if (stakes.isLoading) return <QueryLoading label="Loading stakes from chain…" />;
+  if (staking.isLoading) {
+    return <QueryLoading label="Loading staking from chain…" />;
+  }
 
-  const active = (stakes.data ?? []).filter((s) => !s.released);
-  const released = (stakes.data ?? []).filter((s) => s.released);
-  const lockedTotal = active.reduce((sum, s) => sum + s.amount, 0n);
+  const apr = Number(staking.aprBps) / 100;
 
-  const stakeAmountValid = (() => {
-    if (!amount) return false;
+  async function approveAndStake() {
+    if (!address || !amount) return;
+    setBusy("stake");
     try {
-      return parseEther(amount) > 0n;
-    } catch {
-      return false;
+      const wei = parseEther(amount);
+      push("Approve LAE for staking…", "info");
+      await writeContractAsync({
+        address: LAE_CONTRACTS.laeCoin,
+        abi: laeCoinAbi,
+        functionName: "approve",
+        args: [LAE_CONTRACTS.staking, wei],
+      });
+      push("Stake LAE…", "info");
+      await writeContractAsync({
+        address: LAE_CONTRACTS.staking,
+        abi: laeStakingAbi,
+        functionName: "stake",
+        args: [wei],
+      });
+      push("Stake submitted", "success");
+      setAmount("");
+    } catch (e) {
+      push(e instanceof Error ? e.message : "Stake failed", "error");
+    } finally {
+      setBusy(null);
     }
-  })();
+  }
+
+  async function claim() {
+    setBusy("claim");
+    try {
+      await writeContractAsync({
+        address: LAE_CONTRACTS.staking,
+        abi: laeStakingAbi,
+        functionName: "claim",
+      });
+      push("Rewards claimed", "success");
+    } catch (e) {
+      push(e instanceof Error ? e.message : "Claim failed", "error");
+    } finally {
+      setBusy(null);
+    }
+  }
 
   return (
     <div>
       <h1 className="font-display text-2xl font-bold text-white">LAE Staking</h1>
       <p className="mt-1 text-sm text-slate-400">
-        365-day lock · Club L10+ or 5M LAE minimum eligibility
+        Live reads from staking contract · APR {apr}% · global TVL{" "}
+        {fmtEther(staking.totalStakedGlobal, 0)} LAE
       </p>
 
-      <div className="mt-4 grid gap-4 sm:grid-cols-3">
-        <Panel title="LAE balance">
+      <div className="mt-4 grid gap-4 sm:grid-cols-4">
+        <Panel title="Your stake">
           <p className="text-2xl font-bold text-white">
-            {fmtEther(wallet.data?.sltBalance ?? 0n, 0)}
+            {fmtEther(staking.stakedAmount, 0)} LAE
+          </p>
+          {staking.active ? <Pill tone="emerald">Active</Pill> : <Pill tone="gold">Not staked</Pill>}
+        </Panel>
+        <Panel title="Pending reward">
+          <p className="text-2xl font-bold text-emerald-400">
+            {fmtEther(staking.pendingReward, 0)} LAE
           </p>
         </Panel>
-        <Panel title="Locked">
-          <p className="text-2xl font-bold text-white">{fmtEther(lockedTotal, 0)}</p>
+        <Panel title="Global staked">
+          <p className="text-2xl font-bold text-white">
+            {fmtEther(staking.totalStakedGlobal, 0)}
+          </p>
         </Panel>
-        <Panel title="Active stakes">
-          <p className="text-2xl font-bold text-white">{active.length}</p>
+        <Panel title="Circulating supply">
+          <p className="text-2xl font-bold text-white">
+            {coin.circulating ? fmtEther(coin.circulating, 0) : "—"}
+          </p>
         </Panel>
       </div>
 
@@ -72,94 +114,22 @@ export default function StakingPage() {
           />
           <button
             type="button"
-            disabled={busy !== null || !stakeAmountValid}
+            disabled={busy !== null || !amount}
             className="btn-primary disabled:opacity-50"
-            onClick={async () => {
-              setBusy("stake");
-              try {
-                const wei = parseEther(amount);
-                const allowed = allowance.data ?? 0n;
-                if (allowed < wei) await approve();
-                await stake(amount);
-                setAmount("");
-              } finally {
-                setBusy(null);
-              }
-            }}
+            onClick={approveAndStake}
           >
             {busy === "stake" ? "Staking…" : "Stake"}
           </button>
+          <button
+            type="button"
+            disabled={busy !== null || staking.pendingReward === 0n}
+            className="btn-ghost disabled:opacity-50"
+            onClick={claim}
+          >
+            {busy === "claim" ? "Claiming…" : "Claim rewards"}
+          </button>
         </div>
-        <button
-          type="button"
-          className="mt-2 text-xs text-brand-300"
-          onClick={async () => {
-            setBusy("approve");
-            try {
-              await approve();
-            } finally {
-              setBusy(null);
-            }
-          }}
-        >
-          Approve LAE for staking contract
-        </button>
       </Panel>
-
-      <Panel className="mt-4" title="Active stakes">
-        {active.length === 0 ? (
-          <p className="text-sm text-slate-500">No active stakes</p>
-        ) : (
-          <div className="space-y-3">
-            {active.map((s) => {
-              const unlock = new Date(Number(s.lockEnd) * 1000);
-              const canRelease = Date.now() >= unlock.getTime();
-              return (
-                <div
-                  key={s.index}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white/10 p-3 text-sm"
-                >
-                  <div>
-                    <p className="font-medium text-white">{fmtEther(s.amount, 0)} LAE</p>
-                    <p className="text-xs text-slate-500">
-                      Unlock: {formatDate(unlock.toISOString())}
-                    </p>
-                  </div>
-                  {canRelease ? (
-                    <button
-                      type="button"
-                      className="btn-primary text-xs"
-                      disabled={busy === `release-${s.index}`}
-                      onClick={async () => {
-                        setBusy(`release-${s.index}`);
-                        try {
-                          await release(s.index);
-                        } finally {
-                          setBusy(null);
-                        }
-                      }}
-                    >
-                      Release
-                    </button>
-                  ) : (
-                    <Pill tone="gold">Locked</Pill>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </Panel>
-
-      {released.length > 0 && (
-        <Panel className="mt-4" title="Released stakes">
-          {released.map((s) => (
-            <div key={s.index} className="py-2 text-sm text-slate-400">
-              #{s.index} · {fmtEther(s.amount, 0)} LAE · released
-            </div>
-          ))}
-        </Panel>
-      )}
     </div>
   );
 }

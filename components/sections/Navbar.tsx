@@ -15,13 +15,12 @@ import { BrandLogo } from "@/components/ui/BrandLogo";
 
 const links = [
   { label: "Home", href: "/#top" },
-  { label: "About", href: "/#about" },
-  { label: "Tokenomics", href: "/#tokenomics" },
-  { label: "Network", href: "/#network" },
-  { label: "Roadmap", href: "/#roadmap" },
+  { label: "Club", href: "/#about" },
+  { label: "Matrix", href: "/#network" },
+  { label: "Rewards", href: withBasePath("/dashboard/rewards") },
+  { label: "Token", href: "/#tokenomics" },
   { label: "FAQ", href: "/#faq" },
-  // { label: "P2P", href: "/p2p" }, // hidden for now
-].map((l) => ({ ...l, href: withBasePath(l.href) }));
+].map((l) => ({ ...l, href: l.href.startsWith("/#") ? withBasePath(l.href) : l.href }));
 
 function NavItem({ href, label, active }: { href: string; label: string; active: boolean }) {
   return (
@@ -114,12 +113,12 @@ export function Navbar() {
               </>
             )}
             <motion.a
-              href="#cta"
+              href={withBasePath("/coin")}
               className="btn-ghost !px-5 !py-2.5 !text-xs"
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
             >
-              Buy $LAE
+              LAE Coin
             </motion.a>
           </div>
 
@@ -185,8 +184,8 @@ export function Navbar() {
                       </a>
                     </>
                   )}
-                  <a href="#cta" onClick={() => setOpen(false)} className="btn-ghost mt-3 w-full">
-                    Buy $LAE
+                  <a href={withBasePath("/coin")} onClick={() => setOpen(false)} className="btn-ghost mt-3 w-full">
+                    LAE Coin
                   </a>
                 </div>
               </div>

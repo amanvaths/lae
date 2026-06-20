@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { UserPlus } from "lucide-react";
 import { RegisterGate } from "@/components/auth/RegisterGate";
-import { RegisterPanel } from "@/components/onchain/RegisterPanel";
+import { LaeRegisterPanel } from "@/components/lae-club/LaeRegisterPanel";
 import { BrandLogo } from "@/components/ui/BrandLogo";
 import { withBasePath } from "@/lib/paths";
 
@@ -34,7 +34,7 @@ export default function RegisterPage() {
         </div>
 
         <RegisterGate>
-          <RegisterPanel />
+          <LaeRegisterPanel />
         </RegisterGate>
 
         <p className="mt-5 text-center text-xs text-slate-500">

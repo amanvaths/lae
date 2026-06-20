@@ -1,26 +1,16 @@
 import { ethers } from "ethers";
 import { prisma } from "../../lib/prisma.js";
 import { CHAIN, CONTRACTS } from "../../config/chains.js";
-import {
-  SENSO_LIMITLESS_EVENTS,
-  SPIN_EVENTS,
-  STAKING_EVENTS,
-} from "./abis.js";
+import { LAE_MATRIX_EVENTS } from "./abis.js";
 import { parseEthersLog, processIndexedLog } from "./event-processor.js";
 
-const sensoIface = new ethers.Interface([...SENSO_LIMITLESS_EVENTS]);
-const spinIface = new ethers.Interface([...SPIN_EVENTS]);
-const stakingIface = new ethers.Interface([...STAKING_EVENTS]);
+const laeMatrixIface = new ethers.Interface([...LAE_MATRIX_EVENTS]);
 
 const CONTRACT_TARGETS: Array<{
-  key: "senso" | "spin" | "staking";
+  key: "laeMatrix";
   address: string;
   iface: ethers.Interface;
-}> = [
-  { key: "senso", address: CONTRACTS.senso, iface: sensoIface },
-  { key: "spin", address: CONTRACTS.spin, iface: spinIface },
-  { key: "staking", address: CONTRACTS.staking, iface: stakingIface },
-];
+}> = [{ key: "laeMatrix", address: CONTRACTS.laeMatrix, iface: laeMatrixIface }];
 
 let provider: ethers.JsonRpcProvider | null = null;
 let syncing = false;
@@ -138,12 +128,16 @@ export async function runIndexerSync(): Promise<void> {
 
 /** Start polling sync + live listeners for new blocks */
 export function startBlockchainSyncEngine(): void {
-  if (!CONTRACTS.senso || CONTRACTS.senso === "0x0000000000000000000000000000000000000000") {
-    console.warn("[indexer] Disabled — set SENSO_CONTRACT_ADDRESS");
+  const hasLae =
+    CONTRACTS.laeMatrix &&
+    CONTRACTS.laeMatrix !== "0x0000000000000000000000000000000000000000";
+
+  if (!hasLae) {
+    console.warn("[indexer] Disabled — set LAE_MATRIX_CONTRACT_ADDRESS");
     return;
   }
 
-  console.log(`[indexer] BSC Testnet sync on ${CONTRACTS.senso}`);
+  console.log(`[indexer] LAE Matrix sync on ${CONTRACTS.laeMatrix}`);
   void runIndexerSync();
 
   pollTimer = setInterval(() => {

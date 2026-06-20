@@ -5,28 +5,24 @@ import { Panel } from "@/components/dashboard/ui";
 import { QueryLoading } from "@/components/dashboard/QueryState";
 import { ConnectWallet } from "@/components/web3/ConnectWallet";
 import Link from "next/link";
-import { useSensoUser, useWalletOnChain, useIsRootAdmin } from "@/lib/contracts/hooks";
+import { useLaeUser, referralLinkByUserId } from "@/lib/lae-club/hooks";
 import { useWalletSession } from "@/providers/WalletSessionProvider";
-import { fmtEther } from "@/lib/contracts/format";
 import { truncateAddress } from "@/lib/format";
-import { referralLink } from "@/lib/contracts/services/utils";
-import { CHAIN_ID } from "@/lib/contracts/config";
+import { CHAIN_ID } from "@/lib/lae-club/contracts";
 
 export default function SettingsPage() {
   const { address } = useAccount();
-  const user = useSensoUser();
-  const wallet = useWalletOnChain();
-  const admin = useIsRootAdmin();
+  const user = useLaeUser();
   const { disconnectWallet, isWrongNetwork } = useWalletSession();
 
   return (
     <div>
       <h1 className="font-display text-2xl font-bold text-white">Settings</h1>
-      <p className="mt-1 text-sm text-slate-400">Wallet session · BSC Testnet ({CHAIN_ID})</p>
+      <p className="mt-1 text-sm text-slate-400">Wallet session · BSC Testnet (chain {CHAIN_ID})</p>
 
       <Panel className="mt-6" title="Wallet">
-        {wallet.isLoading ? (
-          <QueryLoading label="Loading balances…" />
+        {user.isLoading ? (
+          <QueryLoading label="Loading on-chain profile…" />
         ) : (
           <dl className="space-y-3 text-sm">
             <div>
@@ -35,15 +31,11 @@ export default function SettingsPage() {
             </div>
             <div>
               <dt className="text-slate-500">Registered on-chain</dt>
-              <dd className="text-white">{user.data?.registered ? "Yes" : "No"}</dd>
+              <dd className="text-white">{user.registered ? "Yes" : "No"}</dd>
             </div>
             <div>
-              <dt className="text-slate-500">Internal mDAI</dt>
-              <dd className="text-white">{fmtEther(wallet.data?.daiInternal ?? 0n)}</dd>
-            </div>
-            <div>
-              <dt className="text-slate-500">LAE balance</dt>
-              <dd className="text-white">{fmtEther(wallet.data?.sltBalance ?? 0n, 0)}</dd>
+              <dt className="text-slate-500">User ID</dt>
+              <dd className="text-white">{user.registered ? `#${String(user.userId)}` : "—"}</dd>
             </div>
             {isWrongNetwork && (
               <p className="text-amber-400">Wrong network — switch to BSC Testnet in your wallet.</p>
@@ -54,8 +46,11 @@ export default function SettingsPage() {
 
       <Panel className="mt-4" title="Referral link">
         <code className="block break-all text-xs text-brand-200">
-          {address ? referralLink(address) : "Connect wallet"}
+          {user.registered && user.userId
+            ? referralLinkByUserId(user.userId)
+            : "Register on LAE Club to get your referral link"}
         </code>
+        <p className="mt-2 text-xs text-slate-500">Share as /register?ref=YOUR_USER_ID</p>
       </Panel>
 
       <Panel className="mt-4" title="Wallet actions">
@@ -64,11 +59,9 @@ export default function SettingsPage() {
           <button type="button" className="btn-ghost" onClick={disconnectWallet}>
             Disconnect wallet
           </button>
-          {admin.data && (
-            <Link href="/dashboard/admin" className="btn-ghost">
-              Protocol admin
-            </Link>
-          )}
+          <Link href="/admin" className="btn-ghost">
+            Admin panel
+          </Link>
         </div>
       </Panel>
     </div>

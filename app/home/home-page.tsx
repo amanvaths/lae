@@ -44,12 +44,12 @@ export default function HomePage() {
       <Vision />
       <SectionDivider />
       <AboutLae />
-      <Tokenomics />
-      <CommunityDistribution />
       <SmartMatrix />
       <CommunityGrowth />
       <SectionDivider />
       <Features />
+      <Tokenomics />
+      <CommunityDistribution />
       <Tech />
       <Stats />
       <Roadmap />

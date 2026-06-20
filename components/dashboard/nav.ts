@@ -1,64 +1,38 @@
 import {
   LayoutDashboard,
   LayoutGrid,
-  Gauge,
-  RefreshCw,
   Users,
   UserPlus,
-  Share2,
   TrendingUp,
-  ArrowDownToLine,
-  ArrowUpFromLine,
+  Crown,
+  Gift,
+  ArrowLeftRight,
   ReceiptText,
-  Sparkles,
-  Lock,
+  Settings,
   type LucideIcon,
 } from "lucide-react";
+import { withBasePath } from "@/lib/paths";
 
 export type NavItem = { label: string; href: string; icon: LucideIcon; badge?: string };
 export type NavGroup = { title: string; items: NavItem[] };
 
-const base = "/dashboard";
+const base = withBasePath("/dashboard");
 
-/** Sidebar — only routes backed by deployed LAE smart contracts. */
+/** Sidebar — LAE Club matrix-first navigation */
 export const navGroups: NavGroup[] = [
   {
-    title: "Overview",
-    items: [{ label: "Dashboard", href: `${base}`, icon: LayoutDashboard }],
-  },
-  {
-    title: "Matrices",
+    title: "Club",
     items: [
-      { label: "My Slots", href: `${base}/slots`, icon: LayoutGrid },
-      { label: "Slot Engine", href: `${base}/slot-engine`, icon: Gauge },
-      { label: "Recycle History", href: `${base}/recycle`, icon: RefreshCw },
-    ],
-  },
-  {
-    title: "Network",
-    items: [
-      { label: "My Team", href: `${base}/team`, icon: Users },
-      { label: "Direct Referrals", href: `${base}/referrals`, icon: UserPlus },
-      { label: "Referral Link", href: `${base}/share`, icon: Share2 },
-    ],
-  },
-  {
-    title: "Earnings",
-    items: [{ label: "Income", href: `${base}/income`, icon: TrendingUp }],
-  },
-  {
-    title: "Finance",
-    items: [
-      { label: "Deposit & Activate", href: `${base}/deposit`, icon: ArrowDownToLine },
-      { label: "Withdraw", href: `${base}/withdraw`, icon: ArrowUpFromLine },
+      { label: "Dashboard", href: base, icon: LayoutDashboard },
+      { label: "Matrix", href: `${base}/matrix`, icon: LayoutGrid },
+      { label: "Team", href: `${base}/team`, icon: Users },
+      { label: "Referrals", href: `${base}/referrals`, icon: UserPlus },
+      { label: "Income", href: `${base}/income`, icon: TrendingUp },
+      { label: "Royal Pool", href: `${base}/royal-pool`, icon: Crown },
+      { label: "Rewards", href: `${base}/rewards`, icon: Gift },
+      { label: "P2P", href: withBasePath("/p2p"), icon: ArrowLeftRight },
       { label: "Transactions", href: `${base}/transactions`, icon: ReceiptText },
-    ],
-  },
-  {
-    title: "Rewards",
-    items: [
-      { label: "Spin & Win", href: `${base}/spin`, icon: Sparkles },
-      { label: "LAE Staking", href: `${base}/staking`, icon: Lock },
+      { label: "Settings", href: `${base}/settings`, icon: Settings },
     ],
   },
 ];

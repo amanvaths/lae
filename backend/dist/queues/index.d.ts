@@ -1,5 +1,8 @@
-import { Queue, Worker } from "bullmq";
-/** All background job queues backed by Redis + BullMQ */
+import type { Queue } from "bullmq";
+/**
+ * Legacy MLM job queues — disabled. Matrix logic runs on-chain only.
+ * Queues are kept as no-op stubs so imports do not break.
+ */
 export declare const placementQueue: Queue<any, any, string, any, any, string>;
 export declare const rebirthQueue: Queue<any, any, string, any, any, string>;
 export declare const autoUpgradeQueue: Queue<any, any, string, any, any, string>;
@@ -33,6 +36,7 @@ export interface NotificationJob {
     event: string;
     payload: Record<string, unknown>;
 }
-export declare function startWorkers(): Worker[];
-export declare const rewardQueue: Queue<any, any, string, any, any, string>;
+/** Legacy MLM workers disabled — backend is indexer + analytics only. */
+export declare function startWorkers(): never[];
+export declare const rewardQueue: Queue;
 //# sourceMappingURL=index.d.ts.map
