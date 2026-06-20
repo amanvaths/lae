@@ -80,7 +80,7 @@ export function CTA() {
                 className="relative mx-auto aspect-square w-full max-w-[420px] [perspective:800px]"
               >
                 <div className="absolute inset-0 animate-pulse-glow rounded-full bg-brand-500/10 blur-3xl" />
-                <CoinFallback spin={false} />
+                <CoinFallback spin={true} />
               </motion.div>
             </div>
           </motion.div>

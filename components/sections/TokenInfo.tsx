@@ -1,9 +1,12 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { Reveal } from "@/components/ui/Reveal";
 import { SectionHeading } from "@/components/ui/SectionHeading";
-import { BrandLogo } from "@/components/ui/BrandLogo";
+import { CoinFallback } from "@/components/three/CoinFallback";
 import { LAE_COIN_TOKENOMICS } from "@/lib/lae-club/constants";
+
+const LaeCoin = dynamic(() => import("@/components/three/LaeCoin"), { ssr: false });
 
 const items = [
   {
@@ -43,27 +46,36 @@ export function TokenInfo() {
           description="LAE is a utility token earned through matrix participation — not speculation. Fixed supply, transparent vesting, community-first."
         />
 
-        <Reveal>
-          <div className="mx-auto mt-14 max-w-3xl">
+        <div className="mx-auto mt-14 max-w-5xl grid gap-12 lg:grid-cols-2 lg:items-center">
+          <Reveal>
+            <div className="relative mx-auto aspect-square w-full max-w-sm">
+              <div className="absolute inset-0 animate-pulse-glow rounded-full bg-brand-500/10 blur-3xl" />
+              <div className="absolute inset-0 animate-spin-slow rounded-full border border-brand-500/25" />
+              <div
+                className="absolute inset-4 rounded-full border border-dashed border-brand-500/15"
+                style={{ animation: "orbit 25s linear infinite reverse" }}
+              />
+              <LaeCoin className="absolute inset-0" />
+            </div>
+          </Reveal>
+
+          <Reveal delay={1}>
             <div className="glass relative overflow-hidden p-8 sm:p-10">
               <div className="absolute -left-10 -top-10 h-40 w-40 rounded-full bg-brand-500/[0.04] blur-3xl" />
 
-              <div className="relative flex flex-col items-center gap-6 sm:flex-row sm:gap-8">
-                <BrandLogo variant="coin" size={64} />
-                <div className="text-center sm:text-left">
-                  <h3 className="font-display text-xl font-bold text-white">
-                    LAE Coin
-                  </h3>
-                  <p className="text-sm text-slate-400">
-                    BNB Chain · BEP-20 · Fixed Supply
-                  </p>
-                </div>
+              <div className="relative">
+                <h3 className="font-display text-xl font-bold text-white">
+                  LAE Coin
+                </h3>
+                <p className="mt-1 text-sm text-slate-400">
+                  BNB Chain · BEP-20 · Fixed Supply
+                </p>
               </div>
 
-              <div className="relative mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="relative mt-8 grid gap-4 sm:grid-cols-2">
                 {items.map((item, i) => (
                   <Reveal key={item.label} delay={i + 1}>
-                    <div className="flex flex-col gap-1 rounded border border-white/5 bg-white/[0.02] p-4 text-center">
+                    <div className="flex flex-col gap-1 rounded-xl border border-white/5 bg-white/[0.02] p-4 text-center">
                       <span className="text-[0.6rem] uppercase tracking-wider text-slate-600">
                         {item.label}
                       </span>
@@ -83,8 +95,8 @@ export function TokenInfo() {
                 through active matrix participation and released over 20 months.
               </p>
             </div>
-          </div>
-        </Reveal>
+          </Reveal>
+        </div>
       </div>
     </section>
   );

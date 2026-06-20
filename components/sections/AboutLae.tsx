@@ -32,7 +32,7 @@ export function AboutLae() {
               className="absolute inset-4 rounded-full border border-dashed border-brand-500/20"
               style={{ animation: "orbit 25s linear infinite reverse" }}
             />
-            <CoinFallback spin={false} />
+            <CoinFallback spin={true} />
             <div className="absolute -left-4 top-0 w-[45%] opacity-90 sm:-left-8">
               <RewardFlowGraphic />
             </div>

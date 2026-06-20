@@ -1,13 +1,17 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowRight, Shield, Coins, Crown, Lock } from "lucide-react";
 import { BrandLogo } from "@/components/ui/BrandLogo";
+import { CoinFallback } from "@/components/three/CoinFallback";
 import { withBasePath } from "@/lib/paths";
 import { LAE_COIN_TOKENOMICS, ROYAL_NFT_MILESTONES } from "@/lib/lae-club/constants";
 import { useLaeCoinStats } from "@/lib/lae-club/hooks";
 import { fmtEther } from "@/lib/contracts/format";
+
+const LaeCoin = dynamic(() => import("@/components/three/LaeCoin"), { ssr: false });
 
 export default function CoinLandingPage() {
   const stats = useLaeCoinStats();
@@ -57,9 +61,15 @@ export default function CoinLandingPage() {
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="flex justify-center"
+          className="relative mx-auto aspect-square w-full max-w-[420px]"
         >
-          <BrandLogo variant="coin" size={320} className="!rounded-full drop-shadow-[0_0_80px_rgba(255,195,26,0.25)]" />
+          <div className="absolute inset-0 animate-pulse-glow rounded-full bg-brand-500/10 blur-3xl" />
+          <div className="absolute inset-0 animate-spin-slow rounded-full border border-brand-500/25" />
+          <div
+            className="absolute inset-4 rounded-full border border-dashed border-brand-500/15"
+            style={{ animation: "orbit 25s linear infinite reverse" }}
+          />
+          <LaeCoin className="absolute inset-0" />
         </motion.div>
       </section>
 

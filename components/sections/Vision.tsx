@@ -27,7 +27,7 @@ export function Vision() {
         <Reveal delay={1}>
           <div className="relative mx-auto aspect-square w-full max-w-sm">
             <div className="absolute inset-0 rounded-full bg-brand-500/10 blur-3xl" />
-            <CoinFallback spin={false} />
+            <CoinFallback spin={true} />
           </div>
         </Reveal>
       </div>
