@@ -39,9 +39,9 @@ export const LAE_DISTRIBUTION = {
 };
 
 export const LAE_SMART_MATRIX = {
-  eyebrow: "15 level smart matrix",
-  title: "Fully automated matrix distribution",
-  body: "The LAE Club ecosystem operates through a fully automated 15-level Smart Matrix with 14 spots per level. Each participant activates Level 1 through registration and progresses through higher levels based on matrix completion, auto-upgrade, and recycle events.",
+  eyebrow: "Silver & Gold Matrix",
+  title: "Silver & Gold — 14-Spot Smart Matrix",
+  body: "The LAE Club ecosystem operates through a fully automated 15-level Silver & Gold Matrix with 14 spots per level. Silver positions (3, 6, 8, 9, 11, 12) deliver YOUR INCOME directly. Gold positions (1, 2, 4, 5, 7, 10, 13, 14) power the Flow & System — upline income, auto-upgrades, downline spill, and recycling.",
   slots: 14,
   levels: 15,
 };

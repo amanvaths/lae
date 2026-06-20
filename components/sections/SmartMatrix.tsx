@@ -24,8 +24,8 @@ export function SmartMatrix() {
             eyebrow={LAE_SMART_MATRIX.eyebrow}
             title={
               <>
-                15 slot smart{" "}
-                <span className="text-gradient-gold">matrix</span>
+                <span className="text-gradient-silver">Silver</span> &{" "}
+                <span className="text-gradient-gold">Gold</span> Matrix
               </>
             }
             description={LAE_SMART_MATRIX.body}
@@ -106,14 +106,25 @@ export function SmartMatrix() {
                 <div className="min-h-0 flex-1 overflow-x-auto">
                   <NetworkTree
                     data={tree}
-                    height={320}
+                    height={380}
                     treeId={`slot-${selected}`}
                   />
                 </div>
 
-                <p className="mt-3 text-center text-[0.65rem] text-slate-600">
-                  Auto-upgrade · matrix completion · rewards flow up the tree
-                </p>
+                <div className="mt-3 flex flex-wrap items-center justify-center gap-4 text-[0.6rem]">
+                  <div className="flex items-center gap-1">
+                    <span className="inline-block h-3 w-4 rounded border border-[#C0C0C0]/50 bg-gradient-to-b from-[#E8E8E8]/30 to-[#A0A0A0]/15" />
+                    <span className="text-slate-400">
+                      <strong className="text-slate-200">Silver</strong> — Your Income
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="inline-block h-3 w-4 rounded border border-[#D4A017]/60 bg-gradient-to-b from-[#FFD700]/25 to-[#8B6914]/15" />
+                    <span className="text-slate-400">
+                      <strong className="text-amber-200">Gold</strong> — Flow & System
+                    </span>
+                  </div>
+                </div>
               </motion.div>
             </AnimatePresence>
           </div>

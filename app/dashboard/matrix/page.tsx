@@ -22,7 +22,12 @@ export default function MatrixPage() {
 
   return (
     <div>
-      <h1 className="font-display text-2xl font-bold text-white">LAE Club Matrix</h1>
+      <h1 className="font-display text-2xl font-bold">
+        <span className="text-gradient-silver">Silver</span>{" "}
+        <span className="text-white">&</span>{" "}
+        <span className="text-gradient-gold">Gold</span>{" "}
+        <span className="text-white">Matrix</span>
+      </h1>
       <p className="mt-1 text-sm text-slate-400">
         15 levels · 14 spots · live on-chain · User ID #{String(user.userId ?? "—")}
       </p>
@@ -33,10 +38,10 @@ export default function MatrixPage() {
             key={l}
             type="button"
             onClick={() => setLevel(l)}
-            className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+            className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
               l === level
-                ? "bg-brand-500 text-ink-950"
-                : "border border-white/10 text-slate-400 hover:text-white"
+                ? "bg-gradient-to-b from-amber-400 to-amber-600 text-ink-950 shadow-[0_0_12px_rgba(255,195,26,0.3)]"
+                : "border border-white/10 text-slate-400 hover:border-amber-500/30 hover:text-amber-200"
             }`}
           >
             L{l}

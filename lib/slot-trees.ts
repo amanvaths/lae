@@ -1,69 +1,82 @@
 export type SlotTreeNode = {
   name: string;
   reward?: string;
+  tone?: "gold" | "silver" | "root";
+  sublabel?: string;
+  spot?: number;
   children?: SlotTreeNode[];
 };
 
-/** Matrix-style tree for a given slot — structure scales with slot level */
+/**
+ * Silver & Gold Matrix tree for any slot.
+ * Structure: YOU → 2 (Upline 1, 2) → 4 (3–6) → 8 (7–14)
+ * Silver spots: 3, 6, 8, 9, 11, 12 (Your Income)
+ * Gold spots: 1, 2, 4, 5, 7, 10, 13, 14 (Flow & System)
+ */
 export function getSlotTree(slotId: number): SlotTreeNode {
-  const tier = Math.min(4, Math.ceil(slotId / 4));
-  const r = (base: number) => `+${Math.max(2, base - Math.floor((slotId - 1) / 3))}%`;
-
-  const downline = (n: number, depth: number): SlotTreeNode => ({
-    name: `D${n}`,
-    reward: r(8 - depth),
-    children:
-      depth < tier
-        ? [
-            { name: `L${n}a`, reward: r(5 - depth) },
-            { name: `L${n}b`, reward: r(4 - depth) },
-          ]
-        : undefined,
-  });
-
-  const tree: SlotTreeNode = {
+  return {
     name: `Slot ${slotId}`,
-    reward: "YOU",
+    sublabel: "YOU",
+    tone: "root",
     children: [
       {
         name: "Upline 1",
-        reward: r(12),
-        children: [downline(1, 1), downline(2, 1)],
+        sublabel: "Income",
+        spot: 1,
+        tone: "gold",
+        children: [
+          {
+            name: "Your",
+            sublabel: "Income",
+            spot: 3,
+            tone: "silver",
+            children: [
+              { name: "Downline 1", sublabel: "Income", spot: 7, tone: "gold" },
+              { name: "Your", sublabel: "Income", spot: 8, tone: "silver" },
+            ],
+          },
+          {
+            name: "Next",
+            sublabel: "Slot",
+            spot: 4,
+            tone: "gold",
+            children: [
+              { name: "Your", sublabel: "Income", spot: 9, tone: "silver" },
+              { name: "Downline 1", sublabel: "Income", spot: 10, tone: "gold" },
+            ],
+          },
+        ],
       },
       {
         name: "Upline 2",
-        reward: r(10),
-        children: [downline(3, 1), ...(slotId > 2 ? [downline(4, 1)] : [])],
-      },
-      {
-        name: "You",
-        reward: r(11),
+        sublabel: "Income",
+        spot: 2,
+        tone: "gold",
         children: [
-          downline(5, 1),
-          downline(6, 1),
-          ...(slotId > 6 ? [downline(7, 2)] : []),
+          {
+            name: "Next",
+            sublabel: "Slot",
+            spot: 5,
+            tone: "gold",
+            children: [
+              { name: "Your", sublabel: "Income", spot: 11, tone: "silver" },
+              { name: "Your", sublabel: "Income", spot: 12, tone: "silver" },
+            ],
+          },
+          {
+            name: "Your",
+            sublabel: "Income",
+            spot: 6,
+            tone: "silver",
+            children: [
+              { name: "Downline 2", sublabel: "Income", spot: 13, tone: "gold" },
+              { name: "Recycle", sublabel: "Sponsor", spot: 14, tone: "gold" },
+            ],
+          },
         ],
       },
     ],
   };
-
-  if (slotId >= 10) {
-    tree.children!.push({
-      name: "Spillover",
-      reward: "auto",
-      children: [{ name: "Fill", reward: "+slot" }, { name: "Recycle", reward: "↻" }],
-    });
-  }
-
-  if (slotId >= 14) {
-    tree.children!.push({
-      name: "Upgrade",
-      reward: "→15",
-      children: [{ name: "Next", reward: "max" }],
-    });
-  }
-
-  return tree;
 }
 
 export const SLOT_TREE_META: Record<

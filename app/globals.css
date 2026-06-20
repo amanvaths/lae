@@ -66,6 +66,13 @@
     @apply bg-gradient-to-r from-gold-300 via-brand-400 to-gold-500 bg-clip-text text-transparent;
   }
 
+  .text-gradient-silver {
+    background: linear-gradient(135deg, #e8e8e8 0%, #c0c0c0 50%, #a8a8a8 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
   .ring-conic {
     background: conic-gradient(
       from 180deg at 50% 50%,

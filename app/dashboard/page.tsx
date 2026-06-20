@@ -167,7 +167,7 @@ export default function DashboardHome() {
         </Panel>
       </div>
 
-      <Panel title="Level 1 matrix (live placements)" className="mt-4">
+      <Panel title="Level 1 · Silver & Gold Matrix" className="mt-4">
         {matrixL1.isLoading ? (
           <QueryLoading label="Loading matrix…" />
         ) : (

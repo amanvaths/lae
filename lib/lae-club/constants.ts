@@ -3,23 +3,34 @@
 export const LAE_LEVELS = 15;
 export const LAE_MATRIX_SIZE = 14;
 
-/** Spot layout: 2 + 4 + 8 = 14 */
-export const MATRIX_SPOT_LABELS: Record<number, { label: string; tone: string }> = {
-  1: { label: "Upline 1", tone: "blue" },
-  2: { label: "Upline 2", tone: "blue" },
-  3: { label: "Your Income", tone: "pink" },
-  4: { label: "Royal Pool / Upgrade Hold", tone: "slate" },
-  5: { label: "Auto Upgrade", tone: "gold" },
-  6: { label: "Your Income", tone: "pink" },
-  7: { label: "Downline 1 Spill", tone: "orange" },
-  8: { label: "Your Income", tone: "pink" },
-  9: { label: "Your Income", tone: "pink" },
-  10: { label: "Downline 1 Spill", tone: "orange" },
-  11: { label: "Your Income", tone: "pink" },
-  12: { label: "Your Income", tone: "pink" },
-  13: { label: "Downline 2 Spill", tone: "orange" },
-  14: { label: "Recycle Sponsor", tone: "red" },
+/**
+ * Spot layout: 2 + 4 + 8 = 14 (Silver & Gold Matrix)
+ *
+ * Silver = YOUR INCOME positions: 3, 6, 8, 9, 11, 12
+ * Gold   = FLOW & SYSTEM positions: 1, 2, 4, 5, 7, 10, 13, 14
+ */
+export const MATRIX_SPOT_LABELS: Record<
+  number,
+  { label: string; sublabel: string; tone: "gold" | "silver" }
+> = {
+  1:  { label: "Upline 1",          sublabel: "Income",           tone: "gold" },
+  2:  { label: "Upline 2",          sublabel: "Income",           tone: "gold" },
+  3:  { label: "Your",              sublabel: "Income",           tone: "silver" },
+  4:  { label: "Next",              sublabel: "Slot",             tone: "gold" },
+  5:  { label: "Next",              sublabel: "Slot",             tone: "gold" },
+  6:  { label: "Your",              sublabel: "Income",           tone: "silver" },
+  7:  { label: "Downline 1",        sublabel: "Income",           tone: "gold" },
+  8:  { label: "Your",              sublabel: "Income",           tone: "silver" },
+  9:  { label: "Your",              sublabel: "Income",           tone: "silver" },
+  10: { label: "Downline 1",        sublabel: "Income",           tone: "gold" },
+  11: { label: "Your",              sublabel: "Income",           tone: "silver" },
+  12: { label: "Your",              sublabel: "Income",           tone: "silver" },
+  13: { label: "Downline 2",        sublabel: "Income",           tone: "gold" },
+  14: { label: "Recycle",           sublabel: "Sponsor",          tone: "gold" },
 };
+
+export const SILVER_SPOTS = [3, 6, 8, 9, 11, 12] as const;
+export const GOLD_SPOTS = [1, 2, 4, 5, 7, 10, 13, 14] as const;
 
 export const DEFAULT_LEVEL_PRICES_BTC = [
   "0.001",
