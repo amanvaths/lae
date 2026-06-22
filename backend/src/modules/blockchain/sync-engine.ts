@@ -3,6 +3,7 @@ import { prisma } from "../../lib/prisma.js";
 import { CHAIN, CONTRACTS, LAE_MATRIX_DEPLOY_BLOCK } from "../../config/chains.js";
 import { LAE_MATRIX_EVENTS } from "./abis.js";
 import { parseEthersLog, processIndexedLog } from "./event-processor.js";
+import { backfillLaeUsersFromChain } from "./chain-backfill.js";
 
 const laeMatrixIface = new ethers.Interface([...LAE_MATRIX_EVENTS]);
 
@@ -56,6 +57,31 @@ async function rewindForReorg(fromBlock: bigint): Promise<void> {
   });
 }
 
+async function fetchLogsWithRetry(
+  p: ethers.JsonRpcProvider,
+  address: string,
+  fromBlock: bigint,
+  toBlock: bigint
+): Promise<ethers.Log[]> {
+  let span = toBlock - fromBlock + 1n;
+  while (span >= 1n) {
+    const end = fromBlock + span - 1n > toBlock ? toBlock : fromBlock + span - 1n;
+    try {
+      return await p.getLogs({
+        address,
+        fromBlock: Number(fromBlock),
+        toBlock: Number(end),
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (span <= 10n) throw err;
+      span = span / 2n;
+      console.warn(`[indexer] getLogs ${fromBlock}-${end} failed (${msg.slice(0, 80)}), retry smaller span ${span}`);
+    }
+  }
+  return [];
+}
+
 /** Scan block range and project events — idempotent via txHash+logIndex keys */
 export async function syncBlockRange(fromBlock: bigint, toBlock: bigint): Promise<number> {
   const p = getIndexerProvider();
@@ -66,25 +92,30 @@ export async function syncBlockRange(fromBlock: bigint, toBlock: bigint): Promis
       continue;
     }
 
-    const logs = await p.getLogs({
-      address: target.address,
-      fromBlock: Number(fromBlock),
-      toBlock: Number(toBlock),
-    });
+    let chunkStart = fromBlock;
+    while (chunkStart <= toBlock) {
+      const chunkEnd =
+        chunkStart + BigInt(CHAIN.batchSize) - 1n > toBlock
+          ? toBlock
+          : chunkStart + BigInt(CHAIN.batchSize) - 1n;
 
-    for (const raw of logs) {
-      try {
-        const parsed = target.iface.parseLog({
-          topics: [...raw.topics],
-          data: raw.data,
-        });
-        if (!parsed) continue;
-        const log = parseEthersLog(target.key, parsed, raw);
-        await processIndexedLog(log);
-        processed++;
-      } catch (err) {
-        console.error("[indexer] log parse error:", err);
+      const logs = await fetchLogsWithRetry(p, target.address, chunkStart, chunkEnd);
+
+      for (const raw of logs) {
+        try {
+          const parsed = target.iface.parseLog({
+            topics: [...raw.topics],
+            data: raw.data,
+          });
+          if (!parsed) continue;
+          const log = parseEthersLog(target.key, parsed, raw);
+          await processIndexedLog(log);
+          processed++;
+        } catch (err) {
+          console.error("[indexer] log parse error:", err);
+        }
       }
+      chunkStart = chunkEnd + 1n;
     }
   }
 
@@ -132,12 +163,19 @@ export async function runIndexerSync(): Promise<void> {
         cursor + BigInt(CHAIN.batchSize) > latest
           ? latest
           : cursor + BigInt(CHAIN.batchSize) - 1n;
-      const n = await syncBlockRange(cursor, end);
-      if (n > 0) {
-        console.log(`[indexer] blocks ${cursor}-${end}: ${n} events`);
+      try {
+        const n = await syncBlockRange(cursor, end);
+        if (n > 0) {
+          console.log(`[indexer] blocks ${cursor}-${end}: ${n} events`);
+        }
+      } catch (err) {
+        console.error(`[indexer] sync failed at ${cursor}-${end}:`, err);
+        break;
       }
       cursor = end + 1n;
     }
+  } catch (err) {
+    console.error("[indexer] runIndexerSync error:", err);
   } finally {
     syncing = false;
   }
@@ -157,6 +195,11 @@ export function startBlockchainSyncEngine(): void {
   console.log(`[indexer] LAE Matrix sync on ${CONTRACTS.laeMatrix}`);
   void (async () => {
     await alignIndexerToMatrixDeploy();
+    try {
+      await backfillLaeUsersFromChain();
+    } catch (err) {
+      console.error("[indexer] chain user backfill failed:", err);
+    }
     await runIndexerSync();
   })();
 
@@ -177,12 +220,17 @@ export function stopBlockchainSyncEngine(): void {
 
 /** Manual replay from block (admin/recovery) */
 export async function replayFromBlock(fromBlock: bigint): Promise<number> {
+  await backfillLaeUsersFromChain();
   const cursor = fromBlock > 0n ? fromBlock - 1n : 0n;
   await prisma.indexerState.update({
     where: { id: "main" },
     data: { lastBlock: cursor, lastBlockHash: null },
   });
-  await runIndexerSync();
+  try {
+    await runIndexerSync();
+  } catch (err) {
+    console.error("[indexer] replay log sync failed (users backfilled from chain):", err);
+  }
   const state = await prisma.indexerState.findUnique({ where: { id: "main" } });
   const users = await prisma.indexedLaeUser.count();
   console.log(`[indexer] Replay done — block ${state?.lastBlock?.toString() ?? "?"}, users ${users}`);

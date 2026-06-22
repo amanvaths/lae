@@ -11,7 +11,7 @@ export const CHAIN = {
     "https://bsc-testnet.publicnode.com",
   startBlock: BigInt(process.env.INDEXER_START_BLOCK ?? String(LAE_MATRIX_DEPLOY_BLOCK)),
   reorgDepth: Number(process.env.INDEXER_REORG_DEPTH ?? "12"),
-  batchSize: Number(process.env.INDEXER_BATCH_SIZE ?? "2000"),
+  batchSize: Number(process.env.INDEXER_BATCH_SIZE ?? "400"),
   pollMs: Number(process.env.INDEXER_POLL_MS ?? "8000"),
 } as const;
 

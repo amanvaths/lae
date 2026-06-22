@@ -139,10 +139,10 @@ jobs:
             printf '%s=%s\n' PORT 4000 >> "${ENV_FILE}"
             printf '%s=%s\n' HOST 0.0.0.0 >> "${ENV_FILE}"
             printf '%s=%s\n' DATABASE_URL "$(sanitize "${DATABASE_URL}")" >> "${ENV_FILE}"
-            printf '%s=%s\n' BSC_RPC_URL "$(sanitize "${BSC_RPC_URL:-https://bsc-testnet.publicnode.com}")" >> "${ENV_FILE}"
+            printf '%s=%s\n' BSC_RPC_URL "$(sanitize "${BSC_RPC_URL:-https://data-seed-prebsc-1-s1.binance.org:8545/}")" >> "${ENV_FILE}"
             printf '%s=%s\n' CHAIN_ID "$(sanitize "${CHAIN_ID:-97}")" >> "${ENV_FILE}"
             printf '%s=%s\n' INDEXER_START_BLOCK "$(sanitize "${INDEXER_START_BLOCK:-114471162}")" >> "${ENV_FILE}"
-            printf '%s=%s\n' INDEXER_BATCH_SIZE 2000 >> "${ENV_FILE}"
+            printf '%s=%s\n' INDEXER_BATCH_SIZE 400 >> "${ENV_FILE}"
             printf '%s=%s\n' INDEXER_POLL_MS 8000 >> "${ENV_FILE}"
             printf '%s=%s\n' INDEXER_REORG_DEPTH 12 >> "${ENV_FILE}"
             printf '%s=%s\n' SENSO_CONTRACT_ADDRESS 0x6521619C38fe4be6B800263CC783d9524ED4F7BA >> "${ENV_FILE}"
@@ -167,11 +167,11 @@ jobs:
           BASE="${{ secrets.BACKEND_PUBLIC_URL }}"
           BASE="${BASE%/}"
           for i in 1 2 3 4 5; do
-            if curl -sf "${BASE}/health" >/dev/null && curl -sf "${BASE}/api/indexer/status" >/dev/null; then
+            if curl -sfk "${BASE}/health" >/dev/null && curl -sfk "${BASE}/api/indexer/status" >/dev/null; then
               echo "Public backend endpoints OK (attempt ${i})"
-              curl -sf "${BASE}/health"
+              curl -sfk "${BASE}/health"
               echo ""
-              curl -sf "${BASE}/api/indexer/status"
+              curl -sfk "${BASE}/api/indexer/status"
               exit 0
             fi
             echo "Waiting for backend… attempt ${i}/5"
