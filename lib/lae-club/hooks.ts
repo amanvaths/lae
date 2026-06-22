@@ -9,7 +9,7 @@ import {
   useWriteContract,
   useWaitForTransactionReceipt,
 } from "wagmi";
-import { formatEther, type Address } from "viem";
+import { formatEther, type Address, type PublicClient } from "viem";
 import { LAE_CONTRACTS } from "./contracts";
 import {
   erc20BalanceAbi,
@@ -20,6 +20,7 @@ import {
 import { LAE_LEVELS } from "./constants";
 import { withBasePath } from "@/lib/paths";
 import { fetchMatrixUserEvents, type MatrixUserEvent } from "./matrix-events";
+import { fetchLaeUserEventsFromApi } from "./user-api";
 import { LAE_USER_QUERY_KEY } from "./query-keys";
 
 export type LaeUserDetails = readonly [
@@ -356,23 +357,28 @@ export function useLaeStaking() {
 }
 
 export function useLaeRoyalPoolBalance(poolAddress?: Address) {
-  const onChainPool = useReadContract({
-    address: LAE_CONTRACTS.matrix,
-    abi: laeClubMatrixAbi,
-    functionName: "CLUB_POOL_ADDRESS",
-    query: { staleTime: 60_000 },
+  const meta = useReadContracts({
+    contracts: [
+      {
+        address: LAE_CONTRACTS.matrix,
+        abi: laeClubMatrixAbi,
+        functionName: "CLUB_POOL_ADDRESS",
+      },
+      {
+        address: LAE_CONTRACTS.matrix,
+        abi: laeClubMatrixAbi,
+        functionName: "PAYMENT_TOKEN",
+      },
+    ],
+    query: { staleTime: 60_000, retry: 1 },
   });
+
   const addr =
     poolAddress ??
-    (onChainPool.data as Address | undefined) ??
+    (meta.data?.[0]?.result as Address | undefined) ??
     LAE_CONTRACTS.clubPool;
-  const paymentToken = useReadContract({
-    address: LAE_CONTRACTS.matrix,
-    abi: laeClubMatrixAbi,
-    functionName: "PAYMENT_TOKEN",
-    query: { staleTime: 60_000 },
-  });
-  const token = (paymentToken.data as Address | undefined) ?? LAE_CONTRACTS.payment;
+  const token = (meta.data?.[1]?.result as Address | undefined) ?? LAE_CONTRACTS.payment;
+
   const balance = useReadContract({
     address: token,
     abi: erc20BalanceAbi,
@@ -381,17 +387,30 @@ export function useLaeRoyalPoolBalance(poolAddress?: Address) {
     query: {
       enabled: !!addr && addr !== "0x0000000000000000000000000000000000000000",
       staleTime: 15_000,
+      retry: 1,
     },
   });
+
   return {
     poolAddress: addr,
     paymentToken: token,
     balance: balance.data ?? 0n,
-    isLoading: paymentToken.isLoading || balance.isLoading || onChainPool.isLoading,
+    isLoading: meta.isLoading || balance.isLoading,
   };
 }
 
-/** Live matrix events from chain logs for connected user */
+async function loadUserEvents(
+  client: PublicClient,
+  userId: bigint,
+  userAddress: Address
+): Promise<MatrixUserEvent[]> {
+  const apiEvents = await fetchLaeUserEventsFromApi(userAddress);
+  if (apiEvents !== null) return apiEvents;
+  const { events } = await fetchMatrixUserEvents(client, userId, userAddress);
+  return events;
+}
+
+/** Live matrix events — indexer API first, chain logs fallback */
 export function useLaeUserEvents() {
   const client = usePublicClient();
   const user = useLaeUser();
@@ -399,14 +418,15 @@ export function useLaeUserEvents() {
   return useQuery<MatrixUserEvent[]>({
     queryKey: ["lae-events", user.userId?.toString(), user.userAddress, LAE_CONTRACTS.matrix],
     enabled: !!client && !!user.userId && user.userId > 0n && !!user.userAddress,
-    staleTime: 120_000,
+    staleTime: 180_000,
+    gcTime: 600_000,
     retry: 0,
     refetchOnWindowFocus: false,
     throwOnError: false,
+    placeholderData: (prev) => prev,
     queryFn: async () => {
       if (!client || !user.userId || !user.userAddress) return [];
-      const { events } = await fetchMatrixUserEvents(client, user.userId, user.userAddress);
-      return events;
+      return loadUserEvents(client, user.userId, user.userAddress);
     },
   });
 }
@@ -428,6 +448,7 @@ export function useLaeIncomeEvents() {
     totalMatrixIncome: totalMatrix,
     totalRoyalIncome: totalRoyal,
     isLoading: events.isLoading,
+    isFetching: events.isFetching,
     isError: false,
     fetchFailed: events.isError,
     refetch: events.refetch,
@@ -771,8 +792,7 @@ export function useLaeUserEventsForUser(
     throwOnError: false,
     queryFn: async () => {
       if (!client || !userId || !userAddress) return [];
-      const { events } = await fetchMatrixUserEvents(client, userId, userAddress);
-      return events;
+      return loadUserEvents(client, userId, userAddress);
     },
   });
 }

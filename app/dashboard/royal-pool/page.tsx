@@ -10,15 +10,22 @@ import {
 import { fmtEther } from "@/lib/contracts/format";
 import { addressUrl, txUrl } from "@/lib/lae-club/contracts";
 import { truncateAddress } from "@/lib/format";
+import { Loader2 } from "lucide-react";
 
 export default function RoyalPoolPage() {
   const user = useLaeUser();
   const pool = useLaeRoyalPoolBalance();
   const income = useLaeIncomeEvents();
 
-  if (user.isLoading || pool.isLoading || income.isLoading) {
-    return <QueryLoading label="Loading royal pool data…" />;
+  if (user.isLoading || pool.isLoading) {
+    return <QueryLoading label="Loading royal pool…" />;
   }
+
+  const royalTotal =
+    income.totalRoyalIncome > 0n
+      ? income.totalRoyalIncome
+      : 0n;
+  const matrixTotal = user.totalIncome ?? income.totalMatrixIncome ?? 0n;
 
   return (
     <div>
@@ -27,12 +34,19 @@ export default function RoyalPoolPage() {
         TreasuryPool events · pool balance from live ERC20 read
       </p>
 
+      {income.isFetching && (
+        <p className="mt-2 flex items-center gap-2 text-xs text-slate-500">
+          <Loader2 className="h-3 w-3 animate-spin" />
+          Syncing event history…
+        </p>
+      )}
+
       <div className="mt-6 grid gap-4 sm:grid-cols-3">
         <Panel title="Your royal income">
-          <p className="text-2xl font-bold text-brand-300">
-            {fmtEther(income.totalRoyalIncome)}
+          <p className="text-2xl font-bold text-brand-300">{fmtEther(royalTotal)}</p>
+          <p className="text-xs text-slate-500">
+            {income.royalEvents.length} TreasuryPool events
           </p>
-          <p className="text-xs text-slate-500">{income.royalEvents.length} TreasuryPool events</p>
         </Panel>
         <Panel title="Pool contract balance">
           <p className="text-2xl font-bold text-white">{fmtEther(pool.balance)}</p>
@@ -50,14 +64,18 @@ export default function RoyalPoolPage() {
           )}
         </Panel>
         <Panel title="Matrix income (comparison)">
-          <p className="text-2xl font-bold text-emerald-400">
-            {fmtEther(income.totalMatrixIncome || user.totalIncome || 0n)}
-          </p>
+          <p className="text-2xl font-bold text-emerald-400">{fmtEther(matrixTotal)}</p>
+          <p className="text-xs text-slate-500">On-chain total from getUserDetails</p>
         </Panel>
       </div>
 
       <Panel className="mt-6" title="Your TreasuryPool history">
-        {income.royalEvents.length === 0 ? (
+        {income.isFetching && income.royalEvents.length === 0 ? (
+          <p className="flex items-center gap-2 text-sm text-slate-500">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Loading events…
+          </p>
+        ) : income.royalEvents.length === 0 ? (
           <p className="text-sm text-slate-500">No royal pool income yet</p>
         ) : (
           [...income.royalEvents].reverse().map((e, i) => (

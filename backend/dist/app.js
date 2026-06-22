@@ -7,6 +7,7 @@ import { errorHandler } from "./middleware/auth.js";
 import authPlugin from "./plugins/auth.plugin.js";
 import { analyticsRoutes } from "./modules/analytics/analytics.routes.js";
 import { adminRoutes } from "./modules/admin/lae-admin.routes.js";
+import { laeUserRoutes } from "./modules/lae/lae-user.routes.js";
 /**
  * LAE Analytics API — read-only indexed blockchain data.
  * Legacy MLM engines and write routes are disabled.
@@ -39,6 +40,7 @@ export async function buildApp() {
     }));
     await app.register(analyticsRoutes, { prefix: "/api" });
     await app.register(adminRoutes, { prefix: "/api" });
+    await app.register(laeUserRoutes, { prefix: "/api" });
     return app;
 }
 //# sourceMappingURL=app.js.map

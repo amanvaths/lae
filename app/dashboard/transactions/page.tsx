@@ -2,16 +2,18 @@
 
 import { Panel, Pill } from "@/components/dashboard/ui";
 import { QueryLoading } from "@/components/dashboard/QueryState";
-import { useLaeUserEvents } from "@/lib/lae-club/hooks";
+import { useLaeUser, useLaeUserEvents } from "@/lib/lae-club/hooks";
 import { txUrl } from "@/lib/lae-club/contracts";
 import { fmtEther } from "@/lib/contracts/format";
 import { truncateAddress } from "@/lib/format";
+import { Loader2 } from "lucide-react";
 
 export default function TransactionsPage() {
+  const user = useLaeUser();
   const events = useLaeUserEvents();
 
-  if (events.isLoading) {
-    return <QueryLoading label="Loading matrix events from chain…" />;
+  if (user.isLoading) {
+    return <QueryLoading label="Loading profile…" />;
   }
 
   const rows = [...(events.data ?? [])].reverse();
@@ -20,11 +22,23 @@ export default function TransactionsPage() {
     <div>
       <h1 className="font-display text-2xl font-bold text-white">Transactions</h1>
       <p className="mt-1 text-sm text-slate-400">
-        {rows.length} matrix events for your User ID (live getContractEvents)
+        User #{String(user.userId ?? "—")} · {rows.length} matrix events
       </p>
 
+      {events.isFetching && (
+        <p className="mt-2 flex items-center gap-2 text-xs text-slate-500">
+          <Loader2 className="h-3 w-3 animate-spin" />
+          {rows.length === 0 ? "Loading events…" : "Syncing latest events…"}
+        </p>
+      )}
+
       <Panel className="mt-6" title="Event log">
-        {rows.length === 0 ? (
+        {events.isFetching && rows.length === 0 ? (
+          <p className="flex items-center gap-2 text-sm text-slate-500">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Fetching matrix events…
+          </p>
+        ) : rows.length === 0 ? (
           <p className="text-sm text-slate-500">No events yet</p>
         ) : (
           <div className="divide-y divide-white/5">
