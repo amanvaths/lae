@@ -20,6 +20,7 @@ import {
 import { LAE_LEVELS } from "./constants";
 import { withBasePath } from "@/lib/paths";
 import { fetchMatrixUserEvents, type MatrixUserEvent } from "./matrix-events";
+import { dedupeEvents, sortEventsNewestFirst } from "./event-utils";
 import { fetchLaeUserEventsFromApi } from "./user-api";
 import { LAE_USER_QUERY_KEY } from "./query-keys";
 
@@ -404,10 +405,14 @@ async function loadUserEvents(
   userId: bigint,
   userAddress: Address
 ): Promise<MatrixUserEvent[]> {
-  const apiEvents = await fetchLaeUserEventsFromApi(userAddress);
-  if (apiEvents !== null) return apiEvents;
-  const { events } = await fetchMatrixUserEvents(client, userId, userAddress);
-  return events;
+  const [apiEvents, chainResult] = await Promise.all([
+    fetchLaeUserEventsFromApi(userAddress),
+    fetchMatrixUserEvents(client, userId, userAddress, { timeoutMs: 45_000 }),
+  ]);
+
+  return sortEventsNewestFirst(
+    dedupeEvents([...(apiEvents ?? []), ...chainResult.events])
+  );
 }
 
 /** Live matrix events — indexer API first, chain logs fallback */
@@ -418,10 +423,10 @@ export function useLaeUserEvents() {
   return useQuery<MatrixUserEvent[]>({
     queryKey: ["lae-events", user.userId?.toString(), user.userAddress, LAE_CONTRACTS.matrix],
     enabled: !!client && !!user.userId && user.userId > 0n && !!user.userAddress,
-    staleTime: 180_000,
+    staleTime: 60_000,
     gcTime: 600_000,
-    retry: 0,
-    refetchOnWindowFocus: false,
+    retry: 1,
+    refetchOnWindowFocus: true,
     throwOnError: false,
     placeholderData: (prev) => prev,
     queryFn: async () => {

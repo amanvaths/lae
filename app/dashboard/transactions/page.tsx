@@ -3,6 +3,7 @@
 import { Panel, Pill } from "@/components/dashboard/ui";
 import { QueryLoading } from "@/components/dashboard/QueryState";
 import { useLaeUser, useLaeUserEvents } from "@/lib/lae-club/hooks";
+import { sortEventsNewestFirst } from "@/lib/lae-club/event-utils";
 import { txUrl } from "@/lib/lae-club/contracts";
 import { fmtEther } from "@/lib/contracts/format";
 import { truncateAddress } from "@/lib/format";
@@ -16,7 +17,7 @@ export default function TransactionsPage() {
     return <QueryLoading label="Loading profile…" />;
   }
 
-  const rows = [...(events.data ?? [])].reverse();
+  const rows = sortEventsNewestFirst(events.data ?? []);
 
   return (
     <div>

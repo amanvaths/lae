@@ -133,7 +133,7 @@ export async function adminRoutes(app: FastifyInstance) {
     if (!verifyAdmin(request)) return reply.status(401).send({ message: "Unauthorized" });
     const body = (request.body ?? {}) as { fromBlock?: string | number };
     const fromBlock = body.fromBlock != null ? BigInt(body.fromBlock) : getMatrixDeployBlock();
-    const indexedUsers = await replayFromBlock(fromBlock);
+    const indexedUsers = await replayFromBlock(fromBlock, { forceEventBackfill: true });
     const state = await prisma.indexerState.findUnique({ where: { id: "main" } });
     return {
       ok: true,
@@ -141,6 +141,7 @@ export async function adminRoutes(app: FastifyInstance) {
       lastBlock: state?.lastBlock?.toString() ?? "0",
       indexedUsers,
       chainEvents: await prisma.chainEvent.count(),
+      indexedIncome: await prisma.indexedLaeIncome.count(),
     };
   });
 }

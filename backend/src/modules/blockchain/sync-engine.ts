@@ -4,6 +4,7 @@ import { CHAIN, CONTRACTS, LAE_MATRIX_DEPLOY_BLOCK } from "../../config/chains.j
 import { LAE_MATRIX_EVENTS } from "./abis.js";
 import { parseEthersLog, processIndexedLog } from "./event-processor.js";
 import { backfillLaeUsersFromChain } from "./chain-backfill.js";
+import { backfillLaeUserEventsFromChain } from "./lae-event-backfill.js";
 
 const laeMatrixIface = new ethers.Interface([...LAE_MATRIX_EVENTS]);
 
@@ -200,6 +201,9 @@ export function startBlockchainSyncEngine(): void {
     } catch (err) {
       console.error("[indexer] chain user backfill failed:", err);
     }
+    void backfillLaeUserEventsFromChain().catch((err) => {
+      console.error("[indexer] chain event backfill failed:", err);
+    });
     await runIndexerSync();
   })();
 
@@ -219,8 +223,19 @@ export function stopBlockchainSyncEngine(): void {
 }
 
 /** Manual replay from block (admin/recovery) */
-export async function replayFromBlock(fromBlock: bigint): Promise<number> {
+export async function replayFromBlock(
+  fromBlock: bigint,
+  options?: { forceEventBackfill?: boolean }
+): Promise<number> {
+  if (options?.forceEventBackfill) {
+    process.env.FORCE_EVENT_BACKFILL = "1";
+  }
   await backfillLaeUsersFromChain();
+  try {
+    await backfillLaeUserEventsFromChain();
+  } catch (err) {
+    console.error("[indexer] event backfill during replay failed:", err);
+  }
   const cursor = fromBlock > 0n ? fromBlock - 1n : 0n;
   await prisma.indexerState.update({
     where: { id: "main" },

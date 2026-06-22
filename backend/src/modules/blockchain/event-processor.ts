@@ -1,5 +1,6 @@
 import type { ethers } from "ethers";
 import { prisma } from "../../lib/prisma.js";
+import { laeWalletForUserId } from "./lae-user-lookup.js";
 
 export interface ParsedLog {
   contract: "laeMatrix" | "senso" | "spin" | "staking";
@@ -28,10 +29,59 @@ function tsFromBlock(_blockNumber: number): Date {
   return new Date(Date.now());
 }
 
+async function resolveLaeEventWallet(
+  eventName: string,
+  args: Record<string, unknown>
+): Promise<string | undefined> {
+  switch (eventName) {
+    case "Registration":
+      return lower(args.userAddress);
+    case "TokenReceived": {
+      const receiverId = num(args.receiverId);
+      return (await laeWalletForUserId(receiverId)) ?? lower(args.from);
+    }
+    case "ClubPoolPayment":
+    case "TreasuryPool": {
+      const refId = num(args.refId);
+      return (await laeWalletForUserId(refId)) ?? undefined;
+    }
+    case "NewUserPlace": {
+      const userId = num(args.user);
+      return (await laeWalletForUserId(userId)) ?? undefined;
+    }
+    case "Spillover": {
+      const receiverId = num(args.receiverId);
+      const referrerId = num(args.referrerId);
+      return (
+        (await laeWalletForUserId(receiverId)) ??
+        (await laeWalletForUserId(referrerId)) ??
+        undefined
+      );
+    }
+    case "Reinvest":
+    case "Upgrade": {
+      const userId = num(args.userId);
+      return (await laeWalletForUserId(userId)) ?? undefined;
+    }
+    case "MissedIncome": {
+      const receiverId = num(args.receiverId);
+      return (await laeWalletForUserId(receiverId)) ?? undefined;
+    }
+    case "LaeRewardAllocated":
+    case "LaeRewardClaimed":
+      return lower(args.user);
+    default:
+      return undefined;
+  }
+}
+
 /** Idempotent projection from parsed log into analytics tables + event_logs */
 export async function processIndexedLog(log: ParsedLog): Promise<void> {
-  const { txHash, logIndex, blockNumber, eventName, args } = log;
+  const { txHash, logIndex, blockNumber, eventName, args, contract } = log;
+  const laeWallet =
+    contract === "laeMatrix" ? await resolveLaeEventWallet(eventName, args) : undefined;
   const wallet =
+    laeWallet ??
     lower(args.userAddress) ??
     lower(args.user) ??
     lower(args.owner) ??
@@ -314,12 +364,15 @@ export async function processIndexedLog(log: ParsedLog): Promise<void> {
 
     case "TokenReceived": {
       const receiverId = num(args.receiverId);
-      const receiver = await prisma.indexedLaeUser.findFirst({ where: { userId: receiverId } });
+      const receiverAddress = await laeWalletForUserId(receiverId);
+      const existing = await prisma.indexedLaeIncome.findUnique({
+        where: { txHash_logIndex: { txHash, logIndex } },
+      });
       await prisma.indexedLaeIncome.upsert({
         where: { txHash_logIndex: { txHash, logIndex } },
         create: {
           receiverUserId: receiverId,
-          receiverAddress: receiver?.walletAddress ?? null,
+          receiverAddress,
           fromUserId: num(args.fromId) || null,
           level: num(args.level),
           amount: dec(args.amount),
@@ -328,11 +381,16 @@ export async function processIndexedLog(log: ParsedLog): Promise<void> {
           txHash,
           logIndex,
         },
-        update: {},
+        update: {
+          receiverAddress: receiverAddress ?? undefined,
+          fromUserId: num(args.fromId) || null,
+          level: num(args.level),
+          amount: dec(args.amount),
+        },
       });
-      if (receiver) {
-        await prisma.indexedLaeUser.update({
-          where: { walletAddress: receiver.walletAddress },
+      if (receiverAddress && !existing) {
+        await prisma.indexedLaeUser.updateMany({
+          where: { walletAddress: receiverAddress },
           data: { totalIncome: { increment: dec(args.amount) } },
         });
       }
@@ -342,12 +400,12 @@ export async function processIndexedLog(log: ParsedLog): Promise<void> {
     case "ClubPoolPayment":
     case "TreasuryPool": {
       const refId = num(args.refId);
-      const ref = await prisma.indexedLaeUser.findFirst({ where: { userId: refId } });
+      const receiverAddress = await laeWalletForUserId(refId);
       await prisma.indexedLaeIncome.upsert({
         where: { txHash_logIndex: { txHash, logIndex } },
         create: {
           receiverUserId: refId,
-          receiverAddress: ref?.walletAddress ?? null,
+          receiverAddress,
           fromUserId: num(args.userId) || null,
           level: num(args.level),
           amount: dec(args.amount),
@@ -356,7 +414,12 @@ export async function processIndexedLog(log: ParsedLog): Promise<void> {
           txHash,
           logIndex,
         },
-        update: {},
+        update: {
+          receiverAddress: receiverAddress ?? undefined,
+          fromUserId: num(args.userId) || null,
+          level: num(args.level),
+          amount: dec(args.amount),
+        },
       });
       break;
     }

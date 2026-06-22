@@ -110,14 +110,27 @@ function chainEventToRow(e: {
 /** Fast indexed user events — avoids slow eth_getLogs on the frontend. */
 export async function getLaeUserEvents(wallet: string, limit = 150): Promise<LaeUserEventRow[]> {
   const w = normalizeWallet(wallet);
-  const user = await prisma.indexedLaeUser.findUnique({ where: { walletAddress: w } });
-  if (!user) return [];
+  let user = await prisma.indexedLaeUser.findUnique({ where: { walletAddress: w } });
+
+  // User may exist on-chain but not yet in indexer — still serve income by wallet from chainEvent
+  if (!user) {
+    const incomeOnly = await prisma.indexedLaeIncome.findMany({
+      where: { receiverAddress: w },
+      orderBy: { blockNumber: "desc" },
+      take: limit,
+    });
+    if (incomeOnly.length === 0) return [];
+    return serializeForJson(incomeOnly.map(incomeToEvent)) as LaeUserEventRow[];
+  }
 
   const perSource = Math.ceil(limit / 3);
+  const uidStr = String(user.userId);
 
   const [incomes, placements, chainEvents] = await Promise.all([
     prisma.indexedLaeIncome.findMany({
-      where: { receiverAddress: w },
+      where: {
+        OR: [{ receiverAddress: w }, { receiverUserId: user.userId }],
+      },
       orderBy: { blockNumber: "desc" },
       take: perSource,
     }),
@@ -128,11 +141,43 @@ export async function getLaeUserEvents(wallet: string, limit = 150): Promise<Lae
     }),
     prisma.chainEvent.findMany({
       where: {
-        walletAddress: w,
-        eventName: { in: ["Reinvest", "Upgrade", "Spillover", "Registration", "MissedIncome"] },
+        AND: [
+          {
+            eventName: {
+              in: [
+                "Reinvest",
+                "Upgrade",
+                "Spillover",
+                "Registration",
+                "MissedIncome",
+                "TokenReceived",
+                "ClubPoolPayment",
+                "NewUserPlace",
+                "LaeRewardAllocated",
+                "LaeRewardClaimed",
+              ],
+            },
+          },
+          {
+            OR: [
+              { walletAddress: w },
+              { eventName: "TokenReceived", payload: { path: ["receiverId"], equals: uidStr } },
+              { eventName: "ClubPoolPayment", payload: { path: ["refId"], equals: uidStr } },
+              { eventName: "NewUserPlace", payload: { path: ["user"], equals: uidStr } },
+              { eventName: "NewUserPlace", payload: { path: ["referrer"], equals: uidStr } },
+              { eventName: "Spillover", payload: { path: ["referrerId"], equals: uidStr } },
+              { eventName: "Spillover", payload: { path: ["receiverId"], equals: uidStr } },
+              { eventName: "Reinvest", payload: { path: ["userId"], equals: uidStr } },
+              { eventName: "Reinvest", payload: { path: ["callerId"], equals: uidStr } },
+              { eventName: "Upgrade", payload: { path: ["userId"], equals: uidStr } },
+              { eventName: "MissedIncome", payload: { path: ["receiverId"], equals: uidStr } },
+              { eventName: "MissedIncome", payload: { path: ["userId"], equals: uidStr } },
+            ],
+          },
+        ],
       },
       orderBy: { blockNumber: "desc" },
-      take: perSource,
+      take: perSource * 2,
     }),
   ]);
 
@@ -164,10 +209,14 @@ export async function getLaeUserEvents(wallet: string, limit = 150): Promise<Lae
 
 export async function getLaeUserIncome(wallet: string, kind?: "matrix" | "royal", limit = 100) {
   const w = normalizeWallet(wallet);
+  const user = await prisma.indexedLaeUser.findUnique({ where: { walletAddress: w } });
+
   return serializeForJson(
     await prisma.indexedLaeIncome.findMany({
       where: {
-        receiverAddress: w,
+        ...(user
+          ? { OR: [{ receiverAddress: w }, { receiverUserId: user.userId }] }
+          : { receiverAddress: w }),
         ...(kind ? { incomeKind: kind } : {}),
       },
       orderBy: { blockNumber: "desc" },

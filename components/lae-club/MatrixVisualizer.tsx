@@ -101,7 +101,7 @@ export function MatrixVisualizer({
                 <div
                   className={cn(
                     "flex items-start justify-center",
-                    isLastRow ? "gap-2" : "gap-4"
+                    isLastRow ? "gap-1.5 sm:gap-2" : "gap-4"
                   )}
                 >
                   {row.map((spotNum) => {
@@ -109,6 +109,8 @@ export function MatrixVisualizer({
                     const meta = MATRIX_SPOT_LABELS[spotNum];
                     const isGold = meta?.tone === "gold";
                     const { filled, address } = slot;
+                    const nextOpenSpot = allSlots.findIndex((s) => !s.filled) + 1;
+                    const isNextOpen = !filled && spotNum === nextOpenSpot;
 
                     return (
                       <div
@@ -124,6 +126,7 @@ export function MatrixVisualizer({
                           spotNum={spotNum}
                           filled={filled}
                           isGold={isGold}
+                          isNextOpen={isNextOpen}
                           label={meta?.label ?? "—"}
                           sublabel={meta?.sublabel ?? ""}
                           address={address}
@@ -139,22 +142,26 @@ export function MatrixVisualizer({
                   })}
                 </div>
 
-                {/* FREE labels under bottom-row pairs */}
+                {/* FREE labels under bottom-row pairs (auto-upgrade pairs) */}
                 {isLastRow && (
-                  <div className="mt-1.5 flex items-start justify-center gap-2">
-                    {[0, 2, 4, 6].map((pairStart) => {
-                      const pairWidth = isLastRow ? "w-[136px]" : "w-[156px]";
+                  <div className="mt-1.5 flex items-start justify-center gap-1.5 sm:gap-2">
+                    {[7, 9, 11, 13].map((pairStart) => {
+                      const pairFilled =
+                        allSlots[pairStart - 1]?.filled || allSlots[pairStart]?.filled;
                       return (
                         <div
                           key={pairStart}
-                          className={cn(
-                            "flex items-center justify-center text-center",
-                            pairWidth
-                          )}
+                          className="flex w-[128px] items-center justify-center sm:w-[136px]"
                         >
-                          <span className="rounded-full bg-[#D4AF37]/10 px-3 py-0.5 text-[9px] font-bold uppercase tracking-[0.2em] text-[#D4AF37]/60">
-                            Free
-                          </span>
+                          {pairFilled ? (
+                            <span className="rounded-full bg-[#D4AF37]/10 px-3 py-0.5 text-[9px] font-bold uppercase tracking-[0.2em] text-[#D4AF37]/60">
+                              Free
+                            </span>
+                          ) : (
+                            <span className="text-[9px] uppercase tracking-[0.15em] text-slate-600">
+                              Pair {pairStart}–{pairStart + 1}
+                            </span>
+                          )}
                         </div>
                       );
                     })}
@@ -216,6 +223,7 @@ function SpotBox({
   spotNum,
   filled,
   isGold,
+  isNextOpen,
   label,
   sublabel,
   address,
@@ -224,12 +232,13 @@ function SpotBox({
   spotNum: number;
   filled: boolean;
   isGold: boolean;
+  isNextOpen: boolean;
   label: string;
   sublabel: string;
   address: `0x${string}` | undefined;
   compact: boolean;
 }) {
-  const boxW = compact ? "min-w-[60px] max-w-[66px]" : "min-w-[72px]";
+  const boxW = compact ? "min-w-[64px] max-w-[72px] sm:min-w-[68px]" : "min-w-[72px]";
 
   const filledGold = cn(
     "border-[#D4AF37]/60 bg-gradient-to-b from-[#D4AF37]/25 via-[#C5A028]/15 to-[#B8860B]/10",
@@ -239,8 +248,9 @@ function SpotBox({
     "border-[#C0C0C0]/50 bg-gradient-to-b from-[#E8E8E8]/20 via-[#C0C0C0]/12 to-[#A8A8A8]/8",
     silverGlow
   );
-  const emptyBox =
-    "border-white/[0.08] bg-white/[0.02] border-dashed";
+  const emptyBox = isNextOpen
+    ? "border-[#D4AF37]/25 bg-[#D4AF37]/[0.04] border-dashed"
+    : "border-white/[0.1] bg-white/[0.03] border-dashed";
 
   return (
     <motion.div
@@ -273,7 +283,9 @@ function SpotBox({
             ? isGold
               ? "text-[#D4AF37]"
               : "text-[#C0C0C0]"
-            : "text-slate-600"
+            : isNextOpen
+              ? "text-[#D4AF37]/80"
+              : "text-slate-400"
         )}
       >
         {label}
@@ -285,18 +297,20 @@ function SpotBox({
             ? isGold
               ? "text-[#D4AF37]/60"
               : "text-[#C0C0C0]/60"
-            : "text-slate-700"
+            : isNextOpen
+              ? "text-[#D4AF37]/50"
+              : "text-slate-500"
         )}
       >
-        {sublabel}
+        {filled ? sublabel : isNextOpen ? "Next open" : "Awaiting"}
       </p>
       <p
         className={cn(
           "mt-0.5 font-mono text-[8px]",
-          filled ? "text-white/70" : "text-slate-600"
+          filled ? "text-white/70" : isNextOpen ? "text-[#D4AF37]/70" : "text-slate-500"
         )}
       >
-        {filled && address ? truncateAddress(address, 4, 3) : "Empty"}
+        {filled && address ? truncateAddress(address, 4, 3) : isNextOpen ? `#${spotNum}` : "—"}
       </p>
     </motion.div>
   );

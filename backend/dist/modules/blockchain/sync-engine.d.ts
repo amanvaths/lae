@@ -7,5 +7,8 @@ export declare function runIndexerSync(): Promise<void>;
 export declare function startBlockchainSyncEngine(): void;
 export declare function stopBlockchainSyncEngine(): void;
 /** Manual replay from block (admin/recovery) */
-export declare function replayFromBlock(fromBlock: bigint): Promise<void>;
+export declare function replayFromBlock(fromBlock: bigint, options?: {
+    forceEventBackfill?: boolean;
+}): Promise<number>;
+export declare function getMatrixDeployBlock(): bigint;
 //# sourceMappingURL=sync-engine.d.ts.map

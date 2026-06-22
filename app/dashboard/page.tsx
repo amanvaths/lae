@@ -22,8 +22,10 @@ import {
   useLaeRecycleCount,
   useLaeNftStatus,
   useLaeMatrixLevel,
+  useLaeUserEvents,
   referralLinkByUserId,
 } from "@/lib/lae-club/hooks";
+import { sortEventsNewestFirst } from "@/lib/lae-club/event-utils";
 import { fmtEther } from "@/lib/contracts/format";
 import { truncateAddress } from "@/lib/format";
 import { withBasePath } from "@/lib/paths";
@@ -42,10 +44,11 @@ export default function DashboardHome() {
   const user = useLaeUser();
   const levels = useLaeAllMatrixLevels();
   const income = useLaeIncomeEvents();
+  const userEvents = useLaeUserEvents();
   const recycles = useLaeRecycleCount();
   const nft = useLaeNftStatus();
   const matrixL1 = useLaeMatrixLevel(1);
-  const recentEvents = (income.allEvents ?? []).slice(-8).reverse();
+  const recentEvents = sortEventsNewestFirst(userEvents.data ?? []).slice(0, 8);
 
   if (user.isLoading) {
     return <QueryLoading label="Loading on-chain dashboard…" />;
@@ -207,10 +210,14 @@ export default function DashboardHome() {
             </Link>
           }
         >
-          {income.isLoading ? (
+          {userEvents.isLoading ? (
             <p className="text-sm text-slate-500">Loading events from chain…</p>
           ) : recentEvents.length === 0 ? (
-            <p className="text-sm text-slate-500">No events yet for this user</p>
+            <p className="text-sm text-slate-500">
+              {userEvents.isFetching
+                ? "Syncing on-chain events…"
+                : "No indexed events yet — new activity will appear after backend sync."}
+            </p>
           ) : (
             <div className="divide-y divide-white/[0.06]">
               {recentEvents.map((e, i) => {

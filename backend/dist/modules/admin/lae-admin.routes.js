@@ -3,6 +3,8 @@ import { prisma } from "../../lib/prisma.js";
 import { config } from "../../config/index.js";
 import { getLaeAdminDashboardStats, getLaeAnalyticsSummary, getLaeRewardsAnalytics, listLaeIncome, listLaePlacements, listLaeUsers, } from "./lae-analytics.service.js";
 import { CONTRACTS } from "../../config/chains.js";
+import { replayFromBlock, getMatrixDeployBlock } from "../blockchain/sync-engine.js";
+import { resetIndexedAnalytics } from "../blockchain/reset-indexed-data.js";
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "admin@gmail.com";
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "Aman@9616";
 function signAdminToken(email) {
@@ -89,14 +91,47 @@ export async function adminRoutes(app) {
         if (!verifyAdmin(request))
             return reply.status(401).send({ message: "Unauthorized" });
         const state = await prisma.indexerState.findUnique({ where: { id: "main" } });
+        const indexedUsers = await prisma.indexedLaeUser.count();
         return {
             contracts: CONTRACTS,
             indexer: {
                 lastBlock: state?.lastBlock?.toString() ?? "0",
                 chainId: state?.chainId ?? null,
                 lastBlockHash: state?.lastBlockHash ?? null,
+                matrixDeployBlock: getMatrixDeployBlock().toString(),
+                indexedUsers,
             },
             adminEmail: ADMIN_EMAIL,
+        };
+    });
+    /** Wipe indexed admin data and rewind indexer — use before fresh launch */
+    app.post("/admin/indexer/reset", async (request, reply) => {
+        if (!verifyAdmin(request))
+            return reply.status(401).send({ message: "Unauthorized" });
+        const deleted = await resetIndexedAnalytics();
+        const state = await prisma.indexerState.findUnique({ where: { id: "main" } });
+        return {
+            ok: true,
+            deleted,
+            lastBlock: state?.lastBlock?.toString() ?? "0",
+            matrixDeployBlock: getMatrixDeployBlock().toString(),
+        };
+    });
+    /** Re-scan blockchain from matrix deploy block — fixes empty admin when indexer lagged */
+    app.post("/admin/indexer/sync", async (request, reply) => {
+        if (!verifyAdmin(request))
+            return reply.status(401).send({ message: "Unauthorized" });
+        const body = (request.body ?? {});
+        const fromBlock = body.fromBlock != null ? BigInt(body.fromBlock) : getMatrixDeployBlock();
+        const indexedUsers = await replayFromBlock(fromBlock, { forceEventBackfill: true });
+        const state = await prisma.indexerState.findUnique({ where: { id: "main" } });
+        return {
+            ok: true,
+            fromBlock: fromBlock.toString(),
+            lastBlock: state?.lastBlock?.toString() ?? "0",
+            indexedUsers,
+            chainEvents: await prisma.chainEvent.count(),
+            indexedIncome: await prisma.indexedLaeIncome.count(),
         };
     });
 }

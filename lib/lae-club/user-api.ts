@@ -5,6 +5,7 @@ type ApiEventRow = {
   transactionHash: string;
   logIndex: number;
   eventName: string;
+  blockNumber?: string;
   args: Record<string, unknown>;
 };
 
@@ -15,10 +16,14 @@ function normalizeApiEvent(row: ApiEventRow): MatrixUserEvent {
     else if (typeof v === "string" && /^-?\d+$/.test(v)) args[k] = BigInt(v);
     else args[k] = v;
   }
+  const blockNumber =
+    row.blockNumber && /^\d+$/.test(row.blockNumber) ? BigInt(row.blockNumber) : undefined;
+
   return {
     transactionHash: row.transactionHash as `0x${string}`,
     logIndex: row.logIndex,
     eventName: row.eventName,
+    blockNumber,
     args,
   } as MatrixUserEvent;
 }

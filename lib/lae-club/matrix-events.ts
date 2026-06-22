@@ -1,6 +1,6 @@
 import type { PublicClient, GetContractEventsReturnType } from "viem";
 import type { Address } from "viem";
-import { LAE_MATRIX_DEPLOY_BLOCK, LOG_CHUNK_BLOCKS, LOG_LOOKBACK_BLOCKS } from "@/lib/contracts/config";
+import { LAE_MATRIX_DEPLOY_BLOCK, LOG_CHUNK_BLOCKS } from "@/lib/contracts/config";
 import { LAE_CONTRACTS } from "./contracts";
 import { laeClubMatrixAbi } from "./abis";
 
@@ -46,8 +46,8 @@ export function allEventQueries(userId: bigint): EventQuery[] {
 }
 
 const CHUNK_TIMEOUT_MS = 8_000;
-const FETCH_TIMEOUT_MS = 25_000;
-const MAX_CONCURRENT = 4;
+const FETCH_TIMEOUT_MS = 45_000;
+const MAX_CONCURRENT = 3;
 
 async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T | null> {
   let timer: ReturnType<typeof setTimeout>;
@@ -115,9 +115,9 @@ function dedupeEvents(events: MatrixUserEvent[]): MatrixUserEvent[] {
   });
 }
 
-function resolveFromBlock(head: bigint): bigint {
-  const lookbackStart = head > LOG_LOOKBACK_BLOCKS ? head - LOG_LOOKBACK_BLOCKS : 0n;
-  return lookbackStart > LAE_MATRIX_DEPLOY_BLOCK ? lookbackStart : LAE_MATRIX_DEPLOY_BLOCK;
+function resolveFromBlock(_head: bigint): bigint {
+  // New matrix contract — always scan from deploy block (small range, full history).
+  return LAE_MATRIX_DEPLOY_BLOCK;
 }
 
 /** Fetch matrix logs using indexed filters + chunked getLogs. Never throws. */
