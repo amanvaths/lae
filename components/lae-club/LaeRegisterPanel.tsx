@@ -4,37 +4,48 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useAccount, useBalance, usePublicClient, useReadContract, useWriteContract } from "wagmi";
-import { Loader2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Loader2 } from "lucide-react";
 import { formatEther, parseEther } from "viem";
 import { Panel } from "@/components/dashboard/ui";
 import { LAE_CONTRACTS } from "@/lib/lae-club/contracts";
 import { laeClubMatrixAbi } from "@/lib/lae-club/abis";
 import { erc20Abi } from "@/lib/contracts/abis/erc20";
-import { useLaeLevelPrices, useLaeUser } from "@/lib/lae-club/hooks";
+import { parseLaeUserId, useLaeLevelPrices, useLaeUser } from "@/lib/lae-club/hooks";
 import { useRouter } from "next/navigation";
 import { withBasePath } from "@/lib/paths";
 import { useToast } from "@/providers/ToastProvider";
 import { formatWalletError } from "@/lib/wallet/errors";
 import { ConnectWallet } from "@/components/web3/ConnectWallet";
+import { isValidReferrerId, withLookupTimeout } from "@/lib/lae-club/user-lookup";
+import { cn } from "@/lib/utils";
 
 const MAX_UINT256 = 2n ** 256n - 1n;
 const REG_GAS_LIMIT = 12_000_000n;
 
+type RegPhase = "idle" | "approve" | "register" | "verify" | "success";
+
+const STEPS: { key: RegPhase; label: string }[] = [
+  { key: "approve", label: "Approve" },
+  { key: "register", label: "Registering" },
+  { key: "verify", label: "Verifying" },
+  { key: "success", label: "Success" },
+];
+
 async function waitForRegistration(
   refetch: () => void,
   getRegistered: () => boolean,
-  maxMs = 15_000
+  maxMs = 10_000
 ): Promise<boolean> {
   const start = Date.now();
   while (Date.now() - start < maxMs) {
     refetch();
     if (getRegistered()) return true;
-    await new Promise((r) => setTimeout(r, 800));
+    await new Promise((r) => setTimeout(r, 600));
   }
   return getRegistered();
 }
 
-export function LaeRegisterPanel() {
+export function LaeRegisterPanel({ luxury = false }: { luxury?: boolean }) {
   const { address } = useAccount();
   const client = usePublicClient();
   const router = useRouter();
@@ -59,8 +70,10 @@ export function LaeRegisterPanel() {
   });
   const nativeBalance = useBalance({ address, query: { enabled: !!address, staleTime: 10_000 } });
   const [pending, setPending] = useState(false);
-  const [step, setStep] = useState<string | null>(null);
+  const [phase, setPhase] = useState<RegPhase>("idle");
   const [referrerId, setReferrerId] = useState("1");
+  const [refError, setRefError] = useState<string | null>(null);
+  const [refValid, setRefValid] = useState<boolean | null>(null);
   const registeredRef = useRef(false);
 
   useEffect(() => {
@@ -73,60 +86,41 @@ export function LaeRegisterPanel() {
   }, [searchParams]);
 
   const level1Price = prices.prices?.find((p) => p.level === 1)?.price;
-
-  if (prices.isLoading) {
-    return (
-      <Panel title="Registration">
-        <div className="flex items-center gap-2 text-slate-400">
-          <Loader2 className="h-4 w-4 animate-spin" /> Reading levelTokenCost(1)…
-        </div>
-      </Panel>
-    );
-  }
-
-  if (!address) {
-    return (
-      <Panel title="Registration">
-        <p className="mb-4 text-sm text-slate-400">
-          Connect your wallet to register — or use <strong className="text-white">View by User ID</strong> on the
-          right to browse any ID without a wallet.
-        </p>
-        <ConnectWallet />
-      </Panel>
-    );
-  }
-
-  if (address && user.isLoading) {
-    return (
-      <Panel title="Registration">
-        <div className="flex items-center gap-2 text-slate-400">
-          <Loader2 className="h-4 w-4 animate-spin" /> Checking wallet…
-        </div>
-      </Panel>
-    );
-  }
-
-  if (user.registered) {
-    return (
-      <Panel title="Registration">
-        <p className="text-emerald-400">Registered · User ID #{String(user.userId)}</p>
-        <Link href={withBasePath("/dashboard")} className="btn-primary mt-4 inline-flex text-sm">
-          Open your dashboard
-        </Link>
-      </Panel>
-    );
-  }
-
+  const priceLabel = prices.prices?.find((p) => p.level === 1)?.priceFormatted ?? "—";
   const paymentBal = tokenBalance.data ?? 0n;
   const allowance = tokenAllowance.data ?? 0n;
   const hasEnoughToken = level1Price != null && paymentBal >= level1Price;
   const hasAllowance = level1Price != null && allowance >= level1Price;
   const hasGas = (nativeBalance.data?.value ?? 0n) > parseEther("0.001");
 
+  async function validateReferrer(): Promise<boolean> {
+    if (!client) return false;
+    const id = parseLaeUserId(referrerId);
+    if (!id) {
+      setRefError("Invalid Referral ID");
+      setRefValid(false);
+      return false;
+    }
+    try {
+      const valid = await withLookupTimeout(isValidReferrerId(client, id), 3_000);
+      setRefValid(valid);
+      if (!valid) {
+        setRefError("Invalid Referral ID");
+        return false;
+      }
+      setRefError(null);
+      return true;
+    } catch {
+      setRefError("Could not verify referral — try again");
+      setRefValid(false);
+      return false;
+    }
+  }
+
   async function handleFaucet() {
     if (!address || !client) return;
     setPending(true);
-    setStep("Minting test BUSD from faucet…");
+    setPhase("idle");
     try {
       const hash = await writeContractAsync({
         address: LAE_CONTRACTS.payment,
@@ -141,33 +135,35 @@ export function LaeRegisterPanel() {
       push(formatWalletError(e), "error");
     } finally {
       setPending(false);
-      setStep(null);
     }
   }
 
   async function handleRegister() {
     if (!address || !level1Price || !client) return;
 
+    const refOk = await validateReferrer();
+    if (!refOk) return;
+
     if (!hasEnoughToken) {
       push(
-        `Need at least ${formatEther(level1Price)} BUSD (testnet payment token). Balance: ${formatEther(paymentBal)}`,
+        `Need at least ${formatEther(level1Price)} BUSD. Balance: ${formatEther(paymentBal)}`,
         "error"
       );
       return;
     }
     if (!hasGas) {
-      push("Need BNB on BSC Testnet for gas — get free test BNB from https://testnet.bnbchain.org/faucet-smart", "error");
+      push("Need BNB on BSC Testnet for gas", "error");
       return;
     }
 
     setPending(true);
-    setStep(null);
+    setPhase("idle");
     try {
       const refId = BigInt(referrerId || "1");
 
       let currentAllowance = allowance;
       if (currentAllowance < level1Price) {
-        setStep("Approve BUSD in MetaMask (step 1 of 2)…");
+        setPhase("approve");
         push("Confirm token approval in MetaMask…", "info");
         const approveHash = await writeContractAsync({
           address: LAE_CONTRACTS.payment,
@@ -189,7 +185,7 @@ export function LaeRegisterPanel() {
         throw new Error("Approval did not complete — try again");
       }
 
-      setStep("Confirm registration in MetaMask (step 2 of 2)…");
+      setPhase("register");
       push("Confirm registration in MetaMask…", "info");
       const regHash = await writeContractAsync({
         address: LAE_CONTRACTS.matrix,
@@ -199,97 +195,216 @@ export function LaeRegisterPanel() {
         gas: REG_GAS_LIMIT,
       });
       await client.waitForTransactionReceipt({ hash: regHash });
-      push(`Registration confirmed: ${regHash.slice(0, 10)}…`, "success");
 
-      setStep("Verifying on-chain registration…");
+      setPhase("verify");
       const confirmed = await waitForRegistration(
         () => user.refetch(),
         () => registeredRef.current
       );
-      if (!confirmed) {
-        push("Registration confirmed on-chain but profile sync is slow — open dashboard to refresh.", "info");
-      }
+
+      setPhase("success");
+      push(
+        confirmed
+          ? `Welcome to LAE Club · User ID assigned`
+          : "Registration confirmed — opening dashboard",
+        "success"
+      );
+
+      await new Promise((r) => setTimeout(r, 800));
       router.replace(withBasePath("/dashboard"));
     } catch (e) {
-      const message = formatWalletError(e);
-      setStep(null);
-      push(message, "error");
+      setPhase("idle");
+      push(formatWalletError(e), "error");
     } finally {
       setPending(false);
-      setStep(null);
     }
   }
 
-  const priceLabel = prices.prices?.find((p) => p.level === 1)?.priceFormatted ?? "—";
+  const Wrap = luxury ? "div" : Panel;
+  const wrapProps = luxury
+    ? { className: "space-y-4" }
+    : { title: "Register on LAE Club", className: undefined };
+
+  if (prices.isLoading) {
+    return luxury ? (
+      <div className="flex items-center justify-center gap-2 py-8 text-slate-400">
+        <Loader2 className="h-4 w-4 animate-spin text-[#D4AF37]" /> Loading…
+      </div>
+    ) : (
+      <Panel title="Registration">
+        <div className="flex items-center gap-2 text-slate-400">
+          <Loader2 className="h-4 w-4 animate-spin" /> Reading level price…
+        </div>
+      </Panel>
+    );
+  }
+
+  if (!address) {
+    return (
+      <Wrap {...(wrapProps as object)}>
+        {luxury ? (
+          <>
+            <ConnectWallet full variant="primary" luxury />
+            <Link href={withBasePath("/")} className="auth-btn-ghost w-full">
+              <ArrowLeft className="h-4 w-4" /> Back Home
+            </Link>
+          </>
+        ) : (
+          <>
+            <p className="mb-4 text-sm text-slate-400">Connect your wallet to register.</p>
+            <ConnectWallet />
+          </>
+        )}
+      </Wrap>
+    );
+  }
+
+  if (user.isLoading) {
+    return (
+      <div className="flex items-center justify-center gap-2 py-6 text-slate-400">
+        <Loader2 className="h-4 w-4 animate-spin text-[#D4AF37]" /> Checking wallet…
+      </div>
+    );
+  }
+
+  if (user.registered) {
+    return (
+      <Wrap {...(wrapProps as object)}>
+        <p className="text-center text-emerald-400">
+          Registered · User ID #{String(user.userId)}
+        </p>
+        <Link
+          href={withBasePath("/dashboard")}
+          className={luxury ? "auth-btn-gold mt-4 w-full" : "btn-primary mt-4 inline-flex text-sm"}
+        >
+          Open your dashboard
+        </Link>
+      </Wrap>
+    );
+  }
 
   return (
-    <Panel title="Register on LAE Club">
-      <p className="mb-3 text-sm text-slate-400">
-        Connected: <span className="font-mono text-white">{address}</span>
-      </p>
-      <div className="mb-4 rounded-xl border border-white/10 bg-white/[0.03] p-3 text-sm">
+    <Wrap {...(wrapProps as object)}>
+      {luxury && <ConnectWallet full variant="primary" luxury />}
+
+      <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 text-sm">
         <p className="text-slate-300">
-          Registration fee: <span className="font-semibold text-brand-200">{priceLabel} BUSD</span>
+          Fee: <span className="font-semibold text-[#D4AF37]">{priceLabel} BUSD</span>
         </p>
         <p className="mt-1 text-slate-400">
-          Your BUSD balance:{" "}
+          Balance:{" "}
           <span className={hasEnoughToken ? "text-emerald-400" : "text-red-400"}>
             {level1Price ? formatEther(paymentBal) : "—"} BUSD
           </span>
         </p>
-        <p className="mt-1 text-slate-400">
-          Matrix allowance:{" "}
-          <span className={hasAllowance ? "text-emerald-400" : "text-amber-300"}>
-            {hasAllowance ? "Ready" : "Needs approval (MetaMask step 1)"}
-          </span>
-        </p>
         {!hasEnoughToken && level1Price && (
-          <div className="mt-3 space-y-2">
-            <p className="text-xs text-amber-300/90">
-              You must hold at least {priceLabel} BUSD before registering.
-            </p>
-            <button
-              type="button"
-              disabled={pending}
-              className="rounded-lg border border-brand-500/40 px-3 py-1.5 text-xs text-brand-200 hover:bg-brand-500/10 disabled:opacity-50"
-              onClick={() => void handleFaucet()}
-            >
-              Mint test BUSD (faucet)
-            </button>
-          </div>
+          <button
+            type="button"
+            disabled={pending}
+            className="mt-2 text-xs text-[#D4AF37] hover:underline disabled:opacity-50"
+            onClick={() => void handleFaucet()}
+          >
+            Get Test BUSD (faucet)
+          </button>
         )}
       </div>
-      <label className="mb-3 block text-xs text-slate-500">
-        Sponsor ID (referrer user ID on-chain)
+
+      <label className="block text-xs font-medium text-slate-400">
+        Referral ID
         <input
           type="number"
           min={1}
           value={referrerId}
-          onChange={(e) => setReferrerId(e.target.value)}
+          onChange={(e) => {
+            setReferrerId(e.target.value);
+            setRefError(null);
+            setRefValid(null);
+          }}
+          onBlur={() => void validateReferrer()}
           disabled={pending}
-          className="mt-1 w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-white outline-none focus:border-brand-500/50 disabled:opacity-60"
+          className="auth-input mt-1.5"
         />
       </label>
-      {step && (
-        <p className="mb-3 flex items-center gap-2 text-sm text-brand-200">
-          <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
-          {step}
-        </p>
+      {refError && <p className="text-xs text-red-400">{refError}</p>}
+      {refValid === true && !refError && (
+        <p className="text-xs text-emerald-400">Referral ID verified</p>
       )}
+
+      {pending && phase !== "idle" && (
+        <RegProgress phase={phase} />
+      )}
+
       <button
         type="button"
-        disabled={pending || !address || !level1Price || !hasEnoughToken}
-        className="btn-primary w-full disabled:opacity-50"
+        disabled={pending || !level1Price || !hasEnoughToken}
+        className={luxury ? "auth-btn-gold w-full" : "btn-primary w-full disabled:opacity-50"}
         onClick={() => void handleRegister()}
       >
         {pending ? (
           <>
-            <Loader2 className="h-4 w-4 animate-spin" /> Registering…
+            <Loader2 className="h-4 w-4 animate-spin" />{" "}
+            {phase === "approve"
+              ? "Approve…"
+              : phase === "register"
+                ? "Registering…"
+                : phase === "verify"
+                  ? "Verifying…"
+                  : "Processing…"}
           </>
         ) : (
-          `Register (${priceLabel} BUSD fee)`
+          `Register (${priceLabel} BUSD)`
         )}
       </button>
-    </Panel>
+
+      {luxury && (
+        <>
+          <p className="text-center text-xs text-slate-500">
+            Already registered?{" "}
+            <Link href={withBasePath("/login")} className="text-[#D4AF37] hover:underline">
+              Login
+            </Link>
+          </p>
+          <Link href={withBasePath("/")} className="auth-btn-ghost w-full">
+            <ArrowLeft className="h-4 w-4" /> Back Home
+          </Link>
+        </>
+      )}
+    </Wrap>
+  );
+}
+
+function RegProgress({ phase }: { phase: RegPhase }) {
+  const order: RegPhase[] = ["approve", "register", "verify", "success"];
+  const currentIdx = order.indexOf(phase);
+
+  return (
+    <div className="rounded-xl border border-[#D4AF37]/20 bg-[#D4AF37]/5 p-3">
+      <div className="space-y-2">
+        {STEPS.map((step, i) => {
+          const done = currentIdx > i || phase === "success";
+          const active = order[i] === phase;
+          return (
+            <div key={step.key} className="flex items-center gap-2 text-xs">
+              {done ? (
+                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
+              ) : active ? (
+                <Loader2 className="h-4 w-4 shrink-0 animate-spin text-[#D4AF37]" />
+              ) : (
+                <span className="h-4 w-4 shrink-0 rounded-full border border-white/20" />
+              )}
+              <span
+                className={cn(
+                  done && "text-emerald-400",
+                  active && "font-semibold text-[#D4AF37]",
+                  !done && !active && "text-slate-500"
+                )}
+              >
+                {step.label}…
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }

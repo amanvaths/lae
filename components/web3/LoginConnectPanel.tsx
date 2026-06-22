@@ -56,7 +56,7 @@ export function LoginConnectPanel() {
     (isMobile || isMobileUserAgent()) && !isInWalletBrowser();
 
   if (!showMobilePanel) {
-    return <ConnectWallet full variant="primary" />;
+    return <ConnectWallet full variant="primary" luxury />;
   }
 
   return (
@@ -69,7 +69,7 @@ export function LoginConnectPanel() {
         type="button"
         onClick={connectMetaMask}
         disabled={isPending}
-        className={cn("btn-primary w-full justify-center !py-3.5", isPending && "opacity-70")}
+        className={cn("auth-btn-gold w-full", isPending && "opacity-70")}
       >
         {isPending ? (
           <Loader2 className="h-4 w-4 animate-spin" />
@@ -81,7 +81,7 @@ export function LoginConnectPanel() {
 
       <a
         href={metamaskDappUrl()}
-        className="btn-ghost w-full justify-center !py-3.5 text-xs sm:text-sm"
+        className="auth-btn-ghost w-full !py-3.5 text-xs sm:text-sm"
       >
         <ExternalLink className="h-4 w-4 shrink-0" />
         Open in MetaMask App
@@ -89,7 +89,7 @@ export function LoginConnectPanel() {
 
       <a
         href={trustWalletDappUrl()}
-        className="btn-ghost w-full justify-center !py-3.5 text-xs sm:text-sm"
+        className="auth-btn-ghost w-full !py-3.5 text-xs sm:text-sm"
       >
         <Smartphone className="h-4 w-4 shrink-0" />
         Open in Trust Wallet

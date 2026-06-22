@@ -15,22 +15,27 @@ export function ConnectWallet({
   full = false,
   variant = "ghost",
   preferLoginPage = false,
+  luxury = false,
 }: {
   full?: boolean;
   variant?: "ghost" | "primary";
   /** Marketing nav: send users to /login for connect + auto dashboard routing */
   preferLoginPage?: boolean;
+  luxury?: boolean;
 }) {
   const web3Ready = useWeb3Loaded();
   const mounted = useClientMounted();
   const { isConnected, address } = useAccount();
   const [menuOpen, setMenuOpen] = useState(false);
 
+  const primaryCls = luxury ? "auth-btn-gold" : "btn-primary";
+  const ghostCls = luxury ? "auth-btn-ghost" : "btn-ghost";
+
   const connectLink = (
     <a
       href={withBasePath("/login")}
       className={cn(
-        variant === "primary" ? "btn-primary" : "btn-ghost",
+        variant === "primary" ? primaryCls : ghostCls,
         full && "w-full justify-center",
         "inline-flex items-center gap-2 text-xs sm:text-sm"
       )}
@@ -44,7 +49,7 @@ export function ConnectWallet({
     return (
       <div
         className={cn(
-          variant === "primary" ? "btn-primary" : "btn-ghost",
+          variant === "primary" ? primaryCls : ghostCls,
           full && "w-full justify-center",
           "inline-flex items-center gap-2 opacity-50 text-xs sm:text-sm"
         )}
@@ -83,7 +88,7 @@ export function ConnectWallet({
                   type="button"
                   disabled
                   className={cn(
-                    variant === "primary" ? "btn-primary" : "btn-ghost",
+                    variant === "primary" ? primaryCls : ghostCls,
                     full && "w-full justify-center",
                     "opacity-60 text-xs sm:text-sm"
                   )}
@@ -96,7 +101,7 @@ export function ConnectWallet({
                   type="button"
                   onClick={openConnectModal}
                   className={cn(
-                    variant === "primary" ? "btn-primary" : "btn-ghost",
+                    variant === "primary" ? primaryCls : ghostCls,
                     full && "w-full justify-center",
                     "text-xs sm:text-sm"
                   )}
