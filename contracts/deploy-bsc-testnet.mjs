@@ -14,7 +14,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const RPC = process.env.BSC_RPC_URL ?? "https://data-seed-prebsc-1-s1.binance.org:8545";
 const CHAIN_ID = 97;
 const PAYMENT_TOKEN =
-  process.env.PAYMENT_TOKEN ?? "0xf8E556996042b34cc706F040c59955abB678995e";
+  process.env.PAYMENT_TOKEN ?? "0xb2bE66BE07E1AD04074B32B8b13DcdFaB6B57575";
 
 const FILES = [
   "LAECoin.sol",

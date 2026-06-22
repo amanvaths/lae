@@ -7,7 +7,7 @@ export const CONTRACTS = {
     process.env.NEXT_PUBLIC_SENSO_CONTRACT ??
     "0x6521619C38fe4be6B800263CC783d9524ED4F7BA") as `0x${string}`,
   dai: (process.env.NEXT_PUBLIC_DAI_CONTRACT ??
-    "0xf8E556996042b34cc706F040c59955abB678995e") as `0x${string}`,
+    "0xb2bE66BE07E1AD04074B32B8b13DcdFaB6B57575") as `0x${string}`,
   slt: (process.env.NEXT_PUBLIC_SLT_CONTRACT ??
     "0xc842c083E703ecf82496813cc3BFe6d36c0A49b0") as `0x${string}`,
 } as const;

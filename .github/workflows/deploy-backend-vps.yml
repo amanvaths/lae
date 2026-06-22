@@ -149,7 +149,7 @@ jobs:
             printf '%s=%s\n' SLT_CONTRACT_ADDRESS 0xc842c083E703ecf82496813cc3BFe6d36c0A49b0 >> "${ENV_FILE}"
             printf '%s=%s\n' SPIN_CONTRACT_ADDRESS 0xF9bdE4a2Ca487b18DA8546124b63Ec9e938ea1aE >> "${ENV_FILE}"
             printf '%s=%s\n' STAKING_CONTRACT_ADDRESS 0xdb25Af21346aD358D5e52835934AF5f326169984 >> "${ENV_FILE}"
-            printf '%s=%s\n' DAI_CONTRACT_ADDRESS 0xf8E556996042b34cc706F040c59955abB678995e >> "${ENV_FILE}"
+            printf '%s=%s\n' DAI_CONTRACT_ADDRESS 0xb2bE66BE07E1AD04074B32B8b13DcdFaB6B57575 >> "${ENV_FILE}"
             printf '%s=%s\n' LAE_MATRIX_CONTRACT_ADDRESS "$(sanitize "${LAE_MATRIX_CONTRACT_ADDRESS:-0xfa671b8Bae031fB9ef6eD02E9a9a63d05f764Dcf}")" >> "${ENV_FILE}"
             printf '%s=%s\n' LAE_COIN_CONTRACT_ADDRESS "$(sanitize "${LAE_COIN_CONTRACT_ADDRESS:-0xD6698E6a8Ee4712cC2E36C150f1C34e59884C45A}")" >> "${ENV_FILE}"
             printf '%s=%s\n' INDEXER_ADMIN_API_KEY "$(sanitize "${INDEXER_ADMIN_API_KEY}")" >> "${ENV_FILE}"

@@ -31,6 +31,22 @@ Upload these 2 files into Remix `contracts/` folder:
 0xf8E556996042b34cc706F040c59955abB678995e
 ```
 
+**Or deploy public test faucet token (any user can mint):**
+
+See `TestPaymentToken.sol` — deploy with empty constructor, then on **LAEClubMatrix** call:
+
+```
+updateTokenAddress(<NEW_TEST_TOKEN>)
+```
+
+Script (owner wallet):
+
+```bash
+DEPLOYER_PRIVATE_KEY=0x... node contracts/deploy-test-token.mjs
+```
+
+Then set `NEXT_PUBLIC_PAYMENT_TOKEN` to the new address and redeploy frontend.
+
 ---
 
 ## Deploy order

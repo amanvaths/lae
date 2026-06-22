@@ -33,5 +33,5 @@ export const CONTRACTS = {
   paymentToken:
     process.env.PAYMENT_TOKEN_ADDRESS ??
     process.env.DAI_CONTRACT_ADDRESS ??
-    "0xf8E556996042b34cc706F040c59955abB678995e",
+    "0xb2bE66BE07E1AD04074B32B8b13DcdFaB6B57575",
 } as const;

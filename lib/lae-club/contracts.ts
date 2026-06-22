@@ -9,7 +9,7 @@ export const LAE_CONTRACTS = {
   /** Payment token (BTCB / mock on testnet) */
   payment: (process.env.NEXT_PUBLIC_PAYMENT_TOKEN ??
     process.env.NEXT_PUBLIC_DAI_CONTRACT ??
-    "0xf8E556996042b34cc706F040c59955abB678995e") as `0x${string}`,
+    "0xb2bE66BE07E1AD04074B32B8b13DcdFaB6B57575") as `0x${string}`,
   /** LAE Coin ERC20 */
   laeCoin: (process.env.NEXT_PUBLIC_LAE_COIN_CONTRACT ??
     process.env.NEXT_PUBLIC_SLT_CONTRACT ??
