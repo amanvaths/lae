@@ -11,6 +11,7 @@ import {
   listLaeUsers,
 } from "./lae-analytics.service.js";
 import { CONTRACTS } from "../../config/chains.js";
+import { replayFromBlock, getMatrixDeployBlock } from "../blockchain/sync-engine.js";
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "admin@gmail.com";
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "Aman@9616";
@@ -99,14 +100,33 @@ export async function adminRoutes(app: FastifyInstance) {
   app.get("/admin/settings", async (request, reply) => {
     if (!verifyAdmin(request)) return reply.status(401).send({ message: "Unauthorized" });
     const state = await prisma.indexerState.findUnique({ where: { id: "main" } });
+    const indexedUsers = await prisma.indexedLaeUser.count();
     return {
       contracts: CONTRACTS,
       indexer: {
         lastBlock: state?.lastBlock?.toString() ?? "0",
         chainId: state?.chainId ?? null,
         lastBlockHash: state?.lastBlockHash ?? null,
+        matrixDeployBlock: getMatrixDeployBlock().toString(),
+        indexedUsers,
       },
       adminEmail: ADMIN_EMAIL,
+    };
+  });
+
+  /** Re-scan blockchain from matrix deploy block — fixes empty admin when indexer lagged */
+  app.post("/admin/indexer/sync", async (request, reply) => {
+    if (!verifyAdmin(request)) return reply.status(401).send({ message: "Unauthorized" });
+    const body = (request.body ?? {}) as { fromBlock?: string | number };
+    const fromBlock = body.fromBlock != null ? BigInt(body.fromBlock) : getMatrixDeployBlock();
+    const indexedUsers = await replayFromBlock(fromBlock);
+    const state = await prisma.indexerState.findUnique({ where: { id: "main" } });
+    return {
+      ok: true,
+      fromBlock: fromBlock.toString(),
+      lastBlock: state?.lastBlock?.toString() ?? "0",
+      indexedUsers,
+      chainEvents: await prisma.chainEvent.count(),
     };
   });
 }

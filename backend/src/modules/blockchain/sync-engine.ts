@@ -1,6 +1,6 @@
 import { ethers } from "ethers";
 import { prisma } from "../../lib/prisma.js";
-import { CHAIN, CONTRACTS } from "../../config/chains.js";
+import { CHAIN, CONTRACTS, LAE_MATRIX_DEPLOY_BLOCK } from "../../config/chains.js";
 import { LAE_MATRIX_EVENTS } from "./abis.js";
 import { parseEthersLog, processIndexedLog } from "./event-processor.js";
 
@@ -26,8 +26,25 @@ export function getIndexerProvider(): ethers.JsonRpcProvider {
 async function getIndexerState() {
   return prisma.indexerState.upsert({
     where: { id: "main" },
-    create: { chainId: CHAIN.chainId, lastBlock: CHAIN.startBlock },
+    create: { chainId: CHAIN.chainId, lastBlock: CHAIN.startBlock > 0n ? CHAIN.startBlock - 1n : 0n },
     update: {},
+  });
+}
+
+/** Skip empty history — jump to LAE Matrix deploy block if cursor is still before it. */
+async function alignIndexerToMatrixDeploy(): Promise<void> {
+  const deploy = LAE_MATRIX_DEPLOY_BLOCK;
+  if (deploy <= 0n) return;
+
+  const state = await getIndexerState();
+  if (state.lastBlock >= deploy - 1n) return;
+
+  console.warn(
+    `[indexer] Fast-forward ${state.lastBlock.toString()} → ${(deploy - 1n).toString()} (matrix deploy block)`
+  );
+  await prisma.indexerState.update({
+    where: { id: "main" },
+    data: { lastBlock: deploy > 0n ? deploy - 1n : 0n, lastBlockHash: null },
   });
 }
 
@@ -138,7 +155,10 @@ export function startBlockchainSyncEngine(): void {
   }
 
   console.log(`[indexer] LAE Matrix sync on ${CONTRACTS.laeMatrix}`);
-  void runIndexerSync();
+  void (async () => {
+    await alignIndexerToMatrixDeploy();
+    await runIndexerSync();
+  })();
 
   pollTimer = setInterval(() => {
     void runIndexerSync();
@@ -156,10 +176,19 @@ export function stopBlockchainSyncEngine(): void {
 }
 
 /** Manual replay from block (admin/recovery) */
-export async function replayFromBlock(fromBlock: bigint): Promise<void> {
+export async function replayFromBlock(fromBlock: bigint): Promise<number> {
+  const cursor = fromBlock > 0n ? fromBlock - 1n : 0n;
   await prisma.indexerState.update({
     where: { id: "main" },
-    data: { lastBlock: fromBlock > 0n ? fromBlock - 1n : 0n },
+    data: { lastBlock: cursor, lastBlockHash: null },
   });
   await runIndexerSync();
+  const state = await prisma.indexerState.findUnique({ where: { id: "main" } });
+  const users = await prisma.indexedLaeUser.count();
+  console.log(`[indexer] Replay done — block ${state?.lastBlock?.toString() ?? "?"}, users ${users}`);
+  return users;
+}
+
+export function getMatrixDeployBlock(): bigint {
+  return LAE_MATRIX_DEPLOY_BLOCK;
 }

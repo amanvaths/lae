@@ -37,6 +37,11 @@ export default function AdminDashboardPage() {
           <p className="text-3xl font-bold">{stats?.totalUsers ?? protocol.totalUsers ?? "—"}</p>
           <p className="text-xs text-slate-500">
             On-chain lastUserId: {String(protocol.lastUserId ?? "—")}
+            {stats && protocol.lastUserId != null && stats.totalUsers === 0 && (
+              <span className="ml-1 text-amber-400">
+                — indexer empty, go to Settings → Sync indexer
+              </span>
+            )}
           </p>
         </Panel>
         <Panel title="Today's Registrations">

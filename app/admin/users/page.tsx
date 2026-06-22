@@ -16,7 +16,7 @@ export default function AdminUsersPage() {
     <AdminShell title="Users">
       <h1 className="font-display text-2xl font-bold">Users</h1>
       <p className="mt-1 text-sm text-slate-400">
-        {data?.total ?? "—"} indexed registrations from BTitan Registration events
+        {data?.total ?? "—"} indexed registrations from LAE Matrix Registration events
       </p>
 
       <Panel className="mt-6" title="Recent users">

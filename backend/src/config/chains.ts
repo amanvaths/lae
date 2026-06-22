@@ -1,11 +1,15 @@
 /** BSC Testnet deployed contracts — matches frontend lib/contracts/config.ts */
+export const LAE_MATRIX_DEPLOY_BLOCK = BigInt(
+  process.env.LAE_MATRIX_DEPLOY_BLOCK ?? process.env.INDEXER_START_BLOCK ?? "114471162"
+);
+
 export const CHAIN = {
   chainId: Number(process.env.CHAIN_ID ?? process.env.POLYGON_CHAIN_ID ?? "97"),
   rpcUrl:
     process.env.BSC_RPC_URL ??
     process.env.POLYGON_RPC_URL ??
-    "https://data-seed-prebsc-1-s1.binance.org:8545",
-  startBlock: BigInt(process.env.INDEXER_START_BLOCK ?? "0"),
+    "https://bsc-testnet.publicnode.com",
+  startBlock: BigInt(process.env.INDEXER_START_BLOCK ?? String(LAE_MATRIX_DEPLOY_BLOCK)),
   reorgDepth: Number(process.env.INDEXER_REORG_DEPTH ?? "12"),
   batchSize: Number(process.env.INDEXER_BATCH_SIZE ?? "2000"),
   pollMs: Number(process.env.INDEXER_POLL_MS ?? "8000"),

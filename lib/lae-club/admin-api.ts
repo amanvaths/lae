@@ -116,3 +116,31 @@ export function fetchLaeAdminAnalytics() {
 export function fetchLaeAdminStaking() {
   return adminFetch<unknown>("/staking");
 }
+
+export function triggerAdminIndexerSync(fromBlock?: string) {
+  return adminPost<{ ok: boolean; indexedUsers: number; lastBlock: string; chainEvents: number }>(
+    "/indexer/sync",
+    fromBlock ? { fromBlock } : {}
+  );
+}
+
+async function adminPost<T>(path: string, body: object): Promise<AdminFetchResult<T>> {
+  try {
+    const res = await fetch(`${ADMIN_API}/api/admin${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      if (res.status === 401) {
+        return { ok: false, error: "Session expired — sign in again", status: 401 };
+      }
+      const err = (await res.json().catch(() => ({}))) as { message?: string };
+      return { ok: false, error: err.message ?? `Admin API error (${res.status})`, status: res.status };
+    }
+    const data = (await res.json()) as T;
+    return { ok: true, data };
+  } catch {
+    return { ok: false, error: "Backend unavailable — is the API running?" };
+  }
+}

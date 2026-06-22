@@ -13,7 +13,7 @@ import {
   getLeaderboard,
   getIndexerStatus,
 } from "./analytics.service.js";
-import { replayFromBlock } from "../blockchain/sync-engine.js";
+import { replayFromBlock, getMatrixDeployBlock } from "../blockchain/sync-engine.js";
 import { requireIndexerAdmin } from "../../middleware/indexer-admin.js";
 
 function walletFromQuery(query: Record<string, unknown>): string | null {
@@ -96,8 +96,8 @@ export async function analyticsRoutes(app: FastifyInstance): Promise<void> {
 
   app.post("/indexer/replay", { preHandler: requireIndexerAdmin }, async (request) => {
     const body = request.body as { fromBlock?: string | number };
-    const from = BigInt(body?.fromBlock ?? 0);
-    await replayFromBlock(from);
-    return { ok: true, fromBlock: from.toString() };
+    const from = BigInt(body?.fromBlock ?? getMatrixDeployBlock());
+    const indexedUsers = await replayFromBlock(from);
+    return { ok: true, fromBlock: from.toString(), indexedUsers };
   });
 }
