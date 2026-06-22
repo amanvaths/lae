@@ -114,7 +114,10 @@ export function ConnectWallet({
                   type="button"
                   onClick={() => setMenuOpen(true)}
                   className={cn(
-                    "inline-flex max-w-[11rem] items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-2 text-xs font-medium text-white transition-colors hover:border-white/20 sm:max-w-none sm:gap-2 sm:px-3 sm:text-sm",
+                    "inline-flex max-w-[11rem] items-center gap-1.5 rounded-full border px-2.5 py-2 text-xs font-medium text-white transition-all sm:max-w-none sm:gap-2 sm:px-3 sm:text-sm",
+                    luxury
+                      ? "border-[#D4AF37]/30 bg-[#D4AF37]/[0.06] hover:border-[#D4AF37]/50 hover:bg-[#D4AF37]/10"
+                      : "border-white/10 bg-white/[0.04] hover:border-white/20",
                     full && "w-full max-w-none justify-center"
                   )}
                 >

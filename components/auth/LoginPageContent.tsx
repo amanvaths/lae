@@ -4,7 +4,7 @@ import { useCallback, useState } from "react";
 import Link from "next/link";
 import { usePublicClient } from "wagmi";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Eye, Loader2, Wallet } from "lucide-react";
+import { ArrowLeft, Eye, Loader2, Wallet, Shield, Zap, Lock } from "lucide-react";
 import { BrandLogo } from "@/components/ui/BrandLogo";
 import { LoginConnectPanel } from "@/components/web3/LoginConnectPanel";
 import { LoginGate } from "@/components/auth/LoginGate";
@@ -71,20 +71,29 @@ export function LoginPageContent() {
 
   return (
     <>
-      <div className="mb-6 text-center">
-        <BrandLogo size={56} className="mx-auto" />
-        <h1 className="mt-4 font-display text-xl font-bold text-white sm:text-2xl">
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="mb-6 text-center"
+      >
+        <BrandLogo size={64} className="mx-auto" />
+        <h1 className="mt-5 font-display text-2xl font-black text-white sm:text-[1.75rem]">
           Welcome Back To{" "}
           <span className="text-gradient-gold">LAE Club</span>
         </h1>
-        <p className="mt-2 text-xs text-slate-500">MetaMask · WalletConnect · Trust Wallet</p>
-      </div>
+        <p className="mt-2 text-sm text-slate-400">MetaMask · WalletConnect · Trust Wallet</p>
+      </motion.div>
 
       <LoginGate>
         <LoginConnectPanel />
       </LoginGate>
 
-      <div className="my-5 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+      <div className="my-6 flex items-center gap-3">
+        <div className="h-px flex-1 bg-gradient-to-r from-transparent via-[#D4AF37]/20 to-transparent" />
+        <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-600">or view user</span>
+        <div className="h-px flex-1 bg-gradient-to-r from-transparent via-[#D4AF37]/20 to-transparent" />
+      </div>
 
       {/* View mode toggle */}
       <div className="mb-4 grid grid-cols-2 gap-2">
@@ -99,10 +108,10 @@ export function LoginPageContent() {
               setResult(null);
             }}
             className={cn(
-              "rounded-xl border py-2.5 text-xs font-semibold transition-all",
+              "rounded-xl border py-3 text-xs font-bold transition-all",
               viewMode === mode
-                ? "border-[#D4AF37]/50 bg-[#D4AF37]/15 text-[#D4AF37]"
-                : "border-white/10 bg-white/[0.02] text-slate-400 hover:border-white/20"
+                ? "border-[#D4AF37]/50 bg-[#D4AF37]/15 text-[#D4AF37] shadow-[0_0_16px_rgba(212,175,55,0.1)]"
+                : "border-white/10 bg-white/[0.02] text-slate-400 hover:border-white/20 hover:text-slate-300"
             )}
           >
             {mode === "id" ? "View By User ID" : "View By Wallet Address"}
@@ -110,7 +119,7 @@ export function LoginPageContent() {
         ))}
       </div>
 
-      <label className="mb-3 block text-xs font-medium text-slate-400">
+      <label className="mb-3 block text-xs font-semibold text-slate-400">
         {viewMode === "id" ? "User ID" : "Wallet Address"}
         <input
           type={viewMode === "id" ? "number" : "text"}
@@ -127,7 +136,7 @@ export function LoginPageContent() {
       </label>
 
       {error && (
-        <p className="mb-3 rounded-lg border border-red-500/20 bg-red-500/5 px-3 py-2 text-xs text-red-300">
+        <p className="mb-3 rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-2.5 text-xs font-medium text-red-300">
           {error}
         </p>
       )}
@@ -155,9 +164,9 @@ export function LoginPageContent() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="mb-4 overflow-hidden rounded-xl border border-[#D4AF37]/20 bg-[#D4AF37]/5"
+            className="mb-4 overflow-hidden rounded-xl border border-[#D4AF37]/25 bg-gradient-to-b from-[#D4AF37]/[0.08] to-transparent"
           >
-            <div className="space-y-2 p-4 text-sm">
+            <div className="space-y-2.5 p-4 text-sm">
               <Row label="User ID" value={`#${result.userId.toString()}`} gold />
               <Row label="Wallet" value={truncateAddress(result.wallet, 6, 4)} mono />
               <Row label="Referrer ID" value={`#${result.referrerId.toString()}`} />
@@ -167,7 +176,7 @@ export function LoginPageContent() {
               <Row label="Total Income" value={`${fmtEther(result.totalIncome)} BUSD`} gold />
               <Link
                 href={withBasePath(`/view?id=${result.userId.toString()}`)}
-                className="auth-btn-ghost mt-2 w-full !py-2.5 text-xs"
+                className="auth-btn-ghost mt-3 w-full !py-2.5 text-xs"
               >
                 <Wallet className="h-3.5 w-3.5" /> Open Full Dashboard
               </Link>
@@ -178,7 +187,7 @@ export function LoginPageContent() {
 
       <p className="mb-4 text-center text-xs text-slate-500">
         New to LAE Club?{" "}
-        <Link href={withBasePath("/register")} className="font-semibold text-[#D4AF37] hover:underline">
+        <Link href={withBasePath("/register")} className="font-bold text-[#D4AF37] hover:underline">
           Register your account
         </Link>
       </p>
@@ -186,6 +195,20 @@ export function LoginPageContent() {
       <Link href={withBasePath("/")} className="auth-btn-ghost w-full">
         <ArrowLeft className="h-4 w-4" /> Back Home
       </Link>
+
+      {/* Trust badges */}
+      <div className="mt-6 flex items-center justify-center gap-5 border-t border-white/[0.06] pt-5">
+        {[
+          { icon: Shield, text: "Secured" },
+          { icon: Zap, text: "Instant" },
+          { icon: Lock, text: "On-Chain" },
+        ].map(({ icon: Icon, text }) => (
+          <span key={text} className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+            <Icon className="h-3 w-3 text-[#D4AF37]/50" />
+            {text}
+          </span>
+        ))}
+      </div>
     </>
   );
 }

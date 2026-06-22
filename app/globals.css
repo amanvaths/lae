@@ -123,39 +123,62 @@
 
   /* Auth pages — luxury gold/silver glass */
   .auth-glass {
-    @apply rounded-2xl border border-white/[0.08] backdrop-blur-2xl;
+    @apply rounded-3xl border backdrop-blur-2xl;
+    border-color: rgba(212, 175, 55, 0.12);
     background: linear-gradient(
-      145deg,
-      rgba(255, 255, 255, 0.06) 0%,
-      rgba(255, 255, 255, 0.02) 50%,
-      rgba(212, 175, 55, 0.04) 100%
+      160deg,
+      rgba(255, 255, 255, 0.07) 0%,
+      rgba(255, 255, 255, 0.02) 40%,
+      rgba(212, 175, 55, 0.05) 100%
     );
     box-shadow:
-      inset 0 1px 0 0 rgba(255, 255, 255, 0.06),
-      0 24px 60px -20px rgba(0, 0, 0, 0.85),
-      0 0 40px -10px rgba(212, 175, 55, 0.08);
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.08),
+      inset 0 -1px 0 0 rgba(212, 175, 55, 0.04),
+      0 32px 80px -20px rgba(0, 0, 0, 0.9),
+      0 0 60px -15px rgba(212, 175, 55, 0.1);
   }
 
   .auth-input {
-    @apply w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white
-      outline-none transition-all placeholder:text-slate-600
-      focus:border-[#D4AF37]/50 focus:bg-white/[0.06] focus:shadow-[0_0_0_3px_rgba(212,175,55,0.12)]
+    @apply w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3.5 text-sm text-white
+      outline-none transition-all duration-300 placeholder:text-slate-600
+      focus:border-[#D4AF37]/60 focus:bg-white/[0.06]
       disabled:opacity-50;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3);
+  }
+  .auth-input:focus {
+    box-shadow:
+      inset 0 1px 2px rgba(0, 0, 0, 0.3),
+      0 0 0 3px rgba(212, 175, 55, 0.15),
+      0 0 20px -4px rgba(212, 175, 55, 0.12);
   }
 
   .auth-btn-gold {
-    @apply relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-xl
-      px-6 py-3.5 text-sm font-semibold text-[#050505] transition-all duration-300
-      hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(212,175,55,0.35)] active:translate-y-0
+    @apply relative inline-flex items-center justify-center gap-2.5 overflow-hidden rounded-xl
+      px-6 py-4 text-sm font-bold tracking-wide text-[#050505] transition-all duration-300
+      hover:-translate-y-0.5 active:translate-y-0
       disabled:pointer-events-none disabled:opacity-50;
-    background: linear-gradient(135deg, #e8c547 0%, #d4af37 45%, #b8962e 100%);
-    box-shadow: 0 4px 20px rgba(212, 175, 55, 0.25);
+    background: linear-gradient(135deg, #f5d760 0%, #e8c547 25%, #d4af37 50%, #b8962e 100%);
+    box-shadow:
+      0 4px 20px rgba(212, 175, 55, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  }
+  .auth-btn-gold:hover {
+    box-shadow:
+      0 8px 40px rgba(212, 175, 55, 0.4),
+      0 0 60px rgba(212, 175, 55, 0.15),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3);
   }
 
   .auth-btn-ghost {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-[#C0C0C0]/25
-      bg-transparent px-6 py-3.5 text-sm font-semibold text-slate-200 transition-all duration-300
-      hover:border-[#D4AF37]/40 hover:bg-[#D4AF37]/5 hover:text-[#D4AF37];
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border
+      bg-transparent px-6 py-4 text-sm font-bold text-slate-200 transition-all duration-300
+      hover:text-[#D4AF37];
+    border-color: rgba(192, 192, 192, 0.2);
+  }
+  .auth-btn-ghost:hover {
+    border-color: rgba(212, 175, 55, 0.4);
+    background: rgba(212, 175, 55, 0.06);
+    box-shadow: 0 0 24px rgba(212, 175, 55, 0.08);
   }
 
   .chip {

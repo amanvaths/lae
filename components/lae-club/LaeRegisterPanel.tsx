@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useAccount, useBalance, usePublicClient, useReadContract, useWriteContract } from "wagmi";
-import { ArrowLeft, CheckCircle2, Loader2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Loader2, AlertTriangle, Wallet, ExternalLink } from "lucide-react";
 import { formatEther, parseEther } from "viem";
-import { Panel } from "@/components/dashboard/ui";
 import { LAE_CONTRACTS } from "@/lib/lae-club/contracts";
 import { laeClubMatrixAbi } from "@/lib/lae-club/abis";
 import { erc20Abi } from "@/lib/contracts/abis/erc20";
@@ -18,17 +17,19 @@ import { formatWalletError } from "@/lib/wallet/errors";
 import { ConnectWallet } from "@/components/web3/ConnectWallet";
 import { isValidReferrerId, withLookupTimeout } from "@/lib/lae-club/user-lookup";
 import { cn } from "@/lib/utils";
+import { motion, AnimatePresence } from "framer-motion";
+import { truncateAddress } from "@/lib/format";
 
 const MAX_UINT256 = 2n ** 256n - 1n;
 const REG_GAS_LIMIT = 12_000_000n;
 
 type RegPhase = "idle" | "approve" | "register" | "verify" | "success";
 
-const STEPS: { key: RegPhase; label: string }[] = [
-  { key: "approve", label: "Approve" },
-  { key: "register", label: "Registering" },
-  { key: "verify", label: "Verifying" },
-  { key: "success", label: "Success" },
+const STEPS: { key: RegPhase; label: string; desc: string }[] = [
+  { key: "approve", label: "Approving", desc: "Approve BUSD token spend" },
+  { key: "register", label: "Registering", desc: "Submitting registration transaction" },
+  { key: "verify", label: "Verifying", desc: "Confirming on-chain registration" },
+  { key: "success", label: "Success", desc: "Registration complete!" },
 ];
 
 async function waitForRegistration(
@@ -74,6 +75,7 @@ export function LaeRegisterPanel({ luxury = false }: { luxury?: boolean }) {
   const [referrerId, setReferrerId] = useState("1");
   const [refError, setRefError] = useState<string | null>(null);
   const [refValid, setRefValid] = useState<boolean | null>(null);
+  const [validating, setValidating] = useState(false);
   const registeredRef = useRef(false);
 
   useEffect(() => {
@@ -93,7 +95,7 @@ export function LaeRegisterPanel({ luxury = false }: { luxury?: boolean }) {
   const hasAllowance = level1Price != null && allowance >= level1Price;
   const hasGas = (nativeBalance.data?.value ?? 0n) > parseEther("0.001");
 
-  async function validateReferrer(): Promise<boolean> {
+  const validateReferrer = useCallback(async (): Promise<boolean> => {
     if (!client) return false;
     const id = parseLaeUserId(referrerId);
     if (!id) {
@@ -101,21 +103,24 @@ export function LaeRegisterPanel({ luxury = false }: { luxury?: boolean }) {
       setRefValid(false);
       return false;
     }
+    setValidating(true);
     try {
       const valid = await withLookupTimeout(isValidReferrerId(client, id), 3_000);
       setRefValid(valid);
       if (!valid) {
-        setRefError("Invalid Referral ID");
+        setRefError("Referral ID not found on-chain");
         return false;
       }
       setRefError(null);
       return true;
     } catch {
-      setRefError("Could not verify referral — try again");
+      setRefError("Could not verify — try again");
       setRefValid(false);
       return false;
+    } finally {
+      setValidating(false);
     }
-  }
+  }, [client, referrerId]);
 
   async function handleFaucet() {
     if (!address || !client) return;
@@ -220,74 +225,281 @@ export function LaeRegisterPanel({ luxury = false }: { luxury?: boolean }) {
     }
   }
 
-  const Wrap = luxury ? "div" : Panel;
-  const wrapProps = luxury
-    ? { className: "space-y-4" }
-    : { title: "Register on LAE Club", className: undefined };
-
+  // Loading prices
   if (prices.isLoading) {
     return luxury ? (
       <div className="flex items-center justify-center gap-2 py-8 text-slate-400">
-        <Loader2 className="h-4 w-4 animate-spin text-[#D4AF37]" /> Loading…
+        <Loader2 className="h-5 w-5 animate-spin text-[#D4AF37]" /> Loading registration…
       </div>
     ) : (
-      <Panel title="Registration">
+      <div className="space-y-3 rounded-xl border border-white/10 bg-white/[0.02] p-4">
         <div className="flex items-center gap-2 text-slate-400">
           <Loader2 className="h-4 w-4 animate-spin" /> Reading level price…
         </div>
-      </Panel>
-    );
-  }
-
-  if (!address) {
-    return (
-      <Wrap {...(wrapProps as object)}>
-        {luxury ? (
-          <>
-            <ConnectWallet full variant="primary" luxury />
-            <Link href={withBasePath("/")} className="auth-btn-ghost w-full">
-              <ArrowLeft className="h-4 w-4" /> Back Home
-            </Link>
-          </>
-        ) : (
-          <>
-            <p className="mb-4 text-sm text-slate-400">Connect your wallet to register.</p>
-            <ConnectWallet />
-          </>
-        )}
-      </Wrap>
-    );
-  }
-
-  if (user.isLoading) {
-    return (
-      <div className="flex items-center justify-center gap-2 py-6 text-slate-400">
-        <Loader2 className="h-4 w-4 animate-spin text-[#D4AF37]" /> Checking wallet…
       </div>
     );
   }
 
-  if (user.registered) {
+  // Wallet not connected
+  if (!address) {
+    return luxury ? (
+      <div className="space-y-4">
+        <ConnectWallet full variant="primary" luxury />
+        <p className="text-center text-xs text-slate-500">
+          Already registered?{" "}
+          <Link href={withBasePath("/login")} className="font-bold text-[#D4AF37] hover:underline">
+            Login
+          </Link>
+        </p>
+        <Link href={withBasePath("/")} className="auth-btn-ghost w-full">
+          <ArrowLeft className="h-4 w-4" /> Back Home
+        </Link>
+      </div>
+    ) : (
+      <div className="space-y-3 rounded-xl border border-white/10 bg-white/[0.02] p-4">
+        <p className="mb-4 text-sm text-slate-400">Connect your wallet to register.</p>
+        <ConnectWallet />
+      </div>
+    );
+  }
+
+  // Loading user data
+  if (user.isLoading) {
     return (
-      <Wrap {...(wrapProps as object)}>
+      <div className="flex items-center justify-center gap-2 py-8 text-slate-400">
+        <Loader2 className="h-5 w-5 animate-spin text-[#D4AF37]" /> Checking wallet…
+      </div>
+    );
+  }
+
+  // Already registered
+  if (user.registered) {
+    return luxury ? (
+      <div className="space-y-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.06] p-4 text-center"
+        >
+          <CheckCircle2 className="mx-auto h-8 w-8 text-emerald-400" />
+          <p className="mt-2 font-bold text-emerald-400">
+            Already Registered
+          </p>
+          <p className="mt-1 text-xs text-slate-400">
+            User ID #{String(user.userId)}
+          </p>
+        </motion.div>
+        <Link
+          href={withBasePath("/dashboard")}
+          className="auth-btn-gold w-full"
+        >
+          Open Dashboard
+        </Link>
+        <Link href={withBasePath("/")} className="auth-btn-ghost w-full">
+          <ArrowLeft className="h-4 w-4" /> Back Home
+        </Link>
+      </div>
+    ) : (
+      <div className="space-y-3 rounded-xl border border-white/10 bg-white/[0.02] p-4">
         <p className="text-center text-emerald-400">
           Registered · User ID #{String(user.userId)}
         </p>
         <Link
           href={withBasePath("/dashboard")}
-          className={luxury ? "auth-btn-gold mt-4 w-full" : "btn-primary mt-4 inline-flex text-sm"}
+          className="btn-primary mt-4 inline-flex text-sm"
         >
           Open your dashboard
         </Link>
-      </Wrap>
+      </div>
     );
   }
 
-  return (
-    <Wrap {...(wrapProps as object)}>
-      {luxury && <ConnectWallet full variant="primary" luxury />}
+  // Main registration form
+  return luxury ? (
+    <div className="space-y-5">
+      {/* Wallet status */}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex items-center gap-3 rounded-xl border border-[#D4AF37]/20 bg-[#D4AF37]/[0.04] px-4 py-3"
+      >
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#D4AF37]/20">
+          <Wallet className="h-4 w-4 text-[#D4AF37]" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-[#D4AF37]/70">Connected Wallet</p>
+          <p className="truncate font-mono text-xs font-medium text-white">{truncateAddress(address, 8, 6)}</p>
+        </div>
+        <span className="shrink-0 rounded-full bg-emerald-500/20 px-2 py-0.5 text-[9px] font-bold uppercase text-emerald-400">
+          BSC
+        </span>
+      </motion.div>
 
-      <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 text-sm">
+      {/* Fee & balance */}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.05 }}
+        className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-4"
+      >
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-slate-400">Registration Fee</span>
+          <span className="text-sm font-bold text-[#D4AF37]">{priceLabel} BUSD</span>
+        </div>
+        <div className="mt-2 flex items-center justify-between">
+          <span className="text-xs text-slate-400">Your Balance</span>
+          <span className={cn(
+            "text-sm font-bold",
+            hasEnoughToken ? "text-emerald-400" : "text-red-400"
+          )}>
+            {level1Price ? formatEther(paymentBal) : "—"} BUSD
+          </span>
+        </div>
+        {!hasGas && (
+          <div className="mt-2 flex items-center gap-1.5 text-[10px] text-amber-400">
+            <AlertTriangle className="h-3 w-3 shrink-0" />
+            Need BNB for gas fees
+          </div>
+        )}
+        {!hasEnoughToken && level1Price && (
+          <button
+            type="button"
+            disabled={pending}
+            className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg border border-[#D4AF37]/20 bg-[#D4AF37]/[0.06] py-2 text-xs font-semibold text-[#D4AF37] transition-all hover:bg-[#D4AF37]/10 disabled:opacity-50"
+            onClick={() => void handleFaucet()}
+          >
+            <ExternalLink className="h-3 w-3" />
+            Get Test BUSD (Faucet)
+          </button>
+        )}
+      </motion.div>
+
+      {/* Referral input */}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+      >
+        <label className="block">
+          <span className="mb-2 flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-400">Referral ID</span>
+            <AnimatePresence mode="wait">
+              {validating && (
+                <motion.span
+                  key="validating"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="flex items-center gap-1 text-[10px] text-slate-500"
+                >
+                  <Loader2 className="h-3 w-3 animate-spin" /> Validating…
+                </motion.span>
+              )}
+              {!validating && refValid === true && !refError && (
+                <motion.span
+                  key="valid"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="flex items-center gap-1 text-[10px] font-bold text-emerald-400"
+                >
+                  <CheckCircle2 className="h-3 w-3" /> Valid Sponsor Found
+                </motion.span>
+              )}
+              {!validating && refError && (
+                <motion.span
+                  key="invalid"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="flex items-center gap-1 text-[10px] font-bold text-red-400"
+                >
+                  <AlertTriangle className="h-3 w-3" /> {refError}
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </span>
+          <input
+            type="number"
+            min={1}
+            value={referrerId}
+            onChange={(e) => {
+              setReferrerId(e.target.value);
+              setRefError(null);
+              setRefValid(null);
+            }}
+            onBlur={() => void validateReferrer()}
+            disabled={pending}
+            placeholder="Enter Referral ID (e.g. 1)"
+            className={cn(
+              "auth-input",
+              refValid === true && !refError && "!border-emerald-500/50",
+              refError && "!border-red-500/50"
+            )}
+          />
+        </label>
+      </motion.div>
+
+      {/* Progress stepper */}
+      <AnimatePresence>
+        {pending && phase !== "idle" && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+          >
+            <PremiumProgress phase={phase} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Register button */}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.15 }}
+      >
+        <button
+          type="button"
+          disabled={pending || !level1Price || !hasEnoughToken}
+          className="auth-btn-gold w-full"
+          onClick={() => void handleRegister()}
+        >
+          {pending ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />{" "}
+              {phase === "approve"
+                ? "Approving BUSD…"
+                : phase === "register"
+                  ? "Registering…"
+                  : phase === "verify"
+                    ? "Verifying on-chain…"
+                    : phase === "success"
+                      ? "Success!"
+                      : "Processing…"}
+            </>
+          ) : (
+            `Register — ${priceLabel} BUSD`
+          )}
+        </button>
+      </motion.div>
+
+      {/* Navigation */}
+      <p className="text-center text-xs text-slate-500">
+        Already registered?{" "}
+        <Link href={withBasePath("/login")} className="font-bold text-[#D4AF37] hover:underline">
+          Login
+        </Link>
+      </p>
+      <Link href={withBasePath("/")} className="auth-btn-ghost w-full">
+        <ArrowLeft className="h-4 w-4" /> Back Home
+      </Link>
+    </div>
+  ) : (
+    /* Non-luxury fallback — dashboard register panel */
+    <div className="space-y-3 rounded-xl border border-white/10 bg-white/[0.02] p-4">
+      <ConnectWallet full variant="primary" />
+      <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3 text-sm">
         <p className="text-slate-300">
           Fee: <span className="font-semibold text-[#D4AF37]">{priceLabel} BUSD</span>
         </p>
@@ -308,7 +520,6 @@ export function LaeRegisterPanel({ luxury = false }: { luxury?: boolean }) {
           </button>
         )}
       </div>
-
       <label className="block text-xs font-medium text-slate-400">
         Referral ID
         <input
@@ -329,15 +540,11 @@ export function LaeRegisterPanel({ luxury = false }: { luxury?: boolean }) {
       {refValid === true && !refError && (
         <p className="text-xs text-emerald-400">Referral ID verified</p>
       )}
-
-      {pending && phase !== "idle" && (
-        <RegProgress phase={phase} />
-      )}
-
+      {pending && phase !== "idle" && <PremiumProgress phase={phase} />}
       <button
         type="button"
         disabled={pending || !level1Price || !hasEnoughToken}
-        className={luxury ? "auth-btn-gold w-full" : "btn-primary w-full disabled:opacity-50"}
+        className="btn-primary w-full disabled:opacity-50"
         onClick={() => void handleRegister()}
       >
         {pending ? (
@@ -355,53 +562,55 @@ export function LaeRegisterPanel({ luxury = false }: { luxury?: boolean }) {
           `Register (${priceLabel} BUSD)`
         )}
       </button>
-
-      {luxury && (
-        <>
-          <p className="text-center text-xs text-slate-500">
-            Already registered?{" "}
-            <Link href={withBasePath("/login")} className="text-[#D4AF37] hover:underline">
-              Login
-            </Link>
-          </p>
-          <Link href={withBasePath("/")} className="auth-btn-ghost w-full">
-            <ArrowLeft className="h-4 w-4" /> Back Home
-          </Link>
-        </>
-      )}
-    </Wrap>
+    </div>
   );
 }
 
-function RegProgress({ phase }: { phase: RegPhase }) {
+function PremiumProgress({ phase }: { phase: RegPhase }) {
   const order: RegPhase[] = ["approve", "register", "verify", "success"];
   const currentIdx = order.indexOf(phase);
 
   return (
-    <div className="rounded-xl border border-[#D4AF37]/20 bg-[#D4AF37]/5 p-3">
-      <div className="space-y-2">
+    <div className="rounded-xl border border-[#D4AF37]/25 bg-gradient-to-b from-[#D4AF37]/[0.06] to-transparent p-4">
+      <div className="space-y-3">
         {STEPS.map((step, i) => {
           const done = currentIdx > i || phase === "success";
           const active = order[i] === phase;
           return (
-            <div key={step.key} className="flex items-center gap-2 text-xs">
-              {done ? (
-                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
-              ) : active ? (
-                <Loader2 className="h-4 w-4 shrink-0 animate-spin text-[#D4AF37]" />
-              ) : (
-                <span className="h-4 w-4 shrink-0 rounded-full border border-white/20" />
+            <motion.div
+              key={step.key}
+              initial={{ opacity: 0, x: -8 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: i * 0.08 }}
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2 transition-all",
+                active && "bg-[#D4AF37]/10",
+                done && "bg-emerald-500/5"
               )}
-              <span
-                className={cn(
-                  done && "text-emerald-400",
-                  active && "font-semibold text-[#D4AF37]",
-                  !done && !active && "text-slate-500"
-                )}
-              >
-                {step.label}…
-              </span>
-            </div>
+            >
+              {done ? (
+                <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-400" />
+              ) : active ? (
+                <Loader2 className="h-5 w-5 shrink-0 animate-spin text-[#D4AF37]" />
+              ) : (
+                <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-white/20">
+                  <span className="text-[9px] font-bold text-slate-500">{i + 1}</span>
+                </div>
+              )}
+              <div>
+                <span
+                  className={cn(
+                    "block text-xs font-bold",
+                    done && "text-emerald-400",
+                    active && "text-[#D4AF37]",
+                    !done && !active && "text-slate-500"
+                  )}
+                >
+                  {step.label}
+                </span>
+                <span className="text-[10px] text-slate-600">{step.desc}</span>
+              </div>
+            </motion.div>
           );
         })}
       </div>
