@@ -1,10 +1,28 @@
 "use client";
 
-import { cn } from "@/lib/utils";
+import { motion } from "framer-motion";
 import { MATRIX_SPOT_LABELS, LAE_MATRIX_SIZE } from "@/lib/lae-club/constants";
 import { truncateAddress } from "@/lib/format";
+import { cn } from "@/lib/utils";
 
-/** Silver & Gold Matrix — 14-spot tree (2 + 4 + 8), PPT design */
+const ZERO = "0x0000000000000000000000000000000000000000";
+
+const ROWS: number[][] = [
+  [1, 2],
+  [3, 4, 5, 6],
+  [7, 8, 9, 10, 11, 12, 13, 14],
+];
+
+const goldGradient =
+  "bg-gradient-to-b from-[#D4AF37] via-[#C5A028] to-[#B8860B]";
+const goldBorder = "border-[#D4AF37]/60";
+const goldGlow = "shadow-[0_0_16px_rgba(212,175,55,0.35)]";
+
+const silverGradient =
+  "bg-gradient-to-b from-[#E8E8E8] via-[#C0C0C0] to-[#A8A8A8]";
+const silverBorder = "border-[#C0C0C0]/50";
+const silverGlow = "shadow-[0_0_12px_rgba(192,192,192,0.2)]";
+
 export function MatrixVisualizer({
   referrals,
   level,
@@ -18,19 +36,21 @@ export function MatrixVisualizer({
   totalEarning?: bigint;
   className?: string;
 }) {
-  const rows = [
-    referrals.slice(0, 2),
-    referrals.slice(2, 6),
-    referrals.slice(6, 14),
-  ];
-  const rowSizes = [2, 4, 8];
+  const allSlots = Array.from({ length: LAE_MATRIX_SIZE }, (_, i) => {
+    const addr = referrals[i];
+    return {
+      spotNum: i + 1,
+      address: addr,
+      filled: !!addr && addr !== ZERO,
+    };
+  });
 
   return (
-    <div className={cn("space-y-2", className)}>
+    <div className={cn("space-y-3", className)}>
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
         <div className="flex items-center gap-2">
-          <span className="rounded bg-gradient-to-r from-amber-500/20 to-yellow-600/20 px-2 py-0.5 font-bold text-amber-300">
+          <span className="rounded-md bg-gradient-to-r from-[#D4AF37]/20 to-[#B8860B]/20 px-2.5 py-1 font-bold tracking-wide text-[#D4AF37]">
             SLOT {level}
           </span>
           <span className="text-slate-500">
@@ -38,122 +58,147 @@ export function MatrixVisualizer({
           </span>
         </div>
         <span className="font-mono text-emerald-400">
-          {referrals.length}/{LAE_MATRIX_SIZE} filled
+          {allSlots.filter((s) => s.filled).length}/{LAE_MATRIX_SIZE} filled
         </span>
       </div>
 
-      {/* YOU node */}
-      <div className="flex justify-center pt-2">
-        <div className="relative">
-          <div className="rounded-lg border-2 border-amber-400 bg-gradient-to-b from-amber-400 via-yellow-500 to-amber-600 px-6 py-2.5 text-center shadow-[0_0_20px_rgba(255,195,26,0.3)]">
-            <p className="text-sm font-black tracking-wide text-ink-950">YOU</p>
+      {/* Tree container — horizontal scroll on mobile */}
+      <div className="overflow-x-auto pb-2">
+        <div className="mx-auto flex min-w-[640px] flex-col items-center gap-0 pt-2">
+          {/* YOU node */}
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            transition={{ type: "spring", stiffness: 300, damping: 20 }}
+            className={cn(
+              "relative z-10 rounded-xl border-2 px-8 py-3 text-center",
+              goldBorder,
+              goldGradient,
+              "shadow-[0_0_20px_rgba(212,175,55,0.4)]"
+            )}
+          >
+            <p className="text-base font-black tracking-widest text-[#1a1200]">
+              YOU
+            </p>
+          </motion.div>
+
+          {/* Connector from YOU to Row 1 */}
+          <div className="relative flex h-8 w-full items-center justify-center">
+            <div className="absolute left-1/2 h-full w-px -translate-x-1/2 bg-gradient-to-b from-[#D4AF37] to-[#D4AF37]/20" />
           </div>
-          {/* connector line down */}
-          <div className="absolute left-1/2 top-full h-5 w-px -translate-x-1/2 bg-gradient-to-b from-amber-500 to-amber-500/30" />
+
+          {/* Rows */}
+          {ROWS.map((row, rowIdx) => {
+            const isLastRow = rowIdx === 2;
+            return (
+              <div key={rowIdx} className="flex w-full flex-col items-center">
+                {/* Horizontal bar connecting siblings */}
+                {rowIdx > 0 && (
+                  <div className="relative mb-1 flex h-6 w-full items-end justify-center">
+                    <HorizontalBar rowIdx={rowIdx} />
+                  </div>
+                )}
+
+                <div
+                  className={cn(
+                    "flex items-start justify-center",
+                    isLastRow ? "gap-2" : "gap-4"
+                  )}
+                >
+                  {row.map((spotNum) => {
+                    const slot = allSlots[spotNum - 1];
+                    const meta = MATRIX_SPOT_LABELS[spotNum];
+                    const isGold = meta?.tone === "gold";
+                    const { filled, address } = slot;
+
+                    return (
+                      <div
+                        key={spotNum}
+                        className="flex flex-col items-center"
+                      >
+                        {/* Vertical drop line from horizontal bar */}
+                        {rowIdx > 0 && (
+                          <div className="h-3 w-px bg-gradient-to-b from-[#D4AF37]/40 to-[#D4AF37]/10" />
+                        )}
+
+                        <SpotBox
+                          spotNum={spotNum}
+                          filled={filled}
+                          isGold={isGold}
+                          label={meta?.label ?? "—"}
+                          sublabel={meta?.sublabel ?? ""}
+                          address={address}
+                          compact={isLastRow}
+                        />
+
+                        {/* Vertical connector to next row */}
+                        {!isLastRow && (
+                          <div className="h-3 w-px bg-gradient-to-b from-[#D4AF37]/30 to-[#D4AF37]/10" />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* FREE labels under bottom-row pairs */}
+                {isLastRow && (
+                  <div className="mt-1.5 flex items-start justify-center gap-2">
+                    {[0, 2, 4, 6].map((pairStart) => {
+                      const pairWidth = isLastRow ? "w-[136px]" : "w-[156px]";
+                      return (
+                        <div
+                          key={pairStart}
+                          className={cn(
+                            "flex items-center justify-center text-center",
+                            pairWidth
+                          )}
+                        >
+                          <span className="rounded-full bg-[#D4AF37]/10 px-3 py-0.5 text-[9px] font-bold uppercase tracking-[0.2em] text-[#D4AF37]/60">
+                            Free
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
 
-      {/* Rows */}
-      {rows.map((row, rowIdx) => {
-        const size = rowSizes[rowIdx];
-        return (
-          <div key={rowIdx} className="relative">
-            {/* horizontal connector line */}
-            <div className="mx-auto mb-1 h-px bg-gradient-to-r from-transparent via-amber-500/40 to-transparent" style={{ width: `${Math.min(100, 40 + rowIdx * 25)}%` }} />
-
-            <div className={cn(
-              "flex justify-center gap-1.5",
-              rowIdx === 2 ? "flex-wrap" : ""
-            )}>
-              {Array.from({ length: size }).map((_, i) => {
-                const globalIdx = (rowIdx === 0 ? 0 : rowIdx === 1 ? 2 : 6) + i;
-                const spotNum = globalIdx + 1;
-                const addr = row[i];
-                const meta = MATRIX_SPOT_LABELS[spotNum];
-                const filled = !!addr && addr !== "0x0000000000000000000000000000000000000000";
-                const isGold = meta?.tone === "gold";
-                const isSilver = meta?.tone === "silver";
-                const isFreeRow = rowIdx === 2;
-
-                return (
-                  <div key={spotNum} className="flex flex-col items-center gap-0.5">
-                    {/* vertical connector */}
-                    {rowIdx > 0 && (
-                      <div className="h-3 w-px bg-amber-500/30" />
-                    )}
-                    <div
-                      className={cn(
-                        "relative rounded-lg border-2 px-2 py-1.5 text-center transition-all",
-                        rowIdx === 2 ? "min-w-[60px]" : "min-w-[72px]",
-                        filled
-                          ? isGold
-                            ? "border-amber-400/70 bg-gradient-to-b from-amber-500/20 via-yellow-600/15 to-amber-700/10 shadow-[0_2px_12px_rgba(255,195,26,0.15)]"
-                            : "border-slate-300/50 bg-gradient-to-b from-slate-300/15 via-slate-400/10 to-slate-500/5 shadow-[0_2px_12px_rgba(200,200,200,0.1)]"
-                          : "border-white/10 bg-white/[0.02]"
-                      )}
-                    >
-                      {/* Spot number badge */}
-                      <span className={cn(
-                        "absolute -top-2 left-1/2 -translate-x-1/2 rounded-full px-1.5 py-px text-[8px] font-bold leading-none",
-                        filled
-                          ? isGold
-                            ? "bg-amber-500 text-ink-950"
-                            : "bg-slate-300 text-ink-950"
-                          : "bg-white/20 text-slate-500"
-                      )}>
-                        {spotNum}
-                      </span>
-
-                      <p className={cn(
-                        "mt-1 text-[10px] font-bold leading-tight",
-                        filled
-                          ? isGold ? "text-amber-200" : "text-slate-200"
-                          : "text-slate-500"
-                      )}>
-                        {meta?.label ?? "—"}
-                      </p>
-                      <p className={cn(
-                        "text-[9px] leading-tight",
-                        filled
-                          ? isGold ? "text-amber-300/70" : "text-slate-400/80"
-                          : "text-slate-600"
-                      )}>
-                        {meta?.sublabel ?? ""}
-                      </p>
-                      <p className={cn(
-                        "mt-0.5 font-mono text-[8px]",
-                        filled ? "text-white/70" : "text-slate-600"
-                      )}>
-                        {filled ? truncateAddress(addr, 4, 3) : "Empty"}
-                      </p>
-                    </div>
-                    {/* FREE label on bottom row */}
-                    {isFreeRow && i % 2 === 1 && (
-                      <span className="mt-0.5 text-[7px] font-bold uppercase tracking-widest text-slate-600">Free</span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })}
-
       {/* Legend */}
-      <div className="flex flex-wrap items-center justify-center gap-4 border-t border-white/5 pt-3 text-[10px]">
-        <div className="flex items-center gap-1.5">
-          <span className="inline-block h-3 w-5 rounded border border-slate-300/50 bg-gradient-to-b from-slate-300/20 to-slate-400/10" />
-          <span className="text-slate-400">
-            <strong className="text-slate-200">Silver</strong> — 3, 6, 8, 9, 11, 12
+      <div className="flex flex-wrap items-center justify-center gap-5 border-t border-white/[0.06] pt-4 text-[11px]">
+        <div className="flex items-center gap-2">
+          <span
+            className={cn(
+              "inline-block h-4 w-6 rounded-md border",
+              silverBorder,
+              silverGradient
+            )}
+          />
+          <span className="text-slate-300">
+            <strong className="text-[#C0C0C0]">Silver</strong>{" "}
+            <span className="text-slate-500">3, 6, 8, 9, 11, 12</span>
           </span>
-          <span className="ml-1 text-slate-500">YOUR INCOME</span>
+          <span className="font-semibold tracking-wide text-[#C0C0C0]/70">
+            YOUR INCOME
+          </span>
         </div>
-        <div className="flex items-center gap-1.5">
-          <span className="inline-block h-3 w-5 rounded border border-amber-400/60 bg-gradient-to-b from-amber-500/25 to-amber-600/15" />
-          <span className="text-slate-400">
-            <strong className="text-amber-200">Gold</strong> — 1, 2, 4, 5, 7, 10, 13, 14
+        <div className="flex items-center gap-2">
+          <span
+            className={cn(
+              "inline-block h-4 w-6 rounded-md border",
+              goldBorder,
+              goldGradient
+            )}
+          />
+          <span className="text-slate-300">
+            <strong className="text-[#D4AF37]">Gold</strong>{" "}
+            <span className="text-slate-500">1, 2, 4, 5, 7, 10, 13, 14</span>
           </span>
-          <span className="ml-1 text-slate-500">FLOW & SYSTEM</span>
+          <span className="font-semibold tracking-wide text-[#D4AF37]/70">
+            FLOW & SYSTEM
+          </span>
         </div>
       </div>
 
@@ -163,5 +208,107 @@ export function MatrixVisualizer({
         </p>
       )}
     </div>
+  );
+}
+
+/* ---- Spot box ---- */
+function SpotBox({
+  spotNum,
+  filled,
+  isGold,
+  label,
+  sublabel,
+  address,
+  compact,
+}: {
+  spotNum: number;
+  filled: boolean;
+  isGold: boolean;
+  label: string;
+  sublabel: string;
+  address: `0x${string}` | undefined;
+  compact: boolean;
+}) {
+  const boxW = compact ? "min-w-[60px] max-w-[66px]" : "min-w-[72px]";
+
+  const filledGold = cn(
+    "border-[#D4AF37]/60 bg-gradient-to-b from-[#D4AF37]/25 via-[#C5A028]/15 to-[#B8860B]/10",
+    goldGlow
+  );
+  const filledSilver = cn(
+    "border-[#C0C0C0]/50 bg-gradient-to-b from-[#E8E8E8]/20 via-[#C0C0C0]/12 to-[#A8A8A8]/8",
+    silverGlow
+  );
+  const emptyBox =
+    "border-white/[0.08] bg-white/[0.02] border-dashed";
+
+  return (
+    <motion.div
+      whileHover={{ scale: 1.08, y: -2 }}
+      transition={{ type: "spring", stiffness: 400, damping: 20 }}
+      className={cn(
+        "relative rounded-lg border-2 px-2 py-2 text-center",
+        boxW,
+        filled ? (isGold ? filledGold : filledSilver) : emptyBox
+      )}
+    >
+      {/* Spot number badge */}
+      <span
+        className={cn(
+          "absolute -top-2.5 left-1/2 z-10 flex h-[18px] w-[18px] -translate-x-1/2 items-center justify-center rounded-full text-[9px] font-bold leading-none",
+          filled
+            ? isGold
+              ? "bg-gradient-to-b from-[#D4AF37] to-[#B8860B] text-[#1a1200] shadow-[0_0_6px_rgba(212,175,55,0.5)]"
+              : "bg-gradient-to-b from-[#E8E8E8] to-[#A8A8A8] text-[#1a1a1a] shadow-[0_0_6px_rgba(192,192,192,0.4)]"
+            : "bg-white/10 text-slate-500"
+        )}
+      >
+        {spotNum}
+      </span>
+
+      <p
+        className={cn(
+          "mt-1.5 text-[10px] font-bold leading-tight",
+          filled
+            ? isGold
+              ? "text-[#D4AF37]"
+              : "text-[#C0C0C0]"
+            : "text-slate-600"
+        )}
+      >
+        {label}
+      </p>
+      <p
+        className={cn(
+          "text-[9px] leading-tight",
+          filled
+            ? isGold
+              ? "text-[#D4AF37]/60"
+              : "text-[#C0C0C0]/60"
+            : "text-slate-700"
+        )}
+      >
+        {sublabel}
+      </p>
+      <p
+        className={cn(
+          "mt-0.5 font-mono text-[8px]",
+          filled ? "text-white/70" : "text-slate-600"
+        )}
+      >
+        {filled && address ? truncateAddress(address, 4, 3) : "Empty"}
+      </p>
+    </motion.div>
+  );
+}
+
+/* ---- Horizontal connector bar ---- */
+function HorizontalBar({ rowIdx }: { rowIdx: number }) {
+  const width = rowIdx === 1 ? "60%" : "85%";
+  return (
+    <div
+      className="h-px bg-gradient-to-r from-transparent via-[#D4AF37]/30 to-transparent"
+      style={{ width }}
+    />
   );
 }

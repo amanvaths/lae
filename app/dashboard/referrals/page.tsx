@@ -15,23 +15,28 @@ export default function ReferralsPage() {
 
   return (
     <div>
-      <h1 className="font-display text-2xl font-bold text-white">Direct Referrals</h1>
-      <p className="mt-1 text-sm text-slate-400">
-        {team.ids.length} direct partner{team.ids.length === 1 ? "" : "s"} · Sponsor ID #
-        {String(user.sponsorId ?? "—")}
+      <h1 className="font-display text-2xl font-bold text-white sm:text-3xl">Direct Referrals</h1>
+      <p className="mt-1.5 text-sm text-slate-400">
+        <span className="font-semibold text-[#D4AF37]">{team.ids.length}</span> direct partner{team.ids.length === 1 ? "" : "s"} · Sponsor ID{" "}
+        <span className="font-semibold text-[#D4AF37]">#{String(user.sponsorId ?? "—")}</span>
       </p>
 
-      <Panel className="mt-6" title="Referral list">
+      <Panel className="mt-6 border-[#D4AF37]/15" title="Referral list">
         {team.ids.length === 0 ? (
           <p className="text-sm text-slate-500">No direct referrals yet</p>
         ) : (
           team.ids.map((id, i) => (
             <div
               key={String(id)}
-              className="grid gap-1 border-b border-white/5 py-3 text-sm sm:grid-cols-2"
+              className="flex flex-col gap-1 border-b border-[#D4AF37]/10 py-3.5 text-sm transition-colors hover:bg-[#D4AF37]/[0.03] sm:flex-row sm:items-center sm:justify-between sm:gap-2"
             >
-              <span className="font-semibold text-white">User #{String(id)}</span>
-              <span className="font-mono text-slate-400">
+              <div className="flex items-center gap-3">
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-[#D4AF37]/20 bg-[#D4AF37]/10 text-xs font-bold text-[#D4AF37]">
+                  {i + 1}
+                </span>
+                <span className="font-semibold text-white">User #{String(id)}</span>
+              </div>
+              <span className="ml-11 font-mono text-xs text-[#C0C0C0] sm:ml-0">
                 {truncateAddress(team.addresses[i] ?? "")}
               </span>
             </div>

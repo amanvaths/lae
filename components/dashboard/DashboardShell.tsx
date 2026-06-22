@@ -11,9 +11,9 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-ink-950">
+    <div className="min-h-screen bg-[#050505]">
       {/* Desktop sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-[264px] border-r border-white/5 lg:block">
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-[264px] border-r border-[#D4AF37]/10 lg:block">
         <Sidebar />
       </aside>
 
@@ -33,7 +33,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               animate={{ x: 0 }}
               exit={{ x: -300 }}
               transition={{ type: "spring", stiffness: 320, damping: 34 }}
-              className="fixed inset-y-0 left-0 z-50 w-[264px] border-r border-white/10 lg:hidden"
+              className="fixed inset-y-0 left-0 z-50 w-[264px] border-r border-[#D4AF37]/15 lg:hidden"
             >
               <button
                 onClick={() => setOpen(false)}
@@ -52,10 +52,11 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       <div className="lg:pl-[264px] min-w-0">
         <Topbar onMenuClick={() => setOpen(true)} />
         <main className="relative min-w-0 overflow-x-hidden px-3 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:px-5 sm:py-6 md:px-6 lg:px-8">
-          {/* ambient glow */}
+          {/* Gold/silver ambient glow spots */}
           <div className="pointer-events-none fixed inset-0 -z-10">
-            <div className="absolute left-1/3 top-0 h-72 w-[600px] -translate-x-1/2 rounded-full bg-brand-500/[0.07] blur-[120px]" />
-            <div className="absolute right-0 top-40 h-64 w-64 rounded-full bg-accent-500/[0.06] blur-[100px]" />
+            <div className="absolute left-1/4 top-0 h-72 w-[500px] -translate-x-1/2 rounded-full bg-[#D4AF37]/[0.04] blur-[140px]" />
+            <div className="absolute right-[10%] top-32 h-56 w-56 rounded-full bg-[#C0C0C0]/[0.03] blur-[120px]" />
+            <div className="absolute bottom-20 left-[60%] h-48 w-[400px] rounded-full bg-[#D4AF37]/[0.03] blur-[160px]" />
           </div>
           <div className="mx-auto max-w-7xl">
             <NetworkBanner />

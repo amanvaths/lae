@@ -18,7 +18,7 @@ export function PageHeading({
     <div className="mb-6 flex flex-col gap-4 sm:mb-7 sm:flex-row sm:items-end sm:justify-between">
       <div className="flex min-w-0 items-start gap-3">
         {Icon && (
-          <span className="mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/[0.04] text-brand-300 sm:h-11 sm:w-11">
+          <span className="mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-[#D4AF37]/15 bg-[#D4AF37]/[0.06] text-[#D4AF37] sm:h-11 sm:w-11">
             <Icon className="h-5 w-5" />
           </span>
         )}
@@ -51,7 +51,13 @@ export function Panel({
   action?: React.ReactNode;
 }) {
   return (
-    <section className={cn("glass overflow-hidden p-4 sm:p-5 md:p-6", className)}>
+    <section
+      className={cn(
+        "overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4 backdrop-blur-xl sm:p-5 md:p-6",
+        "shadow-[inset_0_1px_0_0_rgba(212,175,55,0.06),0_0_0_1px_rgba(212,175,55,0.04)]",
+        className
+      )}
+    >
       {(title || action) && (
         <div className="mb-4 flex flex-col gap-3 sm:mb-5 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
@@ -87,13 +93,20 @@ export function StatCard({
   accent?: "brand" | "violet" | "gold" | "emerald";
 }) {
   const accents: Record<string, string> = {
-    brand: "from-brand-500/20 text-brand-300",
+    brand: "from-[#D4AF37]/20 text-[#D4AF37]",
     violet: "from-accent-500/20 text-accent-400",
-    gold: "from-gold-400/20 text-gold-400",
+    gold: "from-[#D4AF37]/25 text-[#D4AF37]",
     emerald: "from-emerald-500/20 text-emerald-400",
   };
   return (
-    <div className="group glass glass-hover relative overflow-hidden p-4 sm:p-5">
+    <div
+      className={cn(
+        "group relative overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4 backdrop-blur-xl transition-all duration-500 sm:p-5",
+        "shadow-[inset_0_1px_0_0_rgba(212,175,55,0.06)]",
+        "hover:border-[#D4AF37]/15 hover:shadow-[0_0_24px_rgba(212,175,55,0.06),inset_0_1px_0_0_rgba(212,175,55,0.1)]"
+      )}
+    >
+      {/* Gold gradient glow */}
       <div
         className={cn(
           "pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full bg-gradient-to-br to-transparent opacity-60 blur-2xl transition-opacity group-hover:opacity-100",
@@ -113,7 +126,7 @@ export function StatCard({
         {Icon && (
           <span
             className={cn(
-              "grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/[0.04] sm:h-10 sm:w-10",
+              "grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[#D4AF37]/15 bg-[#D4AF37]/[0.06] sm:h-10 sm:w-10",
               accents[accent].split(" ")[1]
             )}
           >
@@ -147,9 +160,9 @@ export function Pill({
 }) {
   const tones: Record<string, string> = {
     slate: "border-white/10 bg-white/[0.04] text-slate-300",
-    brand: "border-brand-500/30 bg-brand-500/10 text-brand-200",
+    brand: "border-[#D4AF37]/30 bg-[#D4AF37]/10 text-[#D4AF37]",
     emerald: "border-emerald-500/30 bg-emerald-500/10 text-emerald-300",
-    gold: "border-gold-400/30 bg-gold-400/10 text-gold-300",
+    gold: "border-[#D4AF37]/30 bg-[#D4AF37]/10 text-[#D4AF37]",
     violet: "border-accent-500/30 bg-accent-500/10 text-accent-400",
     red: "border-red-500/30 bg-red-500/10 text-red-300",
   };
@@ -177,8 +190,8 @@ export function Progress({
   tone?: "brand" | "gold" | "emerald";
 }) {
   const tones: Record<string, string> = {
-    brand: "from-brand-400 to-accent-500",
-    gold: "from-gold-300 to-gold-500",
+    brand: "from-[#D4AF37] to-[#B8860B]",
+    gold: "from-[#D4AF37] to-[#B8860B]",
     emerald: "from-emerald-400 to-emerald-600",
   };
   return (
@@ -195,7 +208,7 @@ export function Progress({
 export function Sparkline({
   data,
   height = 36,
-  stroke = "#48bcff",
+  stroke = "#D4AF37",
   className,
 }: {
   data: number[];
@@ -265,7 +278,7 @@ export function TableWrap({
 /* ---------------- Empty / coming-soon notice ---------------- */
 export function InfoNote({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-brand-500/20 bg-brand-500/[0.06] px-4 py-3 text-sm text-brand-100/80">
+    <div className="rounded-xl border border-[#D4AF37]/20 bg-[#D4AF37]/[0.06] px-4 py-3 text-sm text-[#D4AF37]/80">
       {children}
     </div>
   );

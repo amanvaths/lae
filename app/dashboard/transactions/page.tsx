@@ -20,9 +20,10 @@ export default function TransactionsPage() {
 
   return (
     <div>
-      <h1 className="font-display text-2xl font-bold text-white">Transactions</h1>
-      <p className="mt-1 text-sm text-slate-400">
-        User #{String(user.userId ?? "—")} · {rows.length} matrix events
+      <h1 className="font-display text-2xl font-bold text-white sm:text-3xl">Transactions</h1>
+      <p className="mt-1.5 text-sm text-slate-400">
+        User #{String(user.userId ?? "—")} ·{" "}
+        <span className="font-semibold text-[#D4AF37]">{rows.length}</span> matrix events
       </p>
 
       {events.isFetching && (
@@ -32,7 +33,7 @@ export default function TransactionsPage() {
         </p>
       )}
 
-      <Panel className="mt-6" title="Event log">
+      <Panel className="mt-6 border-[#D4AF37]/15" title="Event log">
         {events.isFetching && rows.length === 0 ? (
           <p className="flex items-center gap-2 text-sm text-slate-500">
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -41,28 +42,30 @@ export default function TransactionsPage() {
         ) : rows.length === 0 ? (
           <p className="text-sm text-slate-500">No events yet</p>
         ) : (
-          <div className="divide-y divide-white/5">
+          <div className="divide-y divide-[#D4AF37]/10">
             {rows.map((e, i) => {
               const args = e.args as Record<string, unknown>;
               const amount = args.amount;
               return (
                 <div
                   key={`${e.transactionHash}-${e.logIndex ?? i}`}
-                  className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm"
+                  className="flex flex-wrap items-center justify-between gap-2 py-3.5 text-sm transition-colors hover:bg-[#D4AF37]/[0.03]"
                 >
                   <div className="min-w-0">
-                    <Pill tone="brand">{e.eventName}</Pill>
+                    <span className="inline-flex items-center rounded-full border border-[#D4AF37]/20 bg-[#D4AF37]/10 px-2.5 py-0.5 text-xs font-medium text-[#D4AF37]">
+                      {e.eventName}
+                    </span>
                     <a
                       href={txUrl(e.transactionHash)}
                       target="_blank"
                       rel="noreferrer"
-                      className="mt-1 block truncate font-mono text-xs text-brand-300 hover:underline"
+                      className="mt-1 block truncate font-mono text-xs text-[#D4AF37]/60 hover:text-[#D4AF37] transition-colors hover:underline"
                     >
                       {truncateAddress(e.transactionHash)}
                     </a>
                   </div>
                   {typeof amount === "bigint" && (
-                    <span className="text-emerald-400">+{fmtEther(amount)}</span>
+                    <span className="font-semibold text-emerald-400">+{fmtEther(amount)}</span>
                   )}
                 </div>
               );

@@ -29,6 +29,15 @@ import { truncateAddress } from "@/lib/format";
 import { withBasePath } from "@/lib/paths";
 import { txUrl } from "@/lib/lae-club/contracts";
 
+const stagger = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.07 } },
+};
+const fadeUp = {
+  hidden: { opacity: 0, y: 18 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.45, ease: "easeOut" } },
+};
+
 export default function DashboardHome() {
   const user = useLaeUser();
   const levels = useLaeAllMatrixLevels();
@@ -69,165 +78,174 @@ export default function DashboardHome() {
           : 0;
 
   return (
-    <div>
+    <motion.div variants={stagger} initial="hidden" animate="show">
+      {/* ── Header ── */}
       <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mb-5 flex flex-col gap-4 sm:mb-7 sm:flex-row sm:items-center sm:justify-between"
+        variants={fadeUp}
+        className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-center sm:justify-between"
       >
         <div className="min-w-0">
           <h1 className="font-display text-xl font-bold text-white sm:text-2xl md:text-3xl">
-            User #{String(user.userId)} ·{" "}
-            <span className="text-gradient font-mono">
-              {truncateAddress(user.userAddress ?? "", 6, 4)}
+            User #{String(user.userId)}{" "}
+            <span className="text-gradient-gold">
+              · {truncateAddress(user.userAddress ?? "", 6, 4)}
             </span>
           </h1>
-          <p className="mt-1 text-sm leading-relaxed text-slate-400">
+          <p className="mt-1.5 text-sm leading-relaxed text-slate-400">
             Sponsor ID #{String(user.sponsorId ?? "—")} ·{" "}
             {user.sponsorAddress ? truncateAddress(user.sponsorAddress, 6, 4) : "—"}
-            <Pill tone="emerald" className="ml-2">
+            <Pill tone="gold" className="ml-2">
               {levels.isLoading ? "…" : `${levels.activeCount} active levels`}
             </Pill>
           </p>
         </div>
-        <Link href={withBasePath("/dashboard/share")} className="btn-primary justify-center">
+        <Link
+          href={withBasePath("/dashboard/share")}
+          className="btn-primary justify-center gap-2 border-[#D4AF37]/30 bg-gradient-to-r from-[#D4AF37]/20 to-[#B8860B]/20 hover:from-[#D4AF37]/30 hover:to-[#B8860B]/30"
+        >
           <Share2 className="h-4 w-4" /> Share referral
         </Link>
       </motion.div>
 
-      <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
-        <StatCard
-          label="User ID"
-          value={String(user.userId ?? "—")}
-          sub={`Sponsor #${String(user.sponsorId ?? "—")}`}
-          icon={Layers}
-          accent="brand"
-        />
-        <StatCard
-          label="Direct Team"
-          value={String(user.directCount ?? 0n)}
-          sub={`Total team ${String(user.teamSize ?? 0n)}`}
-          icon={Users}
-          accent="violet"
-        />
-        <StatCard
-          label="Matrix Income"
-          value={fmtEther(income.totalMatrixIncome || user.totalIncome || 0n)}
-          sub={`Royal ${fmtEther(income.totalRoyalIncome)}`}
-          icon={TrendingUp}
-          accent="gold"
-        />
-        <StatCard
-          label="Recycles"
-          value={String(recycles.count)}
-          sub={`NFT rank ${royalRank > 0 ? `Royal ${royalRank}` : "Registration pass"}`}
-          icon={RefreshCw}
-          accent="emerald"
-        />
-      </div>
-
-      <div className="mt-4 grid gap-4 lg:grid-cols-3">
-        <Panel title="Active levels (on-chain)">
-          {levels.isLoading ? (
-            <QueryLoading label="Loading levels…" />
-          ) : (
-          <div className="flex flex-wrap gap-1.5">
-            {(levels.levels ?? []).map((l) => (
-              <span
-                key={l.level}
-                className={`rounded px-2 py-0.5 text-xs font-medium ${
-                  l.active
-                    ? "bg-emerald-500/20 text-emerald-300"
-                    : "bg-white/5 text-slate-500"
-                }`}
-              >
-                L{l.level}
-              </span>
-            ))}
+      {/* ── Top Stats Row ── */}
+      <motion.div variants={fadeUp} className="grid gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
+        <div className="group relative overflow-hidden rounded-2xl border border-[#D4AF37]/20 bg-ink-900/80 p-4 backdrop-blur-xl transition-all duration-500 hover:border-[#D4AF37]/40 hover:shadow-glow-gold sm:p-5">
+          <div className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-gradient-to-br from-[#D4AF37]/25 to-transparent opacity-60 blur-2xl transition-opacity group-hover:opacity-100" />
+          <div className="relative flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="text-[0.65rem] font-medium uppercase tracking-wider text-[#D4AF37]/70 sm:text-xs">Total Income</p>
+              <p className="mt-1.5 truncate font-display text-xl font-bold text-gradient-gold sm:mt-2 sm:text-2xl">
+                {fmtEther(income.totalMatrixIncome || user.totalIncome || 0n)}
+              </p>
+              <p className="mt-1 truncate text-xs text-slate-500">Royal {fmtEther(income.totalRoyalIncome)}</p>
+            </div>
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-[#D4AF37]/20 bg-[#D4AF37]/10 text-[#D4AF37] sm:h-11 sm:w-11">
+              <TrendingUp className="h-5 w-5" />
+            </span>
           </div>
+        </div>
+
+        <div className="group relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-ink-900/80 p-4 backdrop-blur-xl transition-all duration-500 hover:border-emerald-500/40 hover:shadow-[0_0_40px_-10px_rgba(16,185,129,0.3)] sm:p-5">
+          <div className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-gradient-to-br from-emerald-500/25 to-transparent opacity-60 blur-2xl transition-opacity group-hover:opacity-100" />
+          <div className="relative flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="text-[0.65rem] font-medium uppercase tracking-wider text-emerald-400/70 sm:text-xs">Direct Team</p>
+              <p className="mt-1.5 truncate font-display text-xl font-bold text-emerald-400 sm:mt-2 sm:text-2xl">
+                {String(user.directCount ?? 0n)}
+              </p>
+              <p className="mt-1 truncate text-xs text-slate-500">Total team {String(user.teamSize ?? 0n)}</p>
+            </div>
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-400 sm:h-11 sm:w-11">
+              <Users className="h-5 w-5" />
+            </span>
+          </div>
+        </div>
+
+        <div className="group relative overflow-hidden rounded-2xl border border-[#D4AF37]/20 bg-ink-900/80 p-4 backdrop-blur-xl transition-all duration-500 hover:border-[#D4AF37]/40 hover:shadow-glow-gold sm:p-5">
+          <div className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-gradient-to-br from-brand-500/25 via-[#D4AF37]/15 to-transparent opacity-60 blur-2xl transition-opacity group-hover:opacity-100" />
+          <div className="relative flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="text-[0.65rem] font-medium uppercase tracking-wider text-[#D4AF37]/70 sm:text-xs">Active Levels</p>
+              <p className="mt-1.5 truncate font-display text-xl font-bold text-white sm:mt-2 sm:text-2xl">
+                {levels.isLoading ? "…" : levels.activeCount}
+              </p>
+              <p className="mt-1 truncate text-xs text-slate-500">of 15 matrix levels</p>
+            </div>
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-[#D4AF37]/20 bg-[#D4AF37]/10 text-[#D4AF37] sm:h-11 sm:w-11">
+              <Layers className="h-5 w-5" />
+            </span>
+          </div>
+        </div>
+
+        <div className="group relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-ink-900/80 p-4 backdrop-blur-xl transition-all duration-500 hover:border-emerald-500/40 hover:shadow-[0_0_40px_-10px_rgba(16,185,129,0.3)] sm:p-5">
+          <div className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-gradient-to-br from-emerald-500/25 to-transparent opacity-60 blur-2xl transition-opacity group-hover:opacity-100" />
+          <div className="relative flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="text-[0.65rem] font-medium uppercase tracking-wider text-emerald-400/70 sm:text-xs">Recycles</p>
+              <p className="mt-1.5 truncate font-display text-xl font-bold text-emerald-400 sm:mt-2 sm:text-2xl">
+                {String(recycles.count)}
+              </p>
+              <p className="mt-1 truncate text-xs text-slate-500">NFT rank {royalRank > 0 ? `Royal ${royalRank}` : "Registration pass"}</p>
+            </div>
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-400 sm:h-11 sm:w-11">
+              <RefreshCw className="h-5 w-5" />
+            </span>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* ── Matrix Visualizer ── */}
+      <motion.div variants={fadeUp}>
+        <Panel
+          title="Level 1 · Silver & Gold Matrix"
+          className="mt-5 border-[#D4AF37]/15"
+        >
+          {matrixL1.isLoading ? (
+            <QueryLoading label="Loading matrix…" />
+          ) : (
+            <MatrixVisualizer
+              referrals={matrixL1.referrals}
+              level={1}
+              reinvestCount={matrixL1.reinvestCount}
+              totalEarning={matrixL1.totalEarning}
+            />
           )}
         </Panel>
-        <Panel title="NFT status">
-          <div className="space-y-1 text-sm">
-            <p className={nft.registrationPass ? "text-emerald-400" : "text-slate-500"}>
-              Registration pass · {nft.registrationPass ? "Active" : "—"}
-            </p>
-            <p className={nft.royalRank1 ? "text-brand-300" : "text-slate-500"}>
-              Royal 1 (L3+) · {nft.royalRank1 ? "Eligible" : "—"}
-            </p>
-            <p className={nft.royalRank4 ? "text-brand-300" : "text-slate-500"}>
-              Royal 4 (L12) · {nft.royalRank4 ? "Eligible" : "—"}
-            </p>
-          </div>
+      </motion.div>
+
+      {/* ── Recent Activity ── */}
+      <motion.div variants={fadeUp}>
+        <Panel
+          className="mt-4 border-white/[0.08]"
+          title="Recent on-chain activity"
+          action={
+            <Link
+              href={withBasePath("/dashboard/transactions")}
+              className="text-sm font-medium text-[#D4AF37] hover:text-[#ffe082] transition-colors"
+            >
+              All events →
+            </Link>
+          }
+        >
+          {income.isLoading ? (
+            <p className="text-sm text-slate-500">Loading events from chain…</p>
+          ) : recentEvents.length === 0 ? (
+            <p className="text-sm text-slate-500">No events yet for this user</p>
+          ) : (
+            <div className="divide-y divide-white/[0.06]">
+              {recentEvents.map((e, i) => {
+                const row = e as {
+                  transactionHash: string;
+                  eventName?: string;
+                  args?: Record<string, unknown>;
+                };
+                const amount = row.args?.amount;
+                return (
+                  <div key={`${row.transactionHash}-${i}`} className="flex items-center justify-between gap-3 py-3 text-sm">
+                    <div className="min-w-0">
+                      <Pill tone="gold">{row.eventName}</Pill>
+                      <a
+                        href={txUrl(row.transactionHash)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-1 block truncate text-xs text-[#D4AF37]/70 hover:text-[#D4AF37] hover:underline transition-colors"
+                      >
+                        {truncateAddress(row.transactionHash)}
+                      </a>
+                    </div>
+                    {typeof amount === "bigint" && (
+                      <span className="font-semibold text-emerald-400">+{fmtEther(amount)}</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </Panel>
-        <Panel title="Referral link">
-          <code className="block break-all rounded bg-black/30 p-2 text-xs text-brand-200">
-            {referralLinkByUserId(user.userId) || "—"}
-          </code>
-        </Panel>
-      </div>
+      </motion.div>
 
-      <Panel title="Level 1 · Silver & Gold Matrix" className="mt-4">
-        {matrixL1.isLoading ? (
-          <QueryLoading label="Loading matrix…" />
-        ) : (
-          <MatrixVisualizer
-            referrals={matrixL1.referrals}
-            level={1}
-            reinvestCount={matrixL1.reinvestCount}
-            totalEarning={matrixL1.totalEarning}
-          />
-        )}
-      </Panel>
-
-      <Panel
-        className="mt-4"
-        title="Recent on-chain activity"
-        action={
-          <Link
-            href={withBasePath("/dashboard/transactions")}
-            className="text-sm font-medium text-brand-300 hover:text-brand-200"
-          >
-            All events →
-          </Link>
-        }
-      >
-        {income.isLoading ? (
-          <p className="text-sm text-slate-500">Loading events from chain…</p>
-        ) : recentEvents.length === 0 ? (
-          <p className="text-sm text-slate-500">No events yet for this user</p>
-        ) : (
-          <div className="divide-y divide-white/5">
-            {recentEvents.map((e, i) => {
-              const row = e as {
-                transactionHash: string;
-                eventName?: string;
-                args?: Record<string, unknown>;
-              };
-              const amount = row.args?.amount;
-              return (
-              <div key={`${row.transactionHash}-${i}`} className="flex items-center justify-between gap-3 py-3 text-sm">
-                <div className="min-w-0">
-                  <Pill tone="brand">{row.eventName}</Pill>
-                  <a
-                    href={txUrl(row.transactionHash)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mt-1 block truncate text-xs text-brand-300 hover:underline"
-                  >
-                    {truncateAddress(row.transactionHash)}
-                  </a>
-                </div>
-                {typeof amount === "bigint" && (
-                  <span className="text-emerald-400">+{fmtEther(amount)}</span>
-                )}
-              </div>
-            );})}
-          </div>
-        )}
-      </Panel>
-
-      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      {/* ── Quick Action Cards ── */}
+      <motion.div variants={fadeUp} className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {[
           { href: "/dashboard/matrix", icon: Layers, label: "Matrix", desc: "15 levels · 14 spots" },
           { href: "/dashboard/income", icon: TrendingUp, label: "Income", desc: "TokenReceived events" },
@@ -237,19 +255,20 @@ export default function DashboardHome() {
           <Link
             key={a.href}
             href={withBasePath(a.href)}
-            className="glass glass-hover flex items-center gap-3 p-3.5 sm:p-4"
+            className="group glass relative overflow-hidden flex items-center gap-3 p-3.5 transition-all duration-500 hover:border-[#D4AF37]/30 hover:shadow-glow-gold sm:p-4"
           >
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white/[0.04] text-brand-300 sm:h-10 sm:w-10">
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#D4AF37]/0 to-[#D4AF37]/0 transition-all duration-500 group-hover:from-[#D4AF37]/5 group-hover:to-transparent" />
+            <span className="relative grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-[#D4AF37]/20 bg-[#D4AF37]/10 text-[#D4AF37] sm:h-11 sm:w-11">
               <a.icon className="h-5 w-5" />
             </span>
-            <div className="min-w-0 flex-1">
+            <div className="relative min-w-0 flex-1">
               <p className="truncate text-sm font-semibold text-white">{a.label}</p>
               <p className="truncate text-xs text-slate-500">{a.desc}</p>
             </div>
-            <ArrowUpRight className="ml-1 h-4 w-4 shrink-0 text-slate-500" />
+            <ArrowUpRight className="relative ml-1 h-4 w-4 shrink-0 text-slate-600 transition-colors group-hover:text-[#D4AF37]" />
           </Link>
         ))}
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

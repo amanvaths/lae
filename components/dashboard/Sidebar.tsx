@@ -10,6 +10,7 @@ import { navGroups } from "./nav";
 import { cn } from "@/lib/utils";
 import { withBasePath } from "@/lib/paths";
 import { truncateAddress } from "@/lib/format";
+import { motion } from "framer-motion";
 
 function NavLink({
   href,
@@ -25,27 +26,29 @@ function NavLink({
   onNavigate?: () => void;
 }) {
   return (
-    <Link
-      href={href}
-      onClick={onNavigate}
-      className={cn(
-        "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all",
-        active
-          ? "bg-gradient-to-r from-brand-500/20 to-accent-500/10 text-white"
-          : "text-slate-400 hover:bg-white/[0.04] hover:text-white"
-      )}
-    >
-      {active && (
-        <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-brand-400 shadow-glow" />
-      )}
-      <Icon
+    <Link href={href} onClick={onNavigate} className="block">
+      <motion.div
+        whileHover={{ x: 4 }}
+        transition={{ type: "spring", stiffness: 400, damping: 25 }}
         className={cn(
-          "h-[18px] w-[18px] shrink-0 transition-colors",
-          active ? "text-brand-300" : "text-slate-500 group-hover:text-slate-300"
+          "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-300",
+          active
+            ? "bg-gradient-to-r from-[#D4AF37]/20 via-[#D4AF37]/10 to-transparent text-white shadow-[0_0_20px_rgba(212,175,55,0.08)]"
+            : "text-slate-400 hover:bg-[#D4AF37]/[0.04] hover:text-white"
         )}
-      />
-      <span className="truncate">{label}</span>
-      {active && <ChevronRight className="ml-auto h-4 w-4 text-brand-300/70" />}
+      >
+        {active && (
+          <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-[#D4AF37] shadow-[0_0_8px_rgba(212,175,55,0.6)]" />
+        )}
+        <Icon
+          className={cn(
+            "h-[18px] w-[18px] shrink-0 transition-colors duration-300",
+            active ? "text-[#D4AF37]" : "text-slate-500 group-hover:text-[#D4AF37]/60"
+          )}
+        />
+        <span className="truncate">{label}</span>
+        {active && <ChevronRight className="ml-auto h-4 w-4 text-[#D4AF37]/70" />}
+      </motion.div>
     </Link>
   );
 }
@@ -64,23 +67,28 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const initial = address ? address.slice(2, 3).toUpperCase() : "?";
 
   return (
-    <div className="flex h-full flex-col bg-ink-900/80 backdrop-blur-xl">
-      <div className="flex h-16 items-center gap-2.5 border-b border-white/5 px-5">
+    <div className="flex h-full flex-col bg-[#050505]">
+      {/* Logo */}
+      <div className="flex h-16 items-center gap-2.5 border-b border-[#D4AF37]/15 px-5">
         <Link href={withBasePath("/")} className="flex items-center gap-2.5">
           <BrandLogo size={36} />
           <div className="leading-tight">
             <span className="block font-display text-base font-bold text-white">LAE</span>
-            <span className="block text-[10px] uppercase tracking-widest text-brand-300/80">
-              Network
+            <span className="block text-[10px] uppercase tracking-widest text-[#D4AF37]/80">
+              Club
             </span>
           </div>
         </Link>
       </div>
 
+      {/* Gold underline accent */}
+      <div className="h-px bg-gradient-to-r from-transparent via-[#D4AF37]/30 to-transparent" />
+
+      {/* Navigation */}
       <nav className="no-scrollbar flex-1 overflow-y-auto px-3 py-4">
         {navGroups.map((group) => (
           <div key={group.title} className="mb-5">
-            <p className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-widest text-slate-600">
+            <p className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#D4AF37]/50">
               {group.title}
             </p>
             <div className="flex flex-col gap-0.5">
@@ -98,27 +106,31 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           </div>
         ))}
 
-        <div className="mb-2 border-t border-white/5 pt-4">
-          <p className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-widest text-slate-600">
+        <div className="mb-2 border-t border-[#D4AF37]/10 pt-4">
+          <p className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#D4AF37]/50">
             Account
           </p>
         </div>
       </nav>
 
-      <div className="border-t border-white/5 p-3">
-        <div className="mb-2 flex items-center gap-3 rounded-xl border border-white/5 bg-white/[0.03] p-3">
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-to-br from-brand-400 to-accent-600 text-sm font-bold text-white">
+      {/* Wallet card */}
+      <div className="border-t border-[#D4AF37]/10 p-3">
+        <div className="mb-2 flex items-center gap-3 rounded-xl border border-[#D4AF37]/15 bg-white/[0.03] p-3 backdrop-blur-sm">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#D4AF37] to-[#B8860B] text-sm font-bold text-black">
             {initial}
           </span>
           <div className="min-w-0 flex-1 leading-tight">
             <p className="truncate font-mono text-sm font-semibold text-white">{display}</p>
-            <p className="truncate text-xs text-slate-500">BSC Testnet</p>
+            <p className="mt-0.5 inline-flex items-center gap-1 text-xs text-slate-500">
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              BSC Testnet
+            </p>
           </div>
         </div>
         <button
           type="button"
           onClick={disconnectWallet}
-          className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 px-3 py-2.5 text-sm text-slate-300 transition-colors hover:border-red-500/30 hover:bg-red-500/5 hover:text-red-300"
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 px-3 py-2.5 text-sm text-slate-400 transition-all duration-300 hover:border-red-500/30 hover:bg-red-500/5 hover:text-red-300"
         >
           <LogOut className="h-4 w-4" />
           Disconnect Wallet
