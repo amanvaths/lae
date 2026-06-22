@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useAccount, useBalance, usePublicClient, useReadContract, useWriteContract } from "wagmi";
 import { ArrowLeft, CheckCircle2, Loader2, AlertTriangle, Wallet, ExternalLink } from "lucide-react";
-import { formatEther, parseEther } from "viem";
+import { formatEther, parseEther, type PublicClient } from "viem";
 import { LAE_CONTRACTS } from "@/lib/lae-club/contracts";
 import { laeClubMatrixAbi } from "@/lib/lae-club/abis";
 import { erc20Abi } from "@/lib/contracts/abis/erc20";
@@ -20,8 +20,27 @@ import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { truncateAddress } from "@/lib/format";
 
-const MAX_UINT256 = 2n ** 256n - 1n;
-const REG_GAS_LIMIT = 12_000_000n;
+const REG_GAS_BUFFER_BPS = 1250n; // +25% over estimate
+const REG_GAS_MIN = 600_000n;
+const REG_GAS_MAX = 5_000_000n;
+
+async function estimateRegistrationGas(
+  client: PublicClient,
+  address: `0x${string}`,
+  refId: bigint
+): Promise<bigint> {
+  const estimated = await client.estimateContractGas({
+    address: LAE_CONTRACTS.matrix,
+    abi: laeClubMatrixAbi,
+    functionName: "registrationExt",
+    args: [refId],
+    account: address,
+  });
+  const withBuffer = (estimated * REG_GAS_BUFFER_BPS) / 1000n;
+  if (withBuffer < REG_GAS_MIN) return REG_GAS_MIN;
+  if (withBuffer > REG_GAS_MAX) return REG_GAS_MAX;
+  return withBuffer;
+}
 
 type RegPhase = "idle" | "approve" | "register" | "verify" | "success";
 
@@ -93,7 +112,7 @@ export function LaeRegisterPanel({ luxury = false }: { luxury?: boolean }) {
   const allowance = tokenAllowance.data ?? 0n;
   const hasEnoughToken = level1Price != null && paymentBal >= level1Price;
   const hasAllowance = level1Price != null && allowance >= level1Price;
-  const hasGas = (nativeBalance.data?.value ?? 0n) > parseEther("0.001");
+  const hasGas = (nativeBalance.data?.value ?? 0n) > parseEther("0.005");
 
   const validateReferrer = useCallback(async (): Promise<boolean> => {
     if (!client) return false;
@@ -146,6 +165,11 @@ export function LaeRegisterPanel({ luxury = false }: { luxury?: boolean }) {
   async function handleRegister() {
     if (!address || !level1Price || !client) return;
 
+    if (user.registered) {
+      push("This wallet is already registered — open your dashboard", "error");
+      return;
+    }
+
     const refOk = await validateReferrer();
     if (!refOk) return;
 
@@ -157,7 +181,7 @@ export function LaeRegisterPanel({ luxury = false }: { luxury?: boolean }) {
       return;
     }
     if (!hasGas) {
-      push("Need BNB on BSC Testnet for gas", "error");
+      push("Need BNB on BSC Testnet for gas (at least ~0.005 BNB recommended)", "error");
       return;
     }
 
@@ -174,7 +198,7 @@ export function LaeRegisterPanel({ luxury = false }: { luxury?: boolean }) {
           address: LAE_CONTRACTS.payment,
           abi: erc20Abi,
           functionName: "approve",
-          args: [LAE_CONTRACTS.matrix, MAX_UINT256],
+          args: [LAE_CONTRACTS.matrix, level1Price],
         });
         await client.waitForTransactionReceipt({ hash: approveHash });
         currentAllowance = await client.readContract({
@@ -192,12 +216,24 @@ export function LaeRegisterPanel({ luxury = false }: { luxury?: boolean }) {
 
       setPhase("register");
       push("Confirm registration in MetaMask…", "info");
+
+      // Simulate first — surfaces revert reason before MetaMask opens
+      await client.simulateContract({
+        address: LAE_CONTRACTS.matrix,
+        abi: laeClubMatrixAbi,
+        functionName: "registrationExt",
+        args: [refId],
+        account: address,
+      });
+
+      const gasLimit = await estimateRegistrationGas(client, address, refId);
+
       const regHash = await writeContractAsync({
         address: LAE_CONTRACTS.matrix,
         abi: laeClubMatrixAbi,
         functionName: "registrationExt",
         args: [refId],
-        gas: REG_GAS_LIMIT,
+        gas: gasLimit,
       });
       await client.waitForTransactionReceipt({ hash: regHash });
 
