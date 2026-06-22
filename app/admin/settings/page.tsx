@@ -8,7 +8,7 @@ import { triggerAdminIndexerSync } from "@/lib/lae-club/admin-api";
 import { Loader2, RefreshCw } from "lucide-react";
 
 const ADMIN_API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
-const MATRIX_DEPLOY_BLOCK = "114471162";
+const MATRIX_DEPLOY_BLOCK = "114851700";
 
 type Settings = {
   contracts: Record<string, string>;

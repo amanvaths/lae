@@ -1,6 +1,6 @@
 /** BSC Testnet deployed contracts — matches frontend lib/contracts/config.ts */
 export const LAE_MATRIX_DEPLOY_BLOCK = BigInt(
-  process.env.LAE_MATRIX_DEPLOY_BLOCK ?? process.env.INDEXER_START_BLOCK ?? "114471162"
+  process.env.LAE_MATRIX_DEPLOY_BLOCK ?? process.env.INDEXER_START_BLOCK ?? "114851700"
 );
 
 export const CHAIN = {
@@ -18,7 +18,7 @@ export const CHAIN = {
 export const CONTRACTS = {
   laeMatrix:
     process.env.LAE_MATRIX_CONTRACT_ADDRESS ??
-    "0xfa671b8Bae031fB9ef6eD02E9a9a63d05f764Dcf",
+    "0x431c0d8cdff03D85a6446C9D63947d3C4A5ad1E5",
   senso:
     process.env.SENSO_CONTRACT_ADDRESS ??
     "0x6521619C38fe4be6B800263CC783d9524ED4F7BA",

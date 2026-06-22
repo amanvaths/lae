@@ -33,7 +33,7 @@ const deployed = fs.existsSync(deployedPath)
 const MATRIX =
   process.env.LAE_MATRIX_CONTRACT ??
   deployed.matrix ??
-  "0xfa671b8Bae031fB9ef6eD02E9a9a63d05f764Dcf";
+  "0x431c0d8cdff03D85a6446C9D63947d3C4A5ad1E5";
 const LAECOIN =
   process.env.LAE_COIN_CONTRACT ??
   deployed.laeCoin ??
