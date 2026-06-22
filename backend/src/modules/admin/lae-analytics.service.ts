@@ -87,7 +87,14 @@ export async function listLaeUsers(limit = 100, offset = 0) {
     }),
     prisma.indexedLaeUser.count(),
   ]);
-  return { users, total };
+  return {
+    users: users.map((u) => ({
+      ...u,
+      registeredBlock: u.registeredBlock.toString(),
+      totalIncome: u.totalIncome.toString(),
+    })),
+    total,
+  };
 }
 
 export async function listLaeIncome(limit = 100, kind?: string) {
