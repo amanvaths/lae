@@ -4,8 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { Panel } from "@/components/dashboard/ui";
 import { LAE_CONTRACTS, addressUrl } from "@/lib/lae-club/contracts";
-import { triggerAdminIndexerSync } from "@/lib/lae-club/admin-api";
-import { Loader2, RefreshCw } from "lucide-react";
+import { triggerAdminIndexerSync, triggerAdminIndexerReset } from "@/lib/lae-club/admin-api";
+import { Loader2, RefreshCw, Trash2 } from "lucide-react";
 
 const ADMIN_API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 const MATRIX_DEPLOY_BLOCK = "114851700";
@@ -25,6 +25,7 @@ type Settings = {
 export default function AdminSettingsPage() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const [syncMsg, setSyncMsg] = useState<string | null>(null);
 
   const loadSettings = useCallback(() => {
@@ -40,6 +41,29 @@ export default function AdminSettingsPage() {
   useEffect(() => {
     loadSettings();
   }, [loadSettings]);
+
+  async function handleResetIndexer() {
+    if (
+      !window.confirm(
+        "Delete ALL indexed admin data (users, income, events)? This cannot be undone."
+      )
+    ) {
+      return;
+    }
+    setResetting(true);
+    setSyncMsg(null);
+    const res = await triggerAdminIndexerReset();
+    setResetting(false);
+    if (!res.ok) {
+      setSyncMsg(res.error);
+      return;
+    }
+    const d = res.data.deleted;
+    setSyncMsg(
+      `Reset complete — removed ${d.indexedLaeUsers ?? 0} users, ${d.chainEvents ?? 0} events. Indexer at block ${res.data.lastBlock}.`
+    );
+    loadSettings();
+  }
 
   async function handleSyncIndexer() {
     setSyncing(true);
@@ -106,6 +130,22 @@ export default function AdminSettingsPage() {
             {syncMsg && (
               <p className="mt-2 text-xs text-slate-400">{syncMsg}</p>
             )}
+            <button
+              type="button"
+              disabled={resetting || syncing}
+              onClick={() => void handleResetIndexer()}
+              className="mt-4 inline-flex w-full max-w-sm items-center justify-center gap-2 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200 hover:bg-red-500/20 disabled:opacity-50"
+            >
+              {resetting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" /> Resetting indexed data…
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4" /> Reset all indexed data
+                </>
+              )}
+            </button>
             <p className="mt-3 text-[11px] text-slate-500">
               Re-scans Registration, income, and placement events from the LAE Matrix contract.
             </p>

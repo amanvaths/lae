@@ -124,6 +124,15 @@ export function triggerAdminIndexerSync(fromBlock?: string) {
   );
 }
 
+export function triggerAdminIndexerReset() {
+  return adminPost<{
+    ok: boolean;
+    deleted: Record<string, number>;
+    lastBlock: string;
+    matrixDeployBlock: string;
+  }>("/indexer/reset", {});
+}
+
 async function adminPost<T>(path: string, body: object): Promise<AdminFetchResult<T>> {
   try {
     const res = await fetch(`${ADMIN_API}/api/admin${path}`, {

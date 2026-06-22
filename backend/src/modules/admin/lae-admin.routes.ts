@@ -12,6 +12,7 @@ import {
 } from "./lae-analytics.service.js";
 import { CONTRACTS } from "../../config/chains.js";
 import { replayFromBlock, getMatrixDeployBlock } from "../blockchain/sync-engine.js";
+import { resetIndexedAnalytics } from "../blockchain/reset-indexed-data.js";
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "admin@gmail.com";
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "Aman@9616";
@@ -111,6 +112,19 @@ export async function adminRoutes(app: FastifyInstance) {
         indexedUsers,
       },
       adminEmail: ADMIN_EMAIL,
+    };
+  });
+
+  /** Wipe indexed admin data and rewind indexer — use before fresh launch */
+  app.post("/admin/indexer/reset", async (request, reply) => {
+    if (!verifyAdmin(request)) return reply.status(401).send({ message: "Unauthorized" });
+    const deleted = await resetIndexedAnalytics();
+    const state = await prisma.indexerState.findUnique({ where: { id: "main" } });
+    return {
+      ok: true,
+      deleted,
+      lastBlock: state?.lastBlock?.toString() ?? "0",
+      matrixDeployBlock: getMatrixDeployBlock().toString(),
     };
   });
 
