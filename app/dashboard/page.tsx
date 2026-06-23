@@ -27,7 +27,7 @@ import {
 } from "@/lib/lae-club/hooks";
 import { sortEventsNewestFirst } from "@/lib/lae-club/event-utils";
 import { fmtEther } from "@/lib/contracts/format";
-import { truncateAddress } from "@/lib/format";
+import { truncateAddress, formatUnixDate } from "@/lib/format";
 import { withBasePath } from "@/lib/paths";
 import { txUrl } from "@/lib/lae-club/contracts";
 
@@ -99,7 +99,7 @@ export default function DashboardHome() {
             {user.registeredAt && user.registeredAt > 0n ? (
               <>
                 {" · Registered "}
-                {new Date(Number(user.registeredAt) * 1000).toLocaleDateString()}
+                {formatUnixDate(user.registeredAt)}
               </>
             ) : null}
             <Pill tone="gold" className="ml-2">

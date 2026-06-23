@@ -9,6 +9,7 @@ import { withBasePath } from "@/lib/paths";
 import { usePrefersReducedMotion } from "@/lib/useDeferredReady";
 import { useWeb3Loaded } from "@/app/providers";
 import { useAccount } from "wagmi";
+import { useClientMounted } from "@/lib/useClientMounted";
 import { useLaeUser } from "@/lib/lae-club/hooks";
 
 const NetworkCanvas = dynamic(
@@ -157,9 +158,24 @@ function HeroConnectSlideActions({
 }: {
   secondary: { href: string; label: string };
 }) {
+  const mounted = useClientMounted();
   const { isConnected } = useAccount();
   const user = useLaeUser();
   const registered = user.registered;
+
+  if (!mounted) {
+    return (
+      <div className="flex flex-wrap gap-3">
+        <a href={withBasePath("/login")} className="btn-primary group">
+          Connect Wallet
+          <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+        </a>
+        <a href={secondary.href} className="btn-ghost">
+          {secondary.label}
+        </a>
+      </div>
+    );
+  }
 
   if (isConnected && registered) {
     return (

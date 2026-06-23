@@ -19,7 +19,7 @@ import {
 } from "./abis";
 import { LAE_LEVELS } from "./constants";
 import { countFilledSlots } from "./matrix-slots";
-import { withBasePath } from "@/lib/paths";
+import { siteOrigin, withBasePath } from "@/lib/paths";
 import { fetchMatrixUserEvents, type MatrixUserEvent } from "./matrix-events";
 import { dedupeEvents, sortEventsNewestFirst } from "./event-utils";
 import { fetchLaeUserEventsFromApi } from "./user-api";
@@ -512,10 +512,10 @@ export function useLaeNftStatus() {
 }
 
 export function referralLinkByUserId(userId: bigint | number | undefined) {
-  if (typeof window === "undefined" || userId === undefined || userId === 0n || userId === 0) {
+  if (userId === undefined || userId === 0n || userId === 0) {
     return "";
   }
-  return `${window.location.origin}${withBasePath("/register")}?ref=${String(userId)}`;
+  return `${siteOrigin}${withBasePath("/register")}?ref=${String(userId)}`;
 }
 
 const MONTH_SECONDS = 30n * 24n * 60n * 60n;

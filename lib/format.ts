@@ -17,6 +17,18 @@ export function truncateAddress(addr: string, start = 6, end = 4): string {
   return `${addr.slice(0, start)}…${addr.slice(-end)}`;
 }
 
+/** Stable UTC date string — avoids SSR/client locale hydration mismatches. */
+export function formatUnixDate(sec: bigint | number): string {
+  const ms = Number(sec) * 1000;
+  if (!Number.isFinite(ms) || ms <= 0) return "—";
+  return new Date(ms).toLocaleDateString("en-US", {
+    timeZone: "UTC",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
 export function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-US", {
     month: "short",

@@ -1,4 +1,5 @@
 import { prisma } from "../../lib/prisma.js";
+import { serializeForJson } from "../../lib/serialize.js";
 
 function todayStart(): Date {
   const d = new Date();
@@ -98,18 +99,20 @@ export async function listLaeUsers(limit = 100, offset = 0) {
 }
 
 export async function listLaeIncome(limit = 100, kind?: string) {
-  return prisma.indexedLaeIncome.findMany({
+  const rows = await prisma.indexedLaeIncome.findMany({
     take: limit,
     where: kind ? { incomeKind: kind } : undefined,
     orderBy: { blockNumber: "desc" },
   });
+  return serializeForJson(rows);
 }
 
 export async function listLaePlacements(limit = 100) {
-  return prisma.indexedLaePlacement.findMany({
+  const rows = await prisma.indexedLaePlacement.findMany({
     take: limit,
     orderBy: { blockNumber: "desc" },
   });
+  return serializeForJson(rows);
 }
 
 export async function getLaeRewardsAnalytics(limit = 100) {

@@ -56,15 +56,15 @@ function NavLink({
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   const { address } = useAccount();
-  const { disconnectWallet } = useWalletSession();
+  const { isReady, disconnectWallet } = useWalletSession();
 
   const isActive = (href: string) =>
     href === "/dashboard"
       ? pathname === href || pathname === `${href}/`
       : pathname.startsWith(href);
 
-  const display = address ? truncateAddress(address, 6, 4) : "Not connected";
-  const initial = address ? address.slice(2, 3).toUpperCase() : "?";
+  const display = isReady && address ? truncateAddress(address, 6, 4) : "Not connected";
+  const initial = isReady && address ? address.slice(2, 3).toUpperCase() : "?";
 
   return (
     <div className="flex h-full flex-col bg-[#050505]">

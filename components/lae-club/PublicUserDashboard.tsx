@@ -307,7 +307,7 @@ export function PublicUserDashboard({ userId }: { userId: string }) {
       {tab === "overview" && (
         <Panel title="Referral link" className="mt-4">
           <code className="block break-all rounded bg-black/30 p-2 text-xs text-brand-200">
-            {isOnChain ? referralLinkByUserId(displayId) || "—" : `${typeof window !== "undefined" ? window.location.origin : ""}${withBasePath("/register")}?ref=${String(displayId)}`}
+            {referralLinkByUserId(displayId) || "—"}
           </code>
         </Panel>
       )}

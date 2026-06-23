@@ -7,6 +7,7 @@ import { withBasePath } from "@/lib/paths";
 import { useScrollSpy, sectionFromHref } from "@/lib/useScrollSpy";
 import { useWeb3Loaded } from "@/app/providers";
 import { useAccount } from "wagmi";
+import { useClientMounted } from "@/lib/useClientMounted";
 
 type DockLink = {
   href: string;
@@ -76,8 +77,9 @@ function MobileDockNav({ links }: { links: DockLink[] }) {
 }
 
 function MobileDockConnected() {
+  const mounted = useClientMounted();
   const { isConnected } = useAccount();
-  return <MobileDockNav links={buildLinks(isConnected)} />;
+  return <MobileDockNav links={buildLinks(mounted && isConnected)} />;
 }
 
 export function MobileDock() {

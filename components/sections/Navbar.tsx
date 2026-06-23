@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { withBasePath } from "@/lib/paths";
 import { useScrollSpy, sectionFromHref } from "@/lib/useScrollSpy";
 import { useWeb3Loaded } from "@/app/providers";
+import { useClientMounted } from "@/lib/useClientMounted";
 // import { TopBar } from "@/components/ui/TopBar";
 import { BrandLogo } from "@/components/ui/BrandLogo";
 
@@ -49,8 +50,9 @@ export function Navbar() {
   const active = useScrollSpy();
   const linkActive = (href: string) => sectionFromHref(href) === active;
   const web3Ready = useWeb3Loaded();
+  const mounted = useClientMounted();
   const { isConnected } = useAccount();
-  const showDashboard = web3Ready && isConnected;
+  const showDashboard = mounted && web3Ready && isConnected;
 
   useMotionValueEvent(scrollY, "change", (y) => setScrolled(y > 20));
 
