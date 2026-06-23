@@ -25,6 +25,8 @@ import {
   useLaeUserEvents,
   referralLinkByUserId,
 } from "@/lib/lae-club/hooks";
+import { useLaeMatrixTreeApi } from "@/lib/lae-club/matrix-api";
+import { buildSlotsFromApi } from "@/lib/lae-club/matrix-slots";
 import { sortEventsNewestFirst } from "@/lib/lae-club/event-utils";
 import { fmtEther } from "@/lib/contracts/format";
 import { truncateAddress, formatUnixDate } from "@/lib/format";
@@ -48,6 +50,8 @@ export default function DashboardHome() {
   const recycles = useLaeRecycleCount();
   const nft = useLaeNftStatus();
   const matrixL1 = useLaeMatrixLevel(1);
+  const userIdNum = user.userId ? Number(user.userId) : undefined;
+  const matrixL1Api = useLaeMatrixTreeApi(userIdNum, 1);
   const recentEvents = sortEventsNewestFirst(userEvents.data ?? []).slice(0, 8);
 
   if (user.isLoading) {
@@ -188,15 +192,24 @@ export default function DashboardHome() {
           title="Level 1 · Silver & Gold Matrix"
           className="mt-5 border-[#D4AF37]/15"
         >
-          {matrixL1.isLoading ? (
+          {matrixL1Api.isLoading && matrixL1.isLoading ? (
             <QueryLoading label="Loading matrix…" />
           ) : (
             <MatrixVisualizer
-              referrals={matrixL1.referrals}
-              levelActive={matrixL1.active}
+              slots={matrixL1Api.tree ? buildSlotsFromApi(matrixL1Api.tree.slots) : undefined}
+              referrals={matrixL1Api.tree ? undefined : matrixL1.referrals}
+              levelActive={matrixL1Api.tree?.active ?? matrixL1.active}
               level={1}
-              reinvestCount={matrixL1.reinvestCount}
-              totalEarning={matrixL1.totalEarning}
+              reinvestCount={
+                matrixL1Api.tree
+                  ? BigInt(Math.max(0, matrixL1Api.tree.cycle - 1))
+                  : matrixL1.reinvestCount
+              }
+              totalEarning={
+                matrixL1Api.tree
+                  ? BigInt(matrixL1Api.tree.totalEarning || "0")
+                  : matrixL1.totalEarning
+              }
             />
           )}
         </Panel>
