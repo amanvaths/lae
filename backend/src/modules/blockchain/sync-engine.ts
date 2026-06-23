@@ -18,6 +18,10 @@ let provider: ethers.JsonRpcProvider | null = null;
 let syncing = false;
 let pollTimer: ReturnType<typeof setInterval> | null = null;
 
+let lastSelfHealAt = 0;
+const SELF_HEAL_INTERVAL_MS = 60_000;
+const matrixReadIface = ["function lastUserId() view returns (uint256)"];
+
 export function getIndexerProvider(): ethers.JsonRpcProvider {
   if (!provider) {
     provider = new ethers.JsonRpcProvider(CHAIN.rpcUrl, CHAIN.chainId);
@@ -133,10 +137,43 @@ export async function syncBlockRange(fromBlock: bigint, toBlock: bigint): Promis
   return processed;
 }
 
+/**
+ * Recover indexed data from direct contract reads when the cursor has moved
+ * past the deploy block but the DB is empty (e.g. after an admin reset, or
+ * when the public RPC blocks historical eth_getLogs). Throttled so it does not
+ * run on every poll.
+ */
+async function selfHealFromChainIfBehind(): Promise<void> {
+  const now = Date.now();
+  if (now - lastSelfHealAt < SELF_HEAL_INTERVAL_MS) return;
+  lastSelfHealAt = now;
+
+  try {
+    const p = getIndexerProvider();
+    const matrix = new ethers.Contract(CONTRACTS.laeMatrix, matrixReadIface, p);
+    const onchainUsers = Number(await matrix.lastUserId());
+    if (onchainUsers < 1) return;
+
+    const indexedUsers = await prisma.indexedLaeUser.count();
+    if (indexedUsers >= onchainUsers) return;
+
+    console.warn(
+      `[indexer] Self-heal: on-chain users ${onchainUsers} > indexed ${indexedUsers} — backfilling from chain`
+    );
+    await backfillLaeUsersFromChain();
+    await backfillLaeUserEventsFromChain().catch((err) => {
+      console.error("[indexer] self-heal event backfill failed:", err);
+    });
+  } catch (err) {
+    console.error("[indexer] self-heal check failed:", err);
+  }
+}
+
 export async function runIndexerSync(): Promise<void> {
   if (syncing) return;
   syncing = true;
   try {
+    await selfHealFromChainIfBehind();
     const state = await getIndexerState();
     const p = getIndexerProvider();
     const latest = BigInt(await p.getBlockNumber());
