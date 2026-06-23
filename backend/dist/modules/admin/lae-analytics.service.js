@@ -1,4 +1,5 @@
 import { prisma } from "../../lib/prisma.js";
+import { serializeForJson } from "../../lib/serialize.js";
 function todayStart() {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
@@ -71,20 +72,29 @@ export async function listLaeUsers(limit = 100, offset = 0) {
         }),
         prisma.indexedLaeUser.count(),
     ]);
-    return { users, total };
+    return {
+        users: users.map((u) => ({
+            ...u,
+            registeredBlock: u.registeredBlock.toString(),
+            totalIncome: u.totalIncome.toString(),
+        })),
+        total,
+    };
 }
 export async function listLaeIncome(limit = 100, kind) {
-    return prisma.indexedLaeIncome.findMany({
+    const rows = await prisma.indexedLaeIncome.findMany({
         take: limit,
         where: kind ? { incomeKind: kind } : undefined,
         orderBy: { blockNumber: "desc" },
     });
+    return serializeForJson(rows);
 }
 export async function listLaePlacements(limit = 100) {
-    return prisma.indexedLaePlacement.findMany({
+    const rows = await prisma.indexedLaePlacement.findMany({
         take: limit,
         orderBy: { blockNumber: "desc" },
     });
+    return serializeForJson(rows);
 }
 export async function getLaeRewardsAnalytics(limit = 100) {
     const [allocated, claimed, allocatedAgg, claimedAgg] = await Promise.all([

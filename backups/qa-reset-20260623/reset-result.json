@@ -1,0 +1,22 @@
+{
+    "ok": true,
+    "deleted": {
+        "indexedLaeUsers": 14,
+        "indexedLaeIncome": 8,
+        "indexedLaePlacements": 26,
+        "chainEvents": 73,
+        "indexedUsers": 0,
+        "indexedReferrals": 13,
+        "indexedTransactions": 26,
+        "indexedClubMatrix": 0,
+        "indexedPilotMatrix": 0,
+        "indexedIncome": 0,
+        "indexedTokenRewards": 0,
+        "indexedWithdrawals": 0,
+        "indexedSpins": 0,
+        "indexedStakes": 0,
+        "indexerCursorBlock": 115009158
+    },
+    "lastBlock": "115009158",
+    "matrixDeployBlock": "115009159"
+}

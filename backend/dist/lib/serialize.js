@@ -1,4 +1,5 @@
-/** Convert Prisma rows (BigInt, Date) into JSON-safe values for Fastify responses. */
+import { Decimal } from "@prisma/client/runtime/library";
+/** Convert Prisma rows (BigInt, Date, Decimal) into JSON-safe values for Fastify responses. */
 export function serializeForJson(value) {
     if (value === null || value === undefined)
         return value;
@@ -6,6 +7,8 @@ export function serializeForJson(value) {
         return value.toString();
     if (value instanceof Date)
         return value.toISOString();
+    if (Decimal.isDecimal(value))
+        return value.toString();
     if (Array.isArray(value))
         return value.map((item) => serializeForJson(item));
     if (typeof value === "object") {

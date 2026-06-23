@@ -1,17 +1,18 @@
 /** BSC Testnet deployed contracts — matches frontend lib/contracts/config.ts */
+export const LAE_MATRIX_DEPLOY_BLOCK = BigInt(process.env.LAE_MATRIX_DEPLOY_BLOCK ?? process.env.INDEXER_START_BLOCK ?? "115009159");
 export const CHAIN = {
     chainId: Number(process.env.CHAIN_ID ?? process.env.POLYGON_CHAIN_ID ?? "97"),
     rpcUrl: process.env.BSC_RPC_URL ??
         process.env.POLYGON_RPC_URL ??
-        "https://data-seed-prebsc-1-s1.binance.org:8545",
-    startBlock: BigInt(process.env.INDEXER_START_BLOCK ?? "0"),
+        "https://bsc-testnet.publicnode.com",
+    startBlock: BigInt(process.env.INDEXER_START_BLOCK ?? String(LAE_MATRIX_DEPLOY_BLOCK)),
     reorgDepth: Number(process.env.INDEXER_REORG_DEPTH ?? "12"),
-    batchSize: Number(process.env.INDEXER_BATCH_SIZE ?? "2000"),
+    batchSize: Number(process.env.INDEXER_BATCH_SIZE ?? "400"),
     pollMs: Number(process.env.INDEXER_POLL_MS ?? "8000"),
 };
 export const CONTRACTS = {
     laeMatrix: process.env.LAE_MATRIX_CONTRACT_ADDRESS ??
-        "0xfa671b8Bae031fB9ef6eD02E9a9a63d05f764Dcf",
+        "0x61a12F835D7F51A6508c4CeBA0fA30d50d092621",
     senso: process.env.SENSO_CONTRACT_ADDRESS ??
         "0x6521619C38fe4be6B800263CC783d9524ED4F7BA",
     slt: process.env.SLT_CONTRACT_ADDRESS ??
@@ -24,6 +25,6 @@ export const CONTRACTS = {
         "0xD6698E6a8Ee4712cC2E36C150f1C34e59884C45A",
     paymentToken: process.env.PAYMENT_TOKEN_ADDRESS ??
         process.env.DAI_CONTRACT_ADDRESS ??
-        "0xf8E556996042b34cc706F040c59955abB678995e",
+        "0xb2bE66BE07E1AD04074B32B8b13DcdFaB6B57575",
 };
 //# sourceMappingURL=chains.js.map

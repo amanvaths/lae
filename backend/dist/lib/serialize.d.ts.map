@@ -1,1 +1,1 @@
-{"version":3,"file":"serialize.d.ts","sourceRoot":"","sources":["../../src/lib/serialize.ts"],"names":[],"mappings":"AAAA,sFAAsF;AACtF,wBAAgB,gBAAgB,CAAC,CAAC,EAAE,KAAK,EAAE,CAAC,GAAG,CAAC,CAa/C"}
+{"version":3,"file":"serialize.d.ts","sourceRoot":"","sources":["../../src/lib/serialize.ts"],"names":[],"mappings":"AAEA,+FAA+F;AAC/F,wBAAgB,gBAAgB,CAAC,CAAC,EAAE,KAAK,EAAE,CAAC,GAAG,CAAC,CAc/C"}

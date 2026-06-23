@@ -29,14 +29,14 @@ export declare function getLaeAdminDashboardStats(): Promise<{
 }>;
 export declare function listLaeUsers(limit?: number, offset?: number): Promise<{
     users: {
+        registeredBlock: string;
+        totalIncome: string;
         walletAddress: string;
         sponsorId: number | null;
         createdAt: Date;
         userId: number;
         registeredAt: Date;
-        registeredBlock: bigint;
         teamSize: number;
-        totalIncome: import("@prisma/client/runtime/library").Decimal;
     }[];
     total: number;
 }>;

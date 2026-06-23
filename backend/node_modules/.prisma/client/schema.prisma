@@ -879,3 +879,25 @@ model IndexedLaePlacement {
   @@index([level])
   @@map("idx_lae_placements")
 }
+
+/// Authoritative per-(owner, level, cycle) matrix tree snapshot.
+/// Built from the contract's usersXMatrixReferrals() — the on-chain source of
+/// truth — so the frontend renders the tree from DB instead of recalculating.
+model IndexedMatrixSlot {
+  id            String   @id @default(cuid())
+  referrerId    Int      @map("referrer_id") // matrix owner userId
+  level         Int
+  cycle         Int
+  spot          Int // 1..14, sequential fill order
+  userId        Int      @map("user_id") // occupant userId
+  walletAddress String   @map("wallet_address") // occupant address
+  blockNumber   BigInt?  @map("block_number")
+  txHash        String?  @map("tx_hash")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@unique([referrerId, level, cycle, spot])
+  @@index([referrerId, level])
+  @@index([userId])
+  @@map("idx_lae_matrix_slots")
+}

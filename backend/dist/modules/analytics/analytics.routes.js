@@ -1,5 +1,6 @@
 import { getDashboard, getWalletAnalytics, getReferrals, getTeamStats, getMatrices, getIncomeHistory, getRewardHistory, getTransactions, getSpins, getStakes, getLeaderboard, getIndexerStatus, } from "./analytics.service.js";
-import { replayFromBlock } from "../blockchain/sync-engine.js";
+import { replayFromBlock, getMatrixDeployBlock } from "../blockchain/sync-engine.js";
+import { getMatrixTree, getMatrixOverview } from "../blockchain/matrix-tree.service.js";
 import { requireIndexerAdmin } from "../../middleware/indexer-admin.js";
 function walletFromQuery(query) {
     const w = query.wallet ?? query.address;
@@ -75,12 +76,31 @@ export async function analyticsRoutes(app) {
         const limit = Number(request.query.limit ?? 50);
         return getLeaderboard(limit);
     });
+    /** Authoritative 14-spot matrix tree for a user/level — source of truth = contract, served from backend. */
+    app.get("/matrix/tree/:userId/:level", async (request, reply) => {
+        const params = request.params;
+        const userId = Number(params.userId);
+        const level = Number(params.level);
+        const tree = await getMatrixTree(userId, level);
+        if ("error" in tree)
+            return reply.code(400).send(tree);
+        return tree;
+    });
+    /** Per-level active flag + fill counts for the matrix grid. */
+    app.get("/matrix/overview/:userId", async (request, reply) => {
+        const params = request.params;
+        const userId = Number(params.userId);
+        const overview = await getMatrixOverview(userId);
+        if ("error" in overview)
+            return reply.code(400).send(overview);
+        return overview;
+    });
     app.get("/indexer/status", async () => getIndexerStatus());
     app.post("/indexer/replay", { preHandler: requireIndexerAdmin }, async (request) => {
         const body = request.body;
-        const from = BigInt(body?.fromBlock ?? 0);
-        await replayFromBlock(from);
-        return { ok: true, fromBlock: from.toString() };
+        const from = BigInt(body?.fromBlock ?? getMatrixDeployBlock());
+        const indexedUsers = await replayFromBlock(from);
+        return { ok: true, fromBlock: from.toString(), indexedUsers };
     });
 }
 //# sourceMappingURL=analytics.routes.js.map

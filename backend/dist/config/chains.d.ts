@@ -1,4 +1,5 @@
 /** BSC Testnet deployed contracts — matches frontend lib/contracts/config.ts */
+export declare const LAE_MATRIX_DEPLOY_BLOCK: bigint;
 export declare const CHAIN: {
     readonly chainId: number;
     readonly rpcUrl: string;

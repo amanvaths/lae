@@ -1,0 +1,25 @@
+{
+    "totalUsers": 0,
+    "todayRegistrations": 0,
+    "levelSales": [],
+    "royalPool": {
+        "totalPaid": "0",
+        "eventCount": 0
+    },
+    "matrixIncome": {
+        "totalPaid": "0",
+        "eventCount": 0
+    },
+    "placements": 0,
+    "reinvests": 0,
+    "staking": {
+        "totalStaked": "0",
+        "stakeEvents": 0,
+        "activeStakes": 0
+    },
+    "indexer": {
+        "lastBlock": "115009158",
+        "chainId": 97
+    },
+    "chainEvents": 0
+}

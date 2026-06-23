@@ -13,7 +13,7 @@ export const config = {
         rpcUrl: process.env.BSC_RPC_URL ?? process.env.POLYGON_RPC_URL ?? "https://data-seed-prebsc-1-s1.binance.org:8545",
         chainId: parseInt(process.env.CHAIN_ID ?? process.env.POLYGON_CHAIN_ID ?? "97", 10),
         sensoContract: process.env.SENSO_CONTRACT_ADDRESS ?? "0x6521619C38fe4be6B800263CC783d9524ED4F7BA",
-        daiContract: process.env.DAI_CONTRACT_ADDRESS ?? "0xf8E556996042b34cc706F040c59955abB678995e",
+        daiContract: process.env.DAI_CONTRACT_ADDRESS ?? "0xb2bE66BE07E1AD04074B32B8b13DcdFaB6B57575",
         sltContract: process.env.SLT_CONTRACT_ADDRESS ?? "0xc842c083E703ecf82496813cc3BFe6d36c0A49b0",
         spinContract: process.env.SPIN_CONTRACT_ADDRESS ?? "0xF9bdE4a2Ca487b18DA8546124b63Ec9e938ea1aE",
         stakingContract: process.env.STAKING_CONTRACT_ADDRESS ?? "0xdb25Af21346aD358D5e52835934AF5f326169984",
