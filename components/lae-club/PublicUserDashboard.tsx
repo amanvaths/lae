@@ -22,9 +22,12 @@ import {
   useLaeRewardSummaryForAddress,
   useLaeUserEventsForUser,
   useLaeVestingDirectRequirement,
+  useLaeIdsForAddresses,
   referralLinkByUserId,
   parseLaeUserId,
 } from "@/lib/lae-club/hooks";
+import { useLaeMatrixTreeApi } from "@/lib/lae-club/matrix-api";
+import { buildSlotsFromApi, buildMatrixSlots } from "@/lib/lae-club/matrix-slots";
 import { LAE_LEVELS, LAE_COIN_TOKENOMICS } from "@/lib/lae-club/constants";
 import { fmtEther } from "@/lib/contracts/format";
 import { truncateAddress } from "@/lib/format";
@@ -51,6 +54,24 @@ export function PublicUserDashboard({ userId }: { userId: string }) {
   const matrixL1 = useLaeMatrixLevelForUser(user.walletAddress, user.userId ?? parsedId ?? undefined, 1);
   const matrix = useLaeMatrixLevelForUser(user.walletAddress, user.userId ?? parsedId ?? undefined, matrixLevel);
   const team = useLaeDirectTeamForUser(user.userId ?? parsedId ?? undefined);
+
+  // Authoritative tree from backend API (contract source of truth); contract
+  // referrals with resolved #ids are the fallback so the view is never raw hex.
+  const viewUserIdNum = user.userId
+    ? Number(user.userId)
+    : parsedId != null
+      ? Number(parsedId)
+      : undefined;
+  const treeL1Api = useLaeMatrixTreeApi(viewUserIdNum, 1);
+  const treeApi = useLaeMatrixTreeApi(viewUserIdNum, matrixLevel);
+  const matrixL1Ids = useLaeIdsForAddresses(matrixL1.referrals);
+  const matrixIds = useLaeIdsForAddresses(matrix.referrals);
+  const l1Slots = treeL1Api.tree
+    ? buildSlotsFromApi(treeL1Api.tree.slots)
+    : buildMatrixSlots(matrixL1.referrals, matrixL1.active, matrixL1Ids.idByAddress);
+  const lvlSlots = treeApi.tree
+    ? buildSlotsFromApi(treeApi.tree.slots)
+    : buildMatrixSlots(matrix.referrals, matrix.active, matrixIds.idByAddress);
   const rewards = useLaeRewardSummaryForAddress(user.walletAddress);
   const events = useLaeUserEventsForUser(user.userId ?? parsedId ?? undefined, user.walletAddress);
   const vesting = useLaeVestingDirectRequirement(user.registeredAt);
@@ -166,8 +187,8 @@ export function PublicUserDashboard({ userId }: { userId: string }) {
               <QueryLoading label="Loading matrix…" />
             ) : (
               <MatrixVisualizer
-                referrals={matrixL1.referrals}
-                levelActive={matrixL1.active}
+                slots={l1Slots}
+                levelActive={treeL1Api.tree?.active ?? matrixL1.active}
                 level={1}
                 reinvestCount={matrixL1.reinvestCount}
                 totalEarning={matrixL1.totalEarning}
@@ -207,8 +228,8 @@ export function PublicUserDashboard({ userId }: { userId: string }) {
                 <QueryLoading label="Loading level…" />
               ) : (
                 <MatrixVisualizer
-                  referrals={matrix.referrals}
-                  levelActive={matrix.active}
+                  slots={lvlSlots}
+                  levelActive={treeApi.tree?.active ?? matrix.active}
                   level={matrixLevel}
                   reinvestCount={matrix.reinvestCount}
                   totalEarning={matrix.totalEarning}

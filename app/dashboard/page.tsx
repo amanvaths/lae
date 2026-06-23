@@ -23,10 +23,11 @@ import {
   useLaeNftStatus,
   useLaeMatrixLevel,
   useLaeUserEvents,
+  useLaeIdsForAddresses,
   referralLinkByUserId,
 } from "@/lib/lae-club/hooks";
 import { useLaeMatrixTreeApi } from "@/lib/lae-club/matrix-api";
-import { buildSlotsFromApi } from "@/lib/lae-club/matrix-slots";
+import { buildSlotsFromApi, buildMatrixSlots } from "@/lib/lae-club/matrix-slots";
 import { sortEventsNewestFirst } from "@/lib/lae-club/event-utils";
 import { fmtEther } from "@/lib/contracts/format";
 import { truncateAddress, formatUnixDate } from "@/lib/format";
@@ -52,6 +53,7 @@ export default function DashboardHome() {
   const matrixL1 = useLaeMatrixLevel(1);
   const userIdNum = user.userId ? Number(user.userId) : undefined;
   const matrixL1Api = useLaeMatrixTreeApi(userIdNum, 1);
+  const matrixL1FallbackIds = useLaeIdsForAddresses(matrixL1.referrals);
   const recentEvents = sortEventsNewestFirst(userEvents.data ?? []).slice(0, 8);
 
   if (user.isLoading) {
@@ -196,8 +198,15 @@ export default function DashboardHome() {
             <QueryLoading label="Loading matrix…" />
           ) : (
             <MatrixVisualizer
-              slots={matrixL1Api.tree ? buildSlotsFromApi(matrixL1Api.tree.slots) : undefined}
-              referrals={matrixL1Api.tree ? undefined : matrixL1.referrals}
+              slots={
+                matrixL1Api.tree
+                  ? buildSlotsFromApi(matrixL1Api.tree.slots)
+                  : buildMatrixSlots(
+                      matrixL1.referrals,
+                      matrixL1.active,
+                      matrixL1FallbackIds.idByAddress
+                    )
+              }
               levelActive={matrixL1Api.tree?.active ?? matrixL1.active}
               level={1}
               reinvestCount={

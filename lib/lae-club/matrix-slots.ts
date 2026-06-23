@@ -33,7 +33,8 @@ export type MatrixSlot = {
  */
 export function buildMatrixSlots(
   referrals: readonly Address[],
-  levelActive: boolean
+  levelActive: boolean,
+  idByAddress?: Map<string, number>
 ): MatrixSlot[] {
   const filledCount = referrals.filter(
     (a) => a && a.toLowerCase() !== ZERO
@@ -61,6 +62,7 @@ export function buildMatrixSlots(
         spot,
         state: "filled" as const,
         address: raw,
+        userId: idByAddress?.get(raw.toLowerCase()) ?? null,
         label: meta.label,
         sublabel: meta.sublabel,
         tone: meta.tone,

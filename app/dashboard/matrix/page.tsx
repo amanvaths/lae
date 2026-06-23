@@ -8,13 +8,14 @@ import { MatrixVisualizer } from "@/components/lae-club/MatrixVisualizer";
 import { MatrixLevelCard } from "@/components/lae-club/MatrixLevelCard";
 import { MatrixStatusPanel } from "@/components/lae-club/MatrixStatusPanel";
 import { LAE_LEVELS } from "@/lib/lae-club/constants";
-import { buildSlotsFromApi } from "@/lib/lae-club/matrix-slots";
+import { buildSlotsFromApi, buildMatrixSlots } from "@/lib/lae-club/matrix-slots";
 import {
   useLaeUser,
   useLaeLevelPrices,
   useLaeMatrixLevel,
   useLaeAllMatrixLevels,
   useLaeMatrixFillCounts,
+  useLaeIdsForAddresses,
 } from "@/lib/lae-club/hooks";
 import {
   useLaeMatrixTreeApi,
@@ -39,6 +40,9 @@ export default function MatrixPage() {
   const matrix = useLaeMatrixLevel(selectedLevel ?? 1, {
     enabled: selectedLevel !== null,
   });
+  // Safety net: resolve fallback referral addresses → #id so the tree never
+  // shows raw hex when the API momentarily fails.
+  const fallbackIds = useLaeIdsForAddresses(matrix.referrals);
 
   if (user.isLoading) {
     return <QueryLoading label="Loading LAE Club matrix…" />;
@@ -65,6 +69,11 @@ export default function MatrixPage() {
   // Tree rendering: prefer API slots; fall back to contract referrals only if API failed.
   const tree = treeApi.tree;
   const apiSlots = tree ? buildSlotsFromApi(tree.slots) : undefined;
+  const treeActiveForSlots = tree?.active ?? matrix.active;
+  const fallbackSlots = !apiSlots
+    ? buildMatrixSlots(matrix.referrals, treeActiveForSlots, fallbackIds.idByAddress)
+    : undefined;
+  const renderSlots = apiSlots ?? fallbackSlots;
   const treeActive = tree?.active ?? matrix.active;
   const treeReinvest = tree ? BigInt(Math.max(0, tree.cycle - 1)) : matrix.reinvestCount;
   const treeEarning = tree ? BigInt(tree.totalEarning || "0") : matrix.totalEarning;
@@ -141,8 +150,7 @@ export default function MatrixPage() {
                 </p>
               ) : (
                 <MatrixVisualizer
-                  slots={apiSlots}
-                  referrals={apiSlots ? undefined : matrix.referrals}
+                  slots={renderSlots}
                   levelActive={treeActive}
                   level={selectedLevel}
                   reinvestCount={treeReinvest}

@@ -244,6 +244,42 @@ export function useLaeMatrixFillCounts() {
   };
 }
 
+/**
+ * Batch-resolve occupant addresses → on-chain userId via addressToId().
+ * Used as a safety net so the matrix UI can always render `#id` even when the
+ * backend tree API is momentarily unavailable and we fall back to raw contract
+ * referral addresses. Returns a lowercase-address → userId map.
+ */
+export function useLaeIdsForAddresses(addresses: readonly (Address | undefined)[]) {
+  const ZERO = "0x0000000000000000000000000000000000000000";
+  const unique = Array.from(
+    new Set(
+      addresses
+        .filter((a): a is Address => !!a && a.toLowerCase() !== ZERO)
+        .map((a) => a.toLowerCase() as Address)
+    )
+  );
+
+  const reads = useReadContracts({
+    contracts: unique.map((a) => ({
+      address: LAE_CONTRACTS.matrix,
+      abi: laeClubMatrixAbi,
+      functionName: "addressToId" as const,
+      args: [a] as [Address],
+    })),
+    query: { enabled: unique.length > 0, staleTime: 60_000, retry: 1 },
+  });
+
+  const idByAddress = new Map<string, number>();
+  unique.forEach((a, i) => {
+    const raw = reads.data?.[i]?.result as bigint | undefined;
+    const id = raw ? Number(raw) : 0;
+    if (id > 0) idByAddress.set(a, id);
+  });
+
+  return { idByAddress, isLoading: unique.length > 0 && reads.isLoading };
+}
+
 export function useLaeAllMatrixLevels() {
   const { address } = useAccount();
   const user = useLaeUser();
