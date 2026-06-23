@@ -8,7 +8,7 @@ import { triggerAdminIndexerSync, triggerAdminIndexerReset } from "@/lib/lae-clu
 import { Loader2, RefreshCw, Trash2 } from "lucide-react";
 
 const ADMIN_API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
-const MATRIX_DEPLOY_BLOCK = "114851700";
+const MATRIX_DEPLOY_BLOCK = "115009159";
 
 type Settings = {
   contracts: Record<string, string>;

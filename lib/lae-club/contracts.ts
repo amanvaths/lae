@@ -5,7 +5,7 @@ export const CHAIN_ID = Number(process.env.NEXT_PUBLIC_CHAIN_ID ?? "97");
 export const LAE_CONTRACTS = {
   /** LAEClubMatrix — 15-level 14-spot matrix */
   matrix: (process.env.NEXT_PUBLIC_LAE_MATRIX_CONTRACT ??
-    "0x431c0d8cdff03D85a6446C9D63947d3C4A5ad1E5") as `0x${string}`,
+    "0x61a12F835D7F51A6508c4CeBA0fA30d50d092621") as `0x${string}`,
   /** Payment token (BTCB / mock on testnet) */
   payment: (process.env.NEXT_PUBLIC_PAYMENT_TOKEN ??
     process.env.NEXT_PUBLIC_DAI_CONTRACT ??

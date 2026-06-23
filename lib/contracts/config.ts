@@ -20,7 +20,7 @@ export const LOG_LOOKBACK_BLOCKS = 30_000n;
 
 /** LAEClubMatrix deploy block — BSC Testnet (Jun 2026) */
 export const LAE_MATRIX_DEPLOY_BLOCK = BigInt(
-  process.env.NEXT_PUBLIC_LAE_MATRIX_DEPLOY_BLOCK ?? "114851700"
+  process.env.NEXT_PUBLIC_LAE_MATRIX_DEPLOY_BLOCK ?? "115009159"
 );
 
 /** Max blocks per eth_getLogs request (public RPC limit) */
