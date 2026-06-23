@@ -280,6 +280,40 @@ export function useLaeIdsForAddresses(addresses: readonly (Address | undefined)[
   return { idByAddress, isLoading: unique.length > 0 && reads.isLoading };
 }
 
+/**
+ * Batch-resolve userId → wallet address via idToAddress(). Returns a
+ * number(userId) → Address map. Used by income/reporting views to show the
+ * real wallet address next to each "from #id" entry.
+ */
+export function useLaeAddressesForIds(ids: readonly (number | bigint | undefined)[]) {
+  const ZERO = "0x0000000000000000000000000000000000000000";
+  const unique = Array.from(
+    new Set(
+      ids
+        .map((v) => (v == null ? 0 : Number(v)))
+        .filter((n) => Number.isFinite(n) && n > 0)
+    )
+  );
+
+  const reads = useReadContracts({
+    contracts: unique.map((id) => ({
+      address: LAE_CONTRACTS.matrix,
+      abi: laeClubMatrixAbi,
+      functionName: "idToAddress" as const,
+      args: [BigInt(id)] as [bigint],
+    })),
+    query: { enabled: unique.length > 0, staleTime: 300_000, retry: 1 },
+  });
+
+  const addressById = new Map<number, Address>();
+  unique.forEach((id, i) => {
+    const addr = reads.data?.[i]?.result as Address | undefined;
+    if (addr && addr.toLowerCase() !== ZERO) addressById.set(id, addr);
+  });
+
+  return { addressById, isLoading: unique.length > 0 && reads.isLoading };
+}
+
 export function useLaeAllMatrixLevels() {
   const { address } = useAccount();
   const user = useLaeUser();
