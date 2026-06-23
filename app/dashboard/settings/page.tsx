@@ -12,6 +12,7 @@ import { truncateAddress } from "@/lib/format";
 import { CHAIN_ID } from "@/lib/lae-club/contracts";
 
 export default function SettingsPage() {
+  const { isReady } = useWalletSession();
   const { address } = useAccount();
   const user = useLaeUser();
   const { disconnectWallet, isWrongNetwork } = useWalletSession();
@@ -28,7 +29,7 @@ export default function SettingsPage() {
           <dl className="space-y-4 text-sm">
             <div className="flex items-center justify-between rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-3">
               <dt className="text-slate-500">Address</dt>
-              <dd className="font-mono text-[#D4AF37]">{address ? truncateAddress(address) : "—"}</dd>
+              <dd className="font-mono text-[#D4AF37]">{isReady && address ? truncateAddress(address) : "—"}</dd>
             </div>
             <div className="flex items-center justify-between rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-3">
               <dt className="text-slate-500">Registered on-chain</dt>
