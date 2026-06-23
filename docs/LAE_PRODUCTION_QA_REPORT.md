@@ -2,7 +2,7 @@
 
 **Date:** 2026-06-22  
 **Scope:** Frontend-only rebuild (contracts/indexer untouched)  
-**Contract:** `0x431c0d8cdff03D85a6446C9D63947d3C4A5ad1E5` (BSC Testnet)
+**Contract:** `0x61a12F835D7F51A6508c4CeBA0fA30d50d092621` (Matrix) · `0xD6698E6a8Ee4712cC2E36C150f1C34e59884C45A` (LAE Coin) — BSC Testnet
 
 ---
 
