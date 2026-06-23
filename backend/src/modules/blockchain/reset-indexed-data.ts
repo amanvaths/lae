@@ -8,6 +8,7 @@ export async function resetIndexedAnalytics(): Promise<Record<string, number>> {
 
   const [
     laePlacements,
+    matrixSlots,
     laeIncome,
     laeUsers,
     referrals,
@@ -23,6 +24,7 @@ export async function resetIndexedAnalytics(): Promise<Record<string, number>> {
     chainEvents,
   ] = await prisma.$transaction([
     prisma.indexedLaePlacement.deleteMany(),
+    prisma.indexedMatrixSlot.deleteMany(),
     prisma.indexedLaeIncome.deleteMany(),
     prisma.indexedLaeUser.deleteMany(),
     prisma.indexedReferral.deleteMany(),
@@ -50,6 +52,7 @@ export async function resetIndexedAnalytics(): Promise<Record<string, number>> {
     indexedLaeUsers: laeUsers.count,
     indexedLaeIncome: laeIncome.count,
     indexedLaePlacements: laePlacements.count,
+    indexedMatrixSlots: matrixSlots.count,
     chainEvents: chainEvents.count,
     indexedUsers: users.count,
     indexedReferrals: referrals.count,

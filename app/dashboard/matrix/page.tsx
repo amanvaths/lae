@@ -8,7 +8,7 @@ import { MatrixVisualizer } from "@/components/lae-club/MatrixVisualizer";
 import { MatrixLevelCard } from "@/components/lae-club/MatrixLevelCard";
 import { MatrixStatusPanel } from "@/components/lae-club/MatrixStatusPanel";
 import { LAE_LEVELS } from "@/lib/lae-club/constants";
-import { validateMatrixMapping, buildMatrixSlots } from "@/lib/lae-club/matrix-slots";
+import { buildSlotsFromApi } from "@/lib/lae-club/matrix-slots";
 import {
   useLaeUser,
   useLaeLevelPrices,
@@ -16,11 +16,24 @@ import {
   useLaeAllMatrixLevels,
   useLaeMatrixFillCounts,
 } from "@/lib/lae-club/hooks";
+import {
+  useLaeMatrixTreeApi,
+  useLaeMatrixOverviewApi,
+} from "@/lib/lae-club/matrix-api";
 
 export default function MatrixPage() {
   const [selectedLevel, setSelectedLevel] = useState<number | null>(1);
   const user = useLaeUser();
+  const userIdNum = user.userId ? Number(user.userId) : undefined;
   const prices = useLaeLevelPrices();
+
+  // Primary source: backend matrix tree API (contract = source of truth, served from DB).
+  const overviewApi = useLaeMatrixOverviewApi(userIdNum);
+  const treeApi = useLaeMatrixTreeApi(userIdNum, selectedLevel ?? 1, {
+    enabled: selectedLevel !== null,
+  });
+
+  // Contract fallback — only used when the API is unavailable, plus heldForUpgrade.
   const allLevels = useLaeAllMatrixLevels();
   const fillCounts = useLaeMatrixFillCounts();
   const matrix = useLaeMatrixLevel(selectedLevel ?? 1, {
@@ -49,13 +62,16 @@ export default function MatrixPage() {
 
   const nextLevelPrice = prices.prices?.find((p) => p.level === (selectedLevel ?? 1) + 1);
 
-  if (process.env.NODE_ENV === "development" && selectedLevel !== null && matrix.referrals) {
-    const slots = buildMatrixSlots(matrix.referrals, matrix.active);
-    const check = validateMatrixMapping(matrix.referrals, slots, matrix.active);
-    if (!check.pass) {
-      console.warn("[matrix QA]", check);
-    }
-  }
+  // Tree rendering: prefer API slots; fall back to contract referrals only if API failed.
+  const tree = treeApi.tree;
+  const apiSlots = tree ? buildSlotsFromApi(tree.slots) : undefined;
+  const treeActive = tree?.active ?? matrix.active;
+  const treeReinvest = tree ? BigInt(Math.max(0, tree.cycle - 1)) : matrix.reinvestCount;
+  const treeEarning = tree ? BigInt(tree.totalEarning || "0") : matrix.totalEarning;
+  const treeFilled = tree?.filledSpots ?? matrix.filledSpots;
+  const treeLoading =
+    selectedLevel !== null && treeApi.isLoading && matrix.isLoading;
+  const treeError = treeApi.isError && matrix.isError;
 
   return (
     <div className="space-y-6">
@@ -77,9 +93,10 @@ export default function MatrixPage() {
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {Array.from({ length: LAE_LEVELS }, (_, i) => i + 1).map((lvl) => {
-          const levelActive = allLevels.levels[lvl - 1]?.active === true;
+          const o = overviewApi.overview?.levels[lvl - 1];
+          const levelActive = o ? o.active : allLevels.levels[lvl - 1]?.active === true;
           const price = prices.prices?.find((p) => p.level === lvl);
-          const filled = fillCounts.fills[lvl - 1] ?? 0;
+          const filled = o ? o.filled : fillCounts.fills[lvl - 1] ?? 0;
 
           return (
             <MatrixLevelCard
@@ -89,7 +106,9 @@ export default function MatrixPage() {
               selected={selectedLevel === lvl}
               price={price?.priceFormatted ?? "—"}
               filled={levelActive ? filled : 0}
-              loading={allLevels.isLoading || fillCounts.isLoading}
+              loading={
+                overviewApi.isLoading && allLevels.isLoading && fillCounts.isLoading
+              }
               onClick={() =>
                 setSelectedLevel((prev) => (prev === lvl ? null : lvl))
               }
@@ -112,33 +131,34 @@ export default function MatrixPage() {
               title={`Level ${selectedLevel} · Matrix Tree`}
               className="border border-[#D4AF37]/20 bg-black/40"
             >
-              {matrix.isLoading ? (
-                <QueryLoading label="Reading usersXMatrixReferrals from chain…" />
-              ) : matrix.isError ? (
+              {treeLoading ? (
+                <QueryLoading label="Loading matrix tree…" />
+              ) : treeError ? (
                 <p className="text-sm text-red-300">Failed to load level {selectedLevel} data.</p>
-              ) : !matrix.active ? (
+              ) : !treeActive ? (
                 <p className="text-sm text-slate-400">
                   Level {selectedLevel} is locked. Upgrade to activate this slot on-chain.
                 </p>
               ) : (
                 <MatrixVisualizer
-                  referrals={matrix.referrals}
-                  levelActive={matrix.active}
+                  slots={apiSlots}
+                  referrals={apiSlots ? undefined : matrix.referrals}
+                  levelActive={treeActive}
                   level={selectedLevel}
-                  reinvestCount={matrix.reinvestCount}
-                  totalEarning={matrix.totalEarning}
+                  reinvestCount={treeReinvest}
+                  totalEarning={treeEarning}
                 />
               )}
             </Panel>
 
             <MatrixStatusPanel
               level={selectedLevel}
-              filled={matrix.filledSpots}
-              cycle={matrix.reinvestCount ?? 0n}
-              totalEarning={matrix.totalEarning}
+              filled={treeFilled}
+              cycle={treeReinvest ?? 0n}
+              totalEarning={treeEarning}
               heldForUpgrade={matrix.heldForUpgrade}
               nextUpgradeCost={nextLevelPrice?.priceFormatted}
-              levelActive={matrix.active}
+              levelActive={treeActive}
             />
           </motion.div>
         )}

@@ -14,6 +14,7 @@ import {
   getIndexerStatus,
 } from "./analytics.service.js";
 import { replayFromBlock, getMatrixDeployBlock } from "../blockchain/sync-engine.js";
+import { getMatrixTree, getMatrixOverview } from "../blockchain/matrix-tree.service.js";
 import { requireIndexerAdmin } from "../../middleware/indexer-admin.js";
 
 function walletFromQuery(query: Record<string, unknown>): string | null {
@@ -90,6 +91,25 @@ export async function analyticsRoutes(app: FastifyInstance): Promise<void> {
   app.get("/leaderboard", async (request) => {
     const limit = Number((request.query as { limit?: string }).limit ?? 50);
     return getLeaderboard(limit);
+  });
+
+  /** Authoritative 14-spot matrix tree for a user/level — source of truth = contract, served from backend. */
+  app.get("/matrix/tree/:userId/:level", async (request, reply) => {
+    const params = request.params as { userId?: string; level?: string };
+    const userId = Number(params.userId);
+    const level = Number(params.level);
+    const tree = await getMatrixTree(userId, level);
+    if ("error" in tree) return reply.code(400).send(tree);
+    return tree;
+  });
+
+  /** Per-level active flag + fill counts for the matrix grid. */
+  app.get("/matrix/overview/:userId", async (request, reply) => {
+    const params = request.params as { userId?: string };
+    const userId = Number(params.userId);
+    const overview = await getMatrixOverview(userId);
+    if ("error" in overview) return reply.code(400).send(overview);
+    return overview;
   });
 
   app.get("/indexer/status", async () => getIndexerStatus());

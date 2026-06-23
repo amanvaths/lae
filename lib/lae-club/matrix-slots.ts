@@ -21,6 +21,7 @@ export type MatrixSlot = {
   spot: number;
   state: MatrixSlotState;
   address?: Address;
+  userId?: number | null;
   label: string;
   sublabel: string;
   tone: "gold" | "silver";
@@ -88,6 +89,38 @@ export function buildMatrixSlots(
 
 export function countFilledSlots(referrals: readonly Address[]): number {
   return referrals.filter((a) => a && a.toLowerCase() !== ZERO).length;
+}
+
+type ApiSlotInput = {
+  position: number;
+  state: MatrixSlotState;
+  userId?: number | null;
+  address?: string | null;
+};
+
+/**
+ * Map backend matrix-tree API slots → UI slots. The backend (contract source of
+ * truth) already decides each slot state; the frontend only attaches labels.
+ */
+export function buildSlotsFromApi(apiSlots: ApiSlotInput[]): MatrixSlot[] {
+  const byPosition = new Map<number, ApiSlotInput>();
+  for (const s of apiSlots) byPosition.set(s.position, s);
+
+  return Array.from({ length: LAE_MATRIX_SIZE }, (_, i) => {
+    const spot = i + 1;
+    const meta = MATRIX_SPOT_LABELS[spot]!;
+    const api = byPosition.get(spot);
+    const state: MatrixSlotState = api?.state ?? "waiting";
+    return {
+      spot,
+      state,
+      address: api?.address ? (api.address as Address) : undefined,
+      userId: api?.userId ?? null,
+      label: meta.label,
+      sublabel: meta.sublabel,
+      tone: meta.tone,
+    };
+  });
 }
 
 export function isGoldSpot(spot: number): boolean {

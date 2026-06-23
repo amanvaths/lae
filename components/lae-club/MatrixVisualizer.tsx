@@ -15,20 +15,22 @@ import type { Address } from "viem";
 
 export function MatrixVisualizer({
   referrals,
+  slots: slotsProp,
   levelActive,
   level,
   reinvestCount,
   totalEarning,
   className,
 }: {
-  referrals: readonly Address[];
+  referrals?: readonly Address[];
+  slots?: MatrixSlot[];
   levelActive: boolean;
   level: number;
   reinvestCount?: bigint;
   totalEarning?: bigint;
   className?: string;
 }) {
-  const slots = buildMatrixSlots(referrals, levelActive);
+  const slots = slotsProp ?? buildMatrixSlots(referrals ?? [], levelActive);
   const filled = slots.filter((s) => s.state === "filled").length;
 
   return (
@@ -175,8 +177,12 @@ function SpotCard({ slot, compact }: { slot: MatrixSlot; compact: boolean }) {
           locked && "text-slate-600"
         )}
       >
-        {filled && slot.address
-          ? truncateAddress(slot.address, 4, 3)
+        {filled
+          ? slot.userId
+            ? `#${slot.userId}`
+            : slot.address
+              ? truncateAddress(slot.address, 4, 3)
+              : "FILLED"
           : locked
             ? "LOCKED"
             : open
