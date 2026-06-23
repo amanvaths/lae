@@ -95,8 +95,13 @@ export default function DashboardHome() {
             </span>
           </h1>
           <p className="mt-1.5 text-sm leading-relaxed text-slate-400">
-            Sponsor ID #{String(user.sponsorId ?? "—")} ·{" "}
-            {user.sponsorAddress ? truncateAddress(user.sponsorAddress, 6, 4) : "—"}
+            Sponsor ID #{String(user.sponsorId ?? "—")}
+            {user.registeredAt && user.registeredAt > 0n ? (
+              <>
+                {" · Registered "}
+                {new Date(Number(user.registeredAt) * 1000).toLocaleDateString()}
+              </>
+            ) : null}
             <Pill tone="gold" className="ml-2">
               {levels.isLoading ? "…" : `${levels.activeCount} active levels`}
             </Pill>
@@ -118,7 +123,7 @@ export default function DashboardHome() {
             <div className="min-w-0 flex-1">
               <p className="text-[0.65rem] font-medium uppercase tracking-wider text-[#D4AF37]/70 sm:text-xs">Total Income</p>
               <p className="mt-1.5 truncate font-display text-xl font-bold text-gradient-gold sm:mt-2 sm:text-2xl">
-                {fmtEther(income.totalMatrixIncome || user.totalIncome || 0n)}
+                {fmtEther(user.totalIncome ?? income.totalMatrixIncome ?? 0n)}
               </p>
               <p className="mt-1 truncate text-xs text-slate-500">Royal {fmtEther(income.totalRoyalIncome)}</p>
             </div>
@@ -188,6 +193,7 @@ export default function DashboardHome() {
           ) : (
             <MatrixVisualizer
               referrals={matrixL1.referrals}
+              levelActive={matrixL1.active}
               level={1}
               reinvestCount={matrixL1.reinvestCount}
               totalEarning={matrixL1.totalEarning}

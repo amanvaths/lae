@@ -167,6 +167,7 @@ export function PublicUserDashboard({ userId }: { userId: string }) {
             ) : (
               <MatrixVisualizer
                 referrals={matrixL1.referrals}
+                levelActive={matrixL1.active}
                 level={1}
                 reinvestCount={matrixL1.reinvestCount}
                 totalEarning={matrixL1.totalEarning}
@@ -207,6 +208,7 @@ export function PublicUserDashboard({ userId }: { userId: string }) {
               ) : (
                 <MatrixVisualizer
                   referrals={matrix.referrals}
+                  levelActive={matrix.active}
                   level={matrixLevel}
                   reinvestCount={matrix.reinvestCount}
                   totalEarning={matrix.totalEarning}

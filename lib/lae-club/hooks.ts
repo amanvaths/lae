@@ -18,6 +18,7 @@ import {
   laeStakingAbi,
 } from "./abis";
 import { LAE_LEVELS } from "./constants";
+import { countFilledSlots } from "./matrix-slots";
 import { withBasePath } from "@/lib/paths";
 import { fetchMatrixUserEvents, type MatrixUserEvent } from "./matrix-events";
 import { dedupeEvents, sortEventsNewestFirst } from "./event-utils";
@@ -160,16 +161,17 @@ export function useLaeLevelPrices() {
   };
 }
 
-export function useLaeMatrixLevel(level: number) {
+export function useLaeMatrixLevel(level: number, options?: { enabled?: boolean }) {
   const { address } = useAccount();
   const user = useLaeUser();
-  const enabled =
+  const baseEnabled =
     !!address &&
     user.registered &&
     !!user.userId &&
     user.userId > 0n &&
     level >= 1 &&
     level <= LAE_LEVELS;
+  const enabled = baseEnabled && (options?.enabled !== false);
 
   const reads = useReadContracts({
     contracts: enabled
@@ -209,9 +211,36 @@ export function useLaeMatrixLevel(level: number) {
     totalTeamSize: m?.[4] ?? 0n,
     totalEarning: m?.[5] ?? 0n,
     referrals: refs,
-    filledSpots: refs.length,
+    filledSpots: countFilledSlots(refs),
     isLoading: enabled && reads.isLoading,
     isError: reads.isError,
+  };
+}
+
+/** Per-level fill counts from usersXMatrixReferrals — contract-only. */
+export function useLaeMatrixFillCounts() {
+  const { address } = useAccount();
+  const user = useLaeUser();
+  const enabled = !!address && user.registered;
+
+  const contracts = Array.from({ length: LAE_LEVELS }, (_, i) => ({
+    address: LAE_CONTRACTS.matrix,
+    abi: laeClubMatrixAbi,
+    functionName: "usersXMatrixReferrals" as const,
+    args: [address!, i + 1] as [Address, number],
+  }));
+
+  const q = useReadContracts({
+    contracts,
+    query: { enabled, staleTime: 20_000, retry: 1 },
+  });
+
+  return {
+    fills: Array.from({ length: LAE_LEVELS }, (_, i) =>
+      countFilledSlots((q.data?.[i]?.result as Address[] | undefined) ?? [])
+    ),
+    isLoading: enabled && q.isLoading,
+    isError: q.isError,
   };
 }
 
@@ -684,7 +713,7 @@ export function useLaeMatrixLevelForUser(
     totalTeamSize: m?.[4] ?? 0n,
     totalEarning: m?.[5] ?? 0n,
     referrals: refs,
-    filledSpots: refs.length,
+    filledSpots: countFilledSlots(refs),
     isLoading: enabled && reads.isLoading,
   };
 }
