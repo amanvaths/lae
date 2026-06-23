@@ -16,7 +16,7 @@ function incomeToEvent(row) {
         return {
             transactionHash: row.txHash,
             logIndex: row.logIndex,
-            eventName: "ClubPoolPayment",
+            eventName: "TreasuryPool",
             blockNumber: row.blockNumber.toString(),
             args: {
                 refId: BigInt(row.receiverUserId),
@@ -115,6 +115,7 @@ export async function getLaeUserEvents(wallet, limit = 150) {
                                 "Registration",
                                 "MissedIncome",
                                 "TokenReceived",
+                                "TreasuryPool",
                                 "ClubPoolPayment",
                                 "NewUserPlace",
                                 "LaeRewardAllocated",
@@ -126,6 +127,7 @@ export async function getLaeUserEvents(wallet, limit = 150) {
                         OR: [
                             { walletAddress: w },
                             { eventName: "TokenReceived", payload: { path: ["receiverId"], equals: uidStr } },
+                            { eventName: "TreasuryPool", payload: { path: ["refId"], equals: uidStr } },
                             { eventName: "ClubPoolPayment", payload: { path: ["refId"], equals: uidStr } },
                             { eventName: "NewUserPlace", payload: { path: ["user"], equals: uidStr } },
                             { eventName: "NewUserPlace", payload: { path: ["referrer"], equals: uidStr } },

@@ -1,10 +1,16 @@
 {
   "chainId": 97,
   "network": "bsc-testnet",
-  "matrix": "0x61a12F835D7F51A6508c4CeBA0fA30d50d092621",
+  "matrix": "0xaDFA4602894c75B52a71728A55fCAeeEcc1D2c9a",
+  "matrixContract": "BTitanXMatrix",
   "laeCoin": "0xD6698E6a8Ee4712cC2E36C150f1C34e59884C45A",
   "paymentToken": "0xb2bE66BE07E1AD04074B32B8b13DcdFaB6B57575",
-  "matrixDeployBlock": 115009159,
+  "registrationNft": "0xA74d3788B821d392Fd4622Dae054164e4494cc19",
+  "royalRank1Nft": "0xc48026c9497a92aCBCCBeB389238FA00890123Ab",
+  "royalRank2Nft": "0x9eCd002C123F865Ee68FbD79aB3F5e67d0cEf2F5",
+  "royalRank3Nft": "0x48D17b54D27140E212f6841E80aA6389C416f248",
+  "royalRank4Nft": "0xEe9e3b2aEb8B59ef53593A4E1fc83f0E79CAD99B",
+  "matrixDeployBlock": 115055888,
   "laeCoinDeployBlock": 114471462,
-  "deployBlock": 115009159
+  "deployBlock": 115055888
 }

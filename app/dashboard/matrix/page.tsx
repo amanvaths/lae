@@ -96,7 +96,7 @@ export default function MatrixPage() {
           <span className="text-white">Matrix</span>
         </h1>
         <p className="mt-1.5 text-sm text-slate-400">
-          15 levels · 14 spots · live contract data · User #{String(user.userId ?? "—")}
+          12 levels · 14 spots · live contract data · User #{String(user.userId ?? "—")}
         </p>
       </div>
 

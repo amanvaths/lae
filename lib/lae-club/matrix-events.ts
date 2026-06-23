@@ -19,6 +19,8 @@ function userEventQueries(userId: bigint, userAddress: Address): EventQuery[] {
     { eventName: "Registration", args: { userId } },
     { eventName: "TokenReceived", args: { receiverId: userId } },
     { eventName: "TokenReceived", args: { fromId: userId } },
+    { eventName: "TreasuryPool", args: { refId: userId } },
+    { eventName: "TreasuryPool", args: { userId } },
     { eventName: "ClubPoolPayment", args: { refId: userId } },
     { eventName: "ClubPoolPayment", args: { userId } },
     { eventName: "NewUserPlace", args: { user: userId } },
@@ -37,6 +39,7 @@ function userEventQueries(userId: bigint, userAddress: Address): EventQuery[] {
 export function incomeEventQueries(userId: bigint): EventQuery[] {
   return [
     { eventName: "TokenReceived", args: { receiverId: userId } },
+    { eventName: "TreasuryPool", args: { refId: userId } },
     { eventName: "ClubPoolPayment", args: { refId: userId } },
   ];
 }

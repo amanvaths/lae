@@ -17,7 +17,7 @@ import {
   laeCoinAbi,
   laeStakingAbi,
 } from "./abis";
-import { LAE_LEVELS } from "./constants";
+import { LAE_LEVELS, MATRIX_SUPPORTS_LAE_REWARDS } from "./constants";
 import { countFilledSlots } from "./matrix-slots";
 import { siteOrigin, withBasePath } from "@/lib/paths";
 import { fetchMatrixUserEvents, type MatrixUserEvent } from "./matrix-events";
@@ -375,7 +375,7 @@ export function useLaeProtocolStats() {
     contracts: [
       { address: LAE_CONTRACTS.matrix, abi: laeClubMatrixAbi, functionName: "lastUserId" },
       { address: LAE_CONTRACTS.matrix, abi: laeClubMatrixAbi, functionName: "totalProjectInvestment" },
-      { address: LAE_CONTRACTS.matrix, abi: laeClubMatrixAbi, functionName: "PAYMENT_TOKEN" },
+      { address: LAE_CONTRACTS.matrix, abi: laeClubMatrixAbi, functionName: "BTCB_TOKEN_ADDRESS" },
     ],
     query: { staleTime: 30_000 },
   });
@@ -462,22 +462,14 @@ export function useLaeRoyalPoolBalance(poolAddress?: Address) {
       {
         address: LAE_CONTRACTS.matrix,
         abi: laeClubMatrixAbi,
-        functionName: "CLUB_POOL_ADDRESS",
-      },
-      {
-        address: LAE_CONTRACTS.matrix,
-        abi: laeClubMatrixAbi,
-        functionName: "PAYMENT_TOKEN",
+        functionName: "BTCB_TOKEN_ADDRESS",
       },
     ],
     query: { staleTime: 60_000, retry: 1 },
   });
 
-  const addr =
-    poolAddress ??
-    (meta.data?.[0]?.result as Address | undefined) ??
-    LAE_CONTRACTS.clubPool;
-  const token = (meta.data?.[1]?.result as Address | undefined) ?? LAE_CONTRACTS.payment;
+  const addr = poolAddress ?? LAE_CONTRACTS.clubPool;
+  const token = (meta.data?.[0]?.result as Address | undefined) ?? LAE_CONTRACTS.payment;
 
   const balance = useReadContract({
     address: token,
@@ -543,9 +535,15 @@ export function useLaeUserEvents() {
 export function useLaeIncomeEvents() {
   const events = useLaeUserEvents();
   const income = (events.data ?? []).filter((e) => e.eventName === "TokenReceived");
-  const royal = (events.data ?? []).filter((e) => e.eventName === "ClubPoolPayment");
+  const royal = (events.data ?? []).filter((e) => {
+    const name = e.eventName as string;
+    return name === "TreasuryPool" || name === "ClubPoolPayment";
+  });
   const totalMatrix = income.reduce((s, e) => s + ((e.args.amount as bigint) ?? 0n), 0n);
-  const totalRoyal = royal.reduce((s, e) => s + ((e.args.amount as bigint) ?? 0n), 0n);
+  const totalRoyal = royal.reduce((s, e) => {
+    const amount = (e.args as { amount?: bigint }).amount;
+    return s + (amount ?? 0n);
+  }, 0n);
   return {
     incomeEvents: income,
     royalEvents: royal,
@@ -596,48 +594,18 @@ export function referralLinkByUserId(userId: bigint | number | undefined) {
 const MONTH_SECONDS = 30n * 24n * 60n * 60n;
 
 export function useLaeRewardSummary() {
-  const { address } = useAccount();
-
-  const reads = useReadContracts({
-    contracts: address
-      ? [
-          {
-            address: LAE_CONTRACTS.matrix,
-            abi: laeClubMatrixAbi,
-            functionName: "getLaeRewardSummary" as const,
-            args: [address] as [Address],
-          },
-          {
-            address: LAE_CONTRACTS.matrix,
-            abi: laeClubMatrixAbi,
-            functionName: "getDirectPartnerCount" as const,
-            args: [address] as [Address],
-          },
-        ]
-      : [],
-    query: { enabled: !!address, staleTime: 15_000, retry: 1 },
-  });
-
-  const s = reads.data?.[0]?.result as readonly [bigint, bigint, bigint, bigint, bigint] | undefined;
-  const allocated = s?.[0] ?? 0n;
-  const released = s?.[1] ?? 0n;
-  const claimable = s?.[2] ?? 0n;
-  const claimed = s?.[3] ?? 0n;
-  const locked = s?.[4] ?? 0n;
-  const directCount = (reads.data?.[1]?.result as bigint | undefined) ?? 0n;
-
+  const user = useLaeUser();
   return {
-    allocated,
-    released,
-    claimable,
-    claimed,
-    locked,
-    directCount,
-    nextRelease: released > claimed + claimable ? released - claimed - claimable : 0n,
-    isLoading: !!address && reads.isLoading,
-    refetch: () => {
-      void reads.refetch();
-    },
+    allocated: 0n,
+    released: 0n,
+    claimable: 0n,
+    claimed: 0n,
+    locked: 0n,
+    directCount: user.directCount ?? 0n,
+    nextRelease: 0n,
+    supported: MATRIX_SUPPORTS_LAE_REWARDS,
+    isLoading: user.isLoading,
+    refetch: () => {},
   };
 }
 
@@ -653,18 +621,11 @@ export function useLaeVestingDirectRequirement(registrationTimestamp?: bigint) {
         )
       : 0;
 
-  const req = useReadContract({
-    address: LAE_CONTRACTS.matrix,
-    abi: laeClubMatrixAbi,
-    functionName: "directRequirementByMonth",
-    args: [BigInt(monthIdx)],
-    query: { staleTime: 60_000 },
-  });
-
   return {
     month: monthIdx + 1,
-    requiredDirects: (req.data as bigint | undefined) ?? 0n,
-    isLoading: req.isLoading,
+    requiredDirects: 2n,
+    supported: MATRIX_SUPPORTS_LAE_REWARDS,
+    isLoading: false,
   };
 }
 
@@ -673,14 +634,10 @@ export function useClaimLaeRewards() {
   const receipt = useWaitForTransactionReceipt({ hash });
 
   async function claim() {
-    return writeContractAsync({
-      address: LAE_CONTRACTS.matrix,
-      abi: laeClubMatrixAbi,
-      functionName: "claimLaeRewards",
-    });
+    throw new Error("LAE token vesting is not available on BTitanXMatrix.");
   }
 
-  return { claim, hash, isPending, isConfirming: receipt.isLoading, error, receipt };
+  return { claim, hash, isPending, isConfirming: receipt.isLoading, error, receipt, supported: MATRIX_SUPPORTS_LAE_REWARDS };
 }
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as Address;
@@ -845,44 +802,15 @@ export function useLaeDirectTeamForUser(userId: bigint | undefined) {
   };
 }
 
-export function useLaeRewardSummaryForAddress(userAddress: Address | undefined) {
-  const reads = useReadContracts({
-    contracts: userAddress
-      ? [
-          {
-            address: LAE_CONTRACTS.matrix,
-            abi: laeClubMatrixAbi,
-            functionName: "getLaeRewardSummary" as const,
-            args: [userAddress] as [Address],
-          },
-          {
-            address: LAE_CONTRACTS.matrix,
-            abi: laeClubMatrixAbi,
-            functionName: "getDirectPartnerCount" as const,
-            args: [userAddress] as [Address],
-          },
-        ]
-      : [],
-    query: { enabled: !!userAddress, staleTime: 15_000, retry: 1 },
-  });
-
-  const s = reads.data?.[0]?.result as readonly [bigint, bigint, bigint, bigint, bigint] | undefined;
-  const allocated = s?.[0] ?? 0n;
-  const released = s?.[1] ?? 0n;
-  const claimable = s?.[2] ?? 0n;
-  const claimed = s?.[3] ?? 0n;
-  const locked = s?.[4] ?? 0n;
-  const directCount = (reads.data?.[1]?.result as bigint | undefined) ?? 0n;
-
+export function useLaeRewardSummaryForAddress(_userAddress: Address | undefined) {
   return {
-    allocated,
-    released,
-    claimable,
-    claimed,
-    locked,
-    directCount,
-    nextRelease: released > claimed + claimable ? released - claimed - claimable : 0n,
-    isLoading: !!userAddress && reads.isLoading,
+    allocated: 0n,
+    released: 0n,
+    claimable: 0n,
+    claimed: 0n,
+    locked: 0n,
+    supported: MATRIX_SUPPORTS_LAE_REWARDS,
+    isLoading: false,
   };
 }
 

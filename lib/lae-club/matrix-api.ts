@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { LAE_LEVELS } from "./constants";
 import { api } from "@/lib/api-client";
 
 export type ApiSlotState = "locked" | "waiting" | "open" | "filled";
@@ -56,7 +57,7 @@ export function useLaeMatrixTreeApi(
     !!userId &&
     userId > 0 &&
     level >= 1 &&
-    level <= 15;
+    level <= LAE_LEVELS;
 
   const query = useQuery({
     queryKey: ["lae-matrix-tree", userId, level],

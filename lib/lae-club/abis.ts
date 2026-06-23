@@ -1,317 +1,1024 @@
-/** BTitanXMatrix / LAE Club Matrix — deployed BSC Testnet ABI (live contract) */
+/** BTitanXMatrix — BSC Testnet ABI (auto-generated from contracts/BTitanXMatrix.sol) */
 
 export const laeClubMatrixAbi = [
   {
-    type: "function",
-    name: "registrationExt",
-    inputs: [{ name: "referrerId", type: "uint256" }],
-    outputs: [],
-    stateMutability: "nonpayable",
-  },
-  {
-    type: "function",
-    name: "isUserExists",
-    inputs: [{ name: "user", type: "address" }],
-    outputs: [{ type: "bool" }],
-    stateMutability: "view",
-  },
-  {
-    type: "function",
-    name: "addressToId",
-    inputs: [{ name: "", type: "address" }],
-    outputs: [{ type: "uint256" }],
-    stateMutability: "view",
-  },
-  {
-    type: "function",
-    name: "idToAddress",
-    inputs: [{ name: "", type: "uint256" }],
-    outputs: [{ type: "address" }],
-    stateMutability: "view",
-  },
-  {
-    type: "function",
-    name: "lastUserId",
-    inputs: [],
-    outputs: [{ type: "uint256" }],
-    stateMutability: "view",
-  },
-  {
-    type: "function",
-    name: "totalProjectInvestment",
-    inputs: [],
-    outputs: [{ type: "uint256" }],
-    stateMutability: "view",
-  },
-  {
-    type: "function",
-    name: "levelTokenCost",
-    inputs: [{ name: "", type: "uint8" }],
-    outputs: [{ type: "uint256" }],
-    stateMutability: "view",
-  },
-  {
-    type: "function",
-    name: "LAST_LEVEL",
-    inputs: [],
-    outputs: [{ type: "uint8" }],
-    stateMutability: "view",
-  },
-  {
-    type: "function",
-    name: "MATRIX_SIZE",
-    inputs: [],
-    outputs: [{ type: "uint8" }],
-    stateMutability: "view",
-  },
-  {
-    type: "function",
-    name: "PAYMENT_TOKEN",
-    inputs: [],
-    outputs: [{ type: "address" }],
-    stateMutability: "view",
-  },
-  {
-    type: "function",
-    name: "getUserDetails",
-    inputs: [{ name: "userId", type: "uint256" }],
-    outputs: [
-      { name: "userAddress", type: "address" },
-      { name: "referrerAddress", type: "address" },
-      { name: "referrerId", type: "uint256" },
-      { name: "partnersCount", type: "uint256" },
-      { name: "activeSlotsCount", type: "uint8" },
-      { name: "teamSize", type: "uint256" },
-      { name: "registrationTimestamp", type: "uint256" },
-      { name: "totalIncome", type: "uint256" },
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "ownerAddress",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "btcTokenAddress",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "treasuryPoolAddress",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "platformAddress",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "registrationPassNftAddress",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "royalRank1NftAddress",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "royalRank2NftAddress",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "royalRank3NftAddress",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "royalRank4NftAddress",
+        "type": "address"
+      }
     ],
-    stateMutability: "view",
+    "stateMutability": "nonpayable",
+    "type": "constructor"
   },
   {
-    type: "function",
-    name: "getDirectPartnerAddresses",
-    inputs: [{ name: "userId", type: "uint256" }],
-    outputs: [{ type: "address[]" }],
-    stateMutability: "view",
-  },
-  {
-    type: "function",
-    name: "getDirectPartnerIds",
-    inputs: [{ name: "userId", type: "uint256" }],
-    outputs: [{ type: "uint256[]" }],
-    stateMutability: "view",
-  },
-  {
-    type: "function",
-    name: "isUserSlotActive",
-    inputs: [{ name: "userId", type: "uint256" }, { name: "slot", type: "uint8" }],
-    outputs: [{ type: "bool" }],
-    stateMutability: "view",
-  },
-  {
-    type: "function",
-    name: "usersXMatrix",
-    inputs: [{ name: "userAddress", type: "address" }, { name: "level", type: "uint8" }],
-    outputs: [
-      { name: "currentReferrer", type: "address" },
-      { name: "reinvestCount", type: "uint256" },
-      { name: "heldTokenForUpgrade", type: "uint256" },
-      { name: "lastSpillUnderReceiverIndex", type: "uint256" },
-      { name: "totalTeamSize", type: "uint256" },
-      { name: "totalEarning", type: "uint256" },
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "receiverId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "userId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint8",
+        "name": "level",
+        "type": "uint8"
+      }
     ],
-    stateMutability: "view",
+    "name": "MissedIncome",
+    "type": "event"
   },
   {
-    type: "function",
-    name: "usersXMatrixReferrals",
-    inputs: [{ name: "userAddress", type: "address" }, { name: "level", type: "uint8" }],
-    outputs: [{ type: "address[]" }],
-    stateMutability: "view",
-  },
-  {
-    type: "function",
-    name: "CLUB_POOL_ADDRESS",
-    inputs: [],
-    outputs: [{ type: "address" }],
-    stateMutability: "view",
-  },
-  {
-    type: "function",
-    name: "TREASURY_POOL_ADDRESS",
-    inputs: [],
-    outputs: [{ type: "address" }],
-    stateMutability: "view",
-  },
-  {
-    type: "function",
-    name: "claimLaeRewards",
-    inputs: [],
-    outputs: [{ name: "claimedAmount", type: "uint256" }],
-    stateMutability: "nonpayable",
-  },
-  {
-    type: "function",
-    name: "getLaeRewardSummary",
-    inputs: [{ name: "userAddress", type: "address" }],
-    outputs: [
-      { name: "allocated", type: "uint256" },
-      { name: "released", type: "uint256" },
-      { name: "claimable", type: "uint256" },
-      { name: "claimed", type: "uint256" },
-      { name: "locked", type: "uint256" },
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "user",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "referrer",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint8",
+        "name": "level",
+        "type": "uint8"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "cycle",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint8",
+        "name": "spot",
+        "type": "uint8"
+      }
     ],
-    stateMutability: "view",
+    "name": "NewUserPlace",
+    "type": "event"
   },
   {
-    type: "function",
-    name: "getGlobalLaeStats",
-    inputs: [],
-    outputs: [
-      { name: "allocated", type: "uint256" },
-      { name: "claimed", type: "uint256" },
-      { name: "liquidityCollected", type: "uint256" },
-      { name: "pendingLocked", type: "uint256" },
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "previousOwner",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "newOwner",
+        "type": "address"
+      }
     ],
-    stateMutability: "view",
+    "name": "OwnershipTransferred",
+    "type": "event"
   },
   {
-    type: "function",
-    name: "matrixDistributionBps",
-    inputs: [],
-    outputs: [{ type: "uint256" }],
-    stateMutability: "view",
-  },
-  {
-    type: "function",
-    name: "getDirectPartnerCount",
-    inputs: [{ name: "userAddress", type: "address" }],
-    outputs: [{ type: "uint256" }],
-    stateMutability: "view",
-  },
-  {
-    type: "function",
-    name: "directRequirementByMonth",
-    inputs: [{ name: "", type: "uint256" }],
-    outputs: [{ type: "uint256" }],
-    stateMutability: "view",
-  },
-  {
-    type: "function",
-    name: "monthlyReleaseBps",
-    inputs: [{ name: "", type: "uint256" }],
-    outputs: [{ type: "uint256" }],
-    stateMutability: "view",
-  },
-  {
-    type: "event",
-    name: "Registration",
-    inputs: [
-      { name: "userId", type: "uint256", indexed: true },
-      { name: "referrerId", type: "uint256", indexed: true },
-      { name: "userAddress", type: "address", indexed: true },
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "newRoyalPool",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "newTreasuryPool",
+        "type": "address"
+      }
     ],
+    "name": "PoolAddressesUpdated",
+    "type": "event"
   },
   {
-    type: "event",
-    name: "TokenReceived",
-    inputs: [
-      { name: "receiverId", type: "uint256", indexed: true },
-      { name: "fromId", type: "uint256", indexed: true },
-      { name: "from", type: "address", indexed: true },
-      { name: "level", type: "uint8", indexed: false },
-      { name: "amount", type: "uint256", indexed: false },
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "userId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "referrerId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "userAddress",
+        "type": "address"
+      }
     ],
+    "name": "Registration",
+    "type": "event"
   },
   {
-    type: "event",
-    name: "ClubPoolPayment",
-    inputs: [
-      { name: "refId", type: "uint256", indexed: true },
-      { name: "userId", type: "uint256", indexed: true },
-      { name: "amount", type: "uint256", indexed: false },
-      { name: "level", type: "uint8", indexed: false },
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "newAddress",
+        "type": "address"
+      }
     ],
+    "name": "RegistrationPassNftAddressUpdated",
+    "type": "event"
   },
   {
-    type: "event",
-    name: "NewUserPlace",
-    inputs: [
-      { name: "user", type: "uint256", indexed: true },
-      { name: "referrer", type: "uint256", indexed: true },
-      { name: "level", type: "uint8", indexed: false },
-      { name: "cycle", type: "uint256", indexed: false },
-      { name: "spot", type: "uint8", indexed: false },
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "userId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "newReferrerId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "callerId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint8",
+        "name": "level",
+        "type": "uint8"
+      }
     ],
+    "name": "Reinvest",
+    "type": "event"
   },
   {
-    type: "event",
-    name: "Spillover",
-    inputs: [
-      { name: "referrerId", type: "uint256", indexed: true },
-      { name: "receiverId", type: "uint256", indexed: true },
-      { name: "level", type: "uint8", indexed: false },
-      { name: "cycle", type: "uint256", indexed: false },
-      { name: "virtualSpot", type: "uint8", indexed: false },
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "newRank1",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "newRank2",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "newRank3",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "newRank4",
+        "type": "address"
+      }
     ],
+    "name": "RoyalNftAddressesUpdated",
+    "type": "event"
   },
   {
-    type: "event",
-    name: "Reinvest",
-    inputs: [
-      { name: "userId", type: "uint256", indexed: true },
-      { name: "newReferrerId", type: "uint256", indexed: true },
-      { name: "callerId", type: "uint256", indexed: true },
-      { name: "level", type: "uint8", indexed: false },
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "referrerId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "receiverId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint8",
+        "name": "level",
+        "type": "uint8"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "cycle",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint8",
+        "name": "virtualSpot",
+        "type": "uint8"
+      }
     ],
+    "name": "Spillover",
+    "type": "event"
   },
   {
-    type: "event",
-    name: "Upgrade",
-    inputs: [
-      { name: "userId", type: "uint256", indexed: true },
-      { name: "newReferrerId", type: "uint256", indexed: true },
-      { name: "level", type: "uint8", indexed: false },
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "newToken",
+        "type": "address"
+      }
     ],
+    "name": "TokenAddressesUpdated",
+    "type": "event"
   },
   {
-    type: "event",
-    name: "MissedIncome",
-    inputs: [
-      { name: "receiverId", type: "uint256", indexed: true },
-      { name: "userId", type: "uint256", indexed: true },
-      { name: "level", type: "uint8", indexed: false },
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "receiverId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "fromId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "from",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint8",
+        "name": "level",
+        "type": "uint8"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
     ],
+    "name": "TokenReceived",
+    "type": "event"
   },
   {
-    type: "event",
-    name: "LaeRewardAllocated",
-    inputs: [
-      { name: "user", type: "address", indexed: true },
-      { name: "scheduleIndex", type: "uint256", indexed: true },
-      { name: "laeAmount", type: "uint256", indexed: false },
-      { name: "liquidityContribution", type: "uint256", indexed: false },
-      { name: "level", type: "uint8", indexed: false },
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "recipient",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "reason",
+        "type": "string"
+      }
     ],
+    "name": "TokenTransferFailed",
+    "type": "event"
   },
   {
-    type: "event",
-    name: "LaeRewardClaimed",
-    inputs: [
-      { name: "user", type: "address", indexed: true },
-      { name: "amount", type: "uint256", indexed: false },
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "refId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "userId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint8",
+        "name": "level",
+        "type": "uint8"
+      }
     ],
+    "name": "TreasuryPool",
+    "type": "event"
   },
   {
-    type: "event",
-    name: "PoolAddressesUpdated",
-    inputs: [
-      { name: "newClubPool", type: "address", indexed: true },
-      { name: "newTreasuryPool", type: "address", indexed: true },
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "userId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "newReferrerId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint8",
+        "name": "level",
+        "type": "uint8"
+      }
     ],
+    "name": "Upgrade",
+    "type": "event"
   },
+  {
+    "inputs": [],
+    "name": "BTCB_TOKEN_ADDRESS",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "new1",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "new2",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "new3",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "new4",
+        "type": "address"
+      }
+    ],
+    "name": "ChangeRoyalNftaddresses",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "new1",
+        "type": "address"
+      }
+    ],
+    "name": "ChangeTitanPassNftaddress",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "LAST_LEVEL",
+    "outputs": [
+      {
+        "internalType": "uint8",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "MATRIX_SIZE",
+    "outputs": [
+      {
+        "internalType": "uint8",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "REGISTRATION_PASS_NFT_CONTRACT",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "ROYAL_RANK1_NFT_CONTRACT",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "ROYAL_RANK2_NFT_CONTRACT",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "ROYAL_RANK3_NFT_CONTRACT",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "ROYAL_RANK4_NFT_CONTRACT",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "userAddress",
+        "type": "address"
+      },
+      {
+        "internalType": "uint8",
+        "name": "level",
+        "type": "uint8"
+      }
+    ],
+    "name": "_findFreeReferrer",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "referrer",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "addressToId",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "userAddress",
+        "type": "address"
+      }
+    ],
+    "name": "getActiveLevelsCount",
+    "outputs": [
+      {
+        "internalType": "uint8",
+        "name": "count",
+        "type": "uint8"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "userId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getDirectPartnerAddresses",
+    "outputs": [
+      {
+        "internalType": "address[]",
+        "name": "",
+        "type": "address[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "userId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getDirectPartnerIds",
+    "outputs": [
+      {
+        "internalType": "uint256[]",
+        "name": "",
+        "type": "uint256[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "userId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getUserDetails",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "userAddress",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "referrerAddress",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "referrerId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "partnersCount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint8",
+        "name": "activeSlotsCount",
+        "type": "uint8"
+      },
+      {
+        "internalType": "uint256",
+        "name": "teamSize",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "registrationTimestamp",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "totalIncome",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "idToAddress",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "partner2",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "partner3",
+        "type": "address"
+      }
+    ],
+    "name": "initializePartners",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      }
+    ],
+    "name": "isUserExists",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "userId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint8",
+        "name": "slot",
+        "type": "uint8"
+      }
+    ],
+    "name": "isUserSlotActive",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "lastUserId",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint8",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "name": "levelTokenCost",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "owner",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "partnersInitialized",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "referrerId",
+        "type": "uint256"
+      }
+    ],
+    "name": "registrationExt",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "referrerId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "userAddress",
+        "type": "address"
+      }
+    ],
+    "name": "registrationSys",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "totalProjectInvestment",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "newOwner",
+        "type": "address"
+      }
+    ],
+    "name": "transferOwnership",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "newRoyalPool",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "newTreasuryPool",
+        "type": "address"
+      }
+    ],
+    "name": "updatePoolAddresses",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "newToken",
+        "type": "address"
+      }
+    ],
+    "name": "updateTokenAddress",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "userAddress",
+        "type": "address"
+      },
+      {
+        "internalType": "uint8",
+        "name": "level",
+        "type": "uint8"
+      }
+    ],
+    "name": "usersXMatrix",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "currentReferrer",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "reinvestCount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "heldTokenForUpgrade",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "lastSpillUnderReceiverIndex",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "totalTeamSize",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "totalEarning",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "userAddress",
+        "type": "address"
+      },
+      {
+        "internalType": "uint8",
+        "name": "level",
+        "type": "uint8"
+      }
+    ],
+    "name": "usersXMatrixReferrals",
+    "outputs": [
+      {
+        "internalType": "address[]",
+        "name": "referrals",
+        "type": "address[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  }
 ] as const;
-
 export const laeCoinAbi = [
   { type: "function", name: "name", inputs: [], outputs: [{ type: "string" }], stateMutability: "view" },
   { type: "function", name: "symbol", inputs: [], outputs: [{ type: "string" }], stateMutability: "view" },

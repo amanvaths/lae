@@ -1,5 +1,5 @@
 export declare const MATRIX_SIZE = 14;
-export declare const LAST_LEVEL = 15;
+export declare const LAST_LEVEL = 12;
 export type SlotState = "locked" | "waiting" | "open" | "filled";
 export interface MatrixSlotDTO {
     position: number;

@@ -1,6 +1,9 @@
-/** LAE Club Matrix — 15 levels · 14 spots */
+/** BTitanXMatrix — 12 levels · 14 spots */
 
-export const LAE_LEVELS = 15;
+export const LAE_LEVELS = 12;
+
+/** BTitan matrix has no on-chain LAE token vesting / claimLaeRewards */
+export const MATRIX_SUPPORTS_LAE_REWARDS = false;
 export const LAE_MATRIX_SIZE = 14;
 
 /**
@@ -47,7 +50,6 @@ export const DEFAULT_LEVEL_PRICES_BTC = [
   "2.048",
   "4.096",
   "8.192",
-  "16.384",
 ] as const;
 
 export const LAE_COIN_TOKENOMICS = {

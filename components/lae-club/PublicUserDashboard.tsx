@@ -77,9 +77,15 @@ export function PublicUserDashboard({ userId }: { userId: string }) {
   const vesting = useLaeVestingDirectRequirement(user.registeredAt);
 
   const incomeEvents = (events.data ?? []).filter((e) => e.eventName === "TokenReceived");
-  const royalEvents = (events.data ?? []).filter((e) => e.eventName === "ClubPoolPayment");
+  const royalEvents = (events.data ?? []).filter((e) => {
+    const name = e.eventName as string;
+    return name === "TreasuryPool" || name === "ClubPoolPayment";
+  });
   const totalMatrix = incomeEvents.reduce((s, e) => s + ((e.args.amount as bigint) ?? 0n), 0n);
-  const totalRoyal = royalEvents.reduce((s, e) => s + ((e.args.amount as bigint) ?? 0n), 0n);
+  const totalRoyal = royalEvents.reduce((s, e) => {
+    const amount = (e.args as { amount?: bigint }).amount;
+    return s + (amount ?? 0n);
+  }, 0n);
   const recycleCount = (events.data ?? []).filter((e) => e.eventName === "Reinvest").length;
 
   if (!parsedId) {
@@ -316,7 +322,7 @@ export function PublicUserDashboard({ userId }: { userId: string }) {
               <StatCard label="Claimed" value={`${fmtEther(rewards.claimed, 4)} LAE`} icon={Crown} accent="gold" />
               <StatCard label="Claimable" value={`${fmtEther(rewards.claimable, 4)} LAE`} accent="emerald" />
               <StatCard label="Locked" value={`${fmtEther(rewards.locked, 4)} LAE`} />
-              <StatCard label="Directs" value={rewards.directCount.toString()} sub={`Month ${vesting.month}: need ${vesting.requiredDirects}`} />
+              <StatCard label="Directs" value={String(user.directCount ?? 0n)} sub={`Month ${vesting.month}: need ${vesting.requiredDirects}`} />
             </div>
           )}
           <p className="mt-4 text-xs text-slate-500">

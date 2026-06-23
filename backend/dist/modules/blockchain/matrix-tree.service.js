@@ -3,7 +3,7 @@ import { prisma } from "../../lib/prisma.js";
 import { CONTRACTS } from "../../config/chains.js";
 import { getIndexerProvider } from "./sync-engine.js";
 export const MATRIX_SIZE = 14;
-export const LAST_LEVEL = 15;
+export const LAST_LEVEL = 12;
 const ZERO = "0x0000000000000000000000000000000000000000";
 const MATRIX_TREE_ABI = [
     "function lastUserId() view returns (uint256)",

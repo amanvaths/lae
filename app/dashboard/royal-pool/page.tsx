@@ -93,20 +93,22 @@ export default function RoyalPoolPage() {
         ) : income.royalEvents.length === 0 ? (
           <p className="text-sm text-slate-500">No royal pool income yet</p>
         ) : (
-          [...income.royalEvents].reverse().map((e, i) => (
+          [...income.royalEvents].reverse().map((e, i) => {
+            const args = e.args as { level?: number; userId?: bigint; amount?: bigint };
+            return (
             <div
               key={`${e.transactionHash}-${i}`}
               className="flex flex-wrap items-center justify-between gap-2 border-b border-[#D4AF37]/10 py-3.5 text-sm transition-colors hover:bg-[#D4AF37]/[0.03]"
             >
               <span className="inline-flex items-center gap-2">
                 <span className="inline-flex items-center rounded-full border border-[#D4AF37]/20 bg-[#D4AF37]/10 px-2.5 py-0.5 text-xs font-medium text-[#D4AF37]">
-                  L{String(e.args.level)}
+                  L{String(args.level)}
                 </span>
-                <span className="text-xs text-slate-500">user #{String(e.args.userId ?? "—")}</span>
+                <span className="text-xs text-slate-500">user #{String(args.userId ?? "—")}</span>
               </span>
               <div className="flex items-center gap-3">
                 <span className="font-semibold text-gradient-gold">
-                  +{fmtEther((e.args.amount as bigint) ?? 0n)}
+                  +{fmtEther(args.amount ?? 0n)}
                 </span>
                 <a
                   href={txUrl(e.transactionHash)}
@@ -118,7 +120,8 @@ export default function RoyalPoolPage() {
                 </a>
               </div>
             </div>
-          ))
+            );
+          })
         )}
       </Panel>
     </div>

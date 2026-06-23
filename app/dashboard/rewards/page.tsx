@@ -10,7 +10,7 @@ import {
   useClaimLaeRewards,
 } from "@/lib/lae-club/hooks";
 import { fmtEther } from "@/lib/contracts/format";
-import { LAE_COIN_TOKENOMICS } from "@/lib/lae-club/constants";
+import { LAE_COIN_TOKENOMICS, ROYAL_NFT_MILESTONES } from "@/lib/lae-club/constants";
 import { formatWalletError } from "@/lib/wallet/errors";
 
 export default function RewardsPage() {
@@ -44,6 +44,33 @@ export default function RewardsPage() {
       <Panel title="LAE Rewards">
         <p className="text-sm text-slate-400">User not registered — register on LAE Club Matrix first.</p>
       </Panel>
+    );
+  }
+
+  if (!rewards.supported) {
+    return (
+      <div>
+        <h1 className="font-display text-2xl font-bold text-white sm:text-3xl">Rewards & Royal NFTs</h1>
+        <p className="mt-1.5 text-sm text-slate-400">
+          BTitanXMatrix pays BTC matrix income on-chain. Royal Card NFTs mint automatically at level milestones.
+        </p>
+        <Panel className="mt-6 border-[#D4AF37]/15" title="Royal Card milestones">
+          <div className="grid gap-3 sm:grid-cols-2">
+            {ROYAL_NFT_MILESTONES.map((m) => (
+              <div key={m.rank} className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                <p className="font-semibold text-[#D4AF37]">{m.label}</p>
+                <p className="mt-1 text-sm text-slate-400">Unlock at matrix level {m.level}</p>
+              </div>
+            ))}
+          </div>
+        </Panel>
+        <Panel className="mt-4 border-white/10" title="LAE Coin vesting">
+          <p className="text-sm text-slate-400">
+            The current BTitan matrix contract does not include on-chain LAE token vesting or claimLaeRewards.
+            LAE Coin P2P and token features remain on the separate LAECoin contract if configured.
+          </p>
+        </Panel>
+      </div>
     );
   }
 

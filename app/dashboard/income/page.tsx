@@ -86,7 +86,7 @@ export default function IncomePage() {
           <p className="relative mt-3 text-2xl font-bold text-emerald-400 sm:text-3xl">
             {fmtEther(income.totalRoyalIncome)}
           </p>
-          <p className="relative mt-1 text-xs text-slate-500">{royalRows.length} ClubPoolPayment events</p>
+          <p className="relative mt-1 text-xs text-slate-500">{royalRows.length} TreasuryPool events</p>
         </div>
       </div>
 
@@ -120,7 +120,7 @@ export default function IncomePage() {
 
       <Panel className="mt-4 border-emerald-500/15" title="Club pool income history">
         {royalRows.length === 0 ? (
-          <p className="text-sm text-slate-500">No ClubPoolPayment events yet</p>
+          <p className="text-sm text-slate-500">No TreasuryPool events yet</p>
         ) : (
           <div className="-mt-1">
             {royalRows.map((e, i) => (

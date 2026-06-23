@@ -1,5 +1,5 @@
 /** BSC Testnet deployed contracts — matches frontend lib/contracts/config.ts */
-export const LAE_MATRIX_DEPLOY_BLOCK = BigInt(process.env.LAE_MATRIX_DEPLOY_BLOCK ?? process.env.INDEXER_START_BLOCK ?? "115009159");
+export const LAE_MATRIX_DEPLOY_BLOCK = BigInt(process.env.LAE_MATRIX_DEPLOY_BLOCK ?? process.env.INDEXER_START_BLOCK ?? "115055888");
 export const CHAIN = {
     chainId: Number(process.env.CHAIN_ID ?? process.env.POLYGON_CHAIN_ID ?? "97"),
     rpcUrl: process.env.BSC_RPC_URL ??
@@ -12,7 +12,7 @@ export const CHAIN = {
 };
 export const CONTRACTS = {
     laeMatrix: process.env.LAE_MATRIX_CONTRACT_ADDRESS ??
-        "0x61a12F835D7F51A6508c4CeBA0fA30d50d092621",
+        "0xaDFA4602894c75B52a71728A55fCAeeEcc1D2c9a",
     senso: process.env.SENSO_CONTRACT_ADDRESS ??
         "0x6521619C38fe4be6B800263CC783d9524ED4F7BA",
     slt: process.env.SLT_CONTRACT_ADDRESS ??
