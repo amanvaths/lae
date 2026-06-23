@@ -434,11 +434,16 @@ async function loadUserEvents(
   userId: bigint,
   userAddress: Address
 ): Promise<MatrixUserEvent[]> {
-  const [apiEvents, chainResult] = await Promise.all([
-    fetchLaeUserEventsFromApi(userAddress),
-    fetchMatrixUserEvents(client, userId, userAddress, { timeoutMs: 45_000 }),
-  ]);
+  // Fast path: the indexer API serves all of a user's events from the DB in
+  // ~100ms. Only fall back to slow on-chain log scanning when it has nothing.
+  const apiEvents = await fetchLaeUserEventsFromApi(userAddress);
+  if (apiEvents && apiEvents.length > 0) {
+    return sortEventsNewestFirst(dedupeEvents(apiEvents));
+  }
 
+  const chainResult = await fetchMatrixUserEvents(client, userId, userAddress, {
+    timeoutMs: 30_000,
+  });
   return sortEventsNewestFirst(
     dedupeEvents([...(apiEvents ?? []), ...chainResult.events])
   );

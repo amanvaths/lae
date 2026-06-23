@@ -30,16 +30,17 @@ function normalizeApiEvent(row: ApiEventRow): MatrixUserEvent {
 
 /** Fast path: indexed events from backend API (~100ms vs 30s+ on-chain). */
 export async function fetchLaeUserEventsFromApi(
-  wallet: string
+  wallet: string,
+  limit = 500
 ): Promise<MatrixUserEvent[] | null> {
   const base = API_BASE_URL.replace(/\/$/, "");
   if (!base) return null;
 
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 6_000);
+    const timeout = setTimeout(() => controller.abort(), 8_000);
     const res = await fetch(
-      `${base}/api/lae/events?wallet=${encodeURIComponent(wallet)}&limit=150`,
+      `${base}/api/lae/events?wallet=${encodeURIComponent(wallet)}&limit=${limit}`,
       { signal: controller.signal, cache: "no-store" }
     );
     clearTimeout(timeout);
