@@ -8,6 +8,7 @@ const DEFAULT_SECTIONS = [
   "tokenomics",
   "network",
   "roadmap",
+  "team",
   "faq",
   "cta",
 ];

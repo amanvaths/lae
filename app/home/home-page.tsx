@@ -8,6 +8,7 @@ import { RewardTimeline } from "@/components/sections/RewardTimeline";
 import { RoyalProgram } from "@/components/sections/RoyalProgram";
 import { P2PSection } from "@/components/sections/P2PSection";
 import { TokenInfo } from "@/components/sections/TokenInfo";
+import { Team } from "@/components/sections/Team";
 import { Footer } from "@/components/sections/Footer";
 import { ScrollProgress } from "@/components/ui/ScrollProgress";
 import { MobileDock } from "@/components/ui/MobileDock";
@@ -34,6 +35,8 @@ export default function HomePage() {
       <P2PSection />
       <SectionDivider />
       <TokenInfo />
+      <SectionDivider />
+      <Team />
       <FAQ />
       <Footer />
       <MobileDock />

@@ -20,6 +20,7 @@ const links = [
   { label: "Matrix", href: "/#network" },
   { label: "Rewards", href: "/#rewards" },
   { label: "Token", href: "/#tokenomics" },
+  { label: "Team", href: "/#team" },
   { label: "FAQ", href: "/#faq" },
 ].map((l) => ({ ...l, href: l.href.startsWith("/#") ? withBasePath(l.href) : l.href }));
 
