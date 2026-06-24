@@ -15,7 +15,7 @@ export default function AdminMatrixPage() {
     <AdminShell title="Matrix">
       <h1 className="font-display text-2xl font-bold">Matrix Placements</h1>
       <p className="mt-1 text-sm text-slate-400">
-        NewUserPlace events · 15 levels · 14 spots per cycle
+        PositionFilled events · cycle-based · 14 positions per cycle
       </p>
 
       <Panel className="mt-6" title="Recent placements">

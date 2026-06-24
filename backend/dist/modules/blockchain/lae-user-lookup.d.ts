@@ -1,5 +1,5 @@
-/** Resolve wallet for a LAE user id — DB first, then on-chain idToAddress. */
+/** Resolve wallet for a LAEClubMatrix user id — DB first, then idToAddress. */
 export declare function laeWalletForUserId(userId: number): Promise<string | null>;
-/** Fill missing receiverAddress on indexed income rows after users are backfilled. */
+/** No-op — LAEClubMatrix income rows store toUserId directly. */
 export declare function repairLaeIncomeReceiverAddresses(): Promise<number>;
 //# sourceMappingURL=lae-user-lookup.d.ts.map

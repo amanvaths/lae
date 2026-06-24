@@ -31,7 +31,7 @@ export default function SharePage() {
     <div>
       <h1 className="font-display text-2xl font-bold text-white">Share &amp; Refer</h1>
       <p className="mt-1 text-sm text-slate-400">
-        BTitan registration uses numeric sponsor ID — share your User ID link
+        MatrixCore registration uses sponsor wallet — share your User ID link
       </p>
 
       <Panel className="mt-6" title="Your referral link">

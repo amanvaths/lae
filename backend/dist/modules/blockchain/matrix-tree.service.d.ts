@@ -1,5 +1,5 @@
 export declare const MATRIX_SIZE = 14;
-export declare const LAST_LEVEL = 12;
+export declare const LAST_LEVEL = 15;
 export type SlotState = "locked" | "waiting" | "open" | "filled";
 export interface MatrixSlotDTO {
     position: number;
@@ -14,30 +14,46 @@ export interface MatrixTreeDTO {
     cycle: number;
     active: boolean;
     filledSpots: number;
-    totalEarning: string;
-    totalTeamSize: number;
+    completed: boolean;
+    slot2Opened: boolean;
+    totalEarned: string;
+    totalCycles: number;
     slots: MatrixSlotDTO[];
 }
-/**
- * Build the authoritative 14-spot matrix tree for (userId, level) directly from
- * the contract (the source of truth) and persist the snapshot to the DB so the
- * frontend can render without doing any hierarchy calculation itself.
- */
-export declare function getMatrixTree(userId: number, level: number): Promise<MatrixTreeDTO | {
+/** Authoritative matrix tree — chain for current cycle, DB for history */
+export declare function getMatrixTree(userId: number, level: number, cycleId: number): Promise<MatrixTreeDTO | {
     error: string;
 }>;
+export interface MatrixOverviewCycle {
+    cycle: number;
+    filled: number;
+    completed: boolean;
+    slot2Opened: boolean;
+}
 export interface MatrixOverviewLevel {
     level: number;
     active: boolean;
-    filled: number;
-    cycle: number;
+    currentCycle: number;
+    cycles: MatrixOverviewCycle[];
 }
-/** Per-level active flag + fill count for the matrix level grid (DB-served). */
-export declare function getMatrixOverview(userId: number): Promise<{
+export declare function getMatrixOverview(userId: number, levelFilter?: number): Promise<{
     userId: number;
     address: string;
     levels: MatrixOverviewLevel[];
 } | {
     error: string;
 }>;
+/** All placements for a user across levels/cycles */
+export declare function getUserPlacement(userId: number): Promise<{
+    level: number;
+    id: string;
+    createdAt: Date;
+    txHash: string;
+    blockNumber: bigint;
+    position: number;
+    logIndex: number;
+    matrixOwnerId: number;
+    cycleId: number;
+    occupantId: number;
+}[]>;
 //# sourceMappingURL=matrix-tree.service.d.ts.map

@@ -23,10 +23,10 @@ export declare function registerUser(walletAddress: string, referralCode: string
         createdAt: Date;
         updatedAt: Date;
         userId: string;
+        totalEarned: import("@prisma/client/runtime/library").Decimal;
         availableBalance: import("@prisma/client/runtime/library").Decimal;
         lockedBalance: import("@prisma/client/runtime/library").Decimal;
         withdrawableBalance: import("@prisma/client/runtime/library").Decimal;
-        totalEarned: import("@prisma/client/runtime/library").Decimal;
         totalWithdrawn: import("@prisma/client/runtime/library").Decimal;
         tokenBalance: import("@prisma/client/runtime/library").Decimal;
     } | null;
@@ -59,10 +59,10 @@ export declare function loginUser(walletAddress: string): Promise<{
         createdAt: Date;
         updatedAt: Date;
         userId: string;
+        totalEarned: import("@prisma/client/runtime/library").Decimal;
         availableBalance: import("@prisma/client/runtime/library").Decimal;
         lockedBalance: import("@prisma/client/runtime/library").Decimal;
         withdrawableBalance: import("@prisma/client/runtime/library").Decimal;
-        totalEarned: import("@prisma/client/runtime/library").Decimal;
         totalWithdrawn: import("@prisma/client/runtime/library").Decimal;
         tokenBalance: import("@prisma/client/runtime/library").Decimal;
     } | null;
@@ -99,10 +99,10 @@ export declare function getUserProfile(userId: string): Promise<{
         createdAt: Date;
         updatedAt: Date;
         userId: string;
+        totalEarned: import("@prisma/client/runtime/library").Decimal;
         availableBalance: import("@prisma/client/runtime/library").Decimal;
         lockedBalance: import("@prisma/client/runtime/library").Decimal;
         withdrawableBalance: import("@prisma/client/runtime/library").Decimal;
-        totalEarned: import("@prisma/client/runtime/library").Decimal;
         totalWithdrawn: import("@prisma/client/runtime/library").Decimal;
         tokenBalance: import("@prisma/client/runtime/library").Decimal;
     } | null;

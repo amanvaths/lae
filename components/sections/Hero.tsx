@@ -57,7 +57,7 @@ const slides = [
     secondary: { href: withBasePath("/dashboard/matrix"), label: "Open Matrix" },
   },
   {
-    label: "14-spot BTitan system",
+    label: "14-position MatrixCore",
     title: (
       <>
         14 Spot
@@ -68,7 +68,7 @@ const slides = [
     desc: (
       <>
         Upline spill, downline spill-under, recycle on spot 14, and royal pool routing — identical
-        BTitan placement logic, deployed on BNB Chain.
+        MatrixCore global BFS placement, deployed on BNB Chain.
       </>
     ),
     primary: { href: "#network", label: "Explore 14 Spots" },

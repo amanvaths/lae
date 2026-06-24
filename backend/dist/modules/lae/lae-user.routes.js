@@ -21,7 +21,7 @@ export async function laeUserRoutes(app) {
         if (!wallet)
             return reply.code(400).send({ error: "wallet query required (0x…)" });
         const q = request.query;
-        const kind = q.kind === "matrix" || q.kind === "royal" ? q.kind : undefined;
+        const kind = q.kind === "matrix" || q.kind === "treasury" ? q.kind : undefined;
         const limit = Number(q.limit ?? 100);
         const incomes = await getLaeUserIncome(wallet, kind, limit);
         return { incomes, source: "indexer" };

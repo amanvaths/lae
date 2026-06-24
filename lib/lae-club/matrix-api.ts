@@ -1,7 +1,6 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { LAE_LEVELS } from "./constants";
 import { api } from "@/lib/api-client";
 
 export type ApiSlotState = "locked" | "waiting" | "open" | "filled";
@@ -20,16 +19,25 @@ export interface ApiMatrixTree {
   cycle: number;
   active: boolean;
   filledSpots: number;
-  totalEarning: string;
-  totalTeamSize: number;
+  completed: boolean;
+  slot2Opened: boolean;
+  totalEarned: string;
+  totalCycles: number;
   slots: ApiMatrixSlot[];
+}
+
+export interface ApiMatrixOverviewCycle {
+  cycle: number;
+  filled: number;
+  completed: boolean;
+  slot2Opened: boolean;
 }
 
 export interface ApiMatrixOverviewLevel {
   level: number;
   active: boolean;
-  filled: number;
-  cycle: number;
+  currentCycle: number;
+  cycles: ApiMatrixOverviewCycle[];
 }
 
 export interface ApiMatrixOverview {
@@ -38,30 +46,28 @@ export interface ApiMatrixOverview {
   levels: ApiMatrixOverviewLevel[];
 }
 
-export function fetchMatrixTree(userId: number, level: number) {
-  return api.get<ApiMatrixTree>(`/api/matrix/tree/${userId}/${level}`, false);
+export function fetchMatrixTree(userId: number, level: number, cycle: number) {
+  return api.get<ApiMatrixTree>(`/api/matrix/tree/${userId}/${level}/${cycle}`, false);
 }
 
-export function fetchMatrixOverview(userId: number) {
-  return api.get<ApiMatrixOverview>(`/api/matrix/overview/${userId}`, false);
+export function fetchMatrixOverview(userId: number, level?: number) {
+  const q = level != null ? `?level=${level}` : "";
+  return api.get<ApiMatrixOverview>(`/api/matrix/overview/${userId}${q}`, false);
 }
 
-/** Authoritative matrix tree for (userId, level) served from the backend DB/contract. */
+/** LAEClubMatrix tree — API (usersXMatrixReferrals via backend). */
 export function useLaeMatrixTreeApi(
   userId: number | undefined,
   level: number,
+  cycle: number,
   options?: { enabled?: boolean }
 ) {
   const enabled =
-    (options?.enabled ?? true) &&
-    !!userId &&
-    userId > 0 &&
-    level >= 1 &&
-    level <= LAE_LEVELS;
+    (options?.enabled ?? true) && !!userId && userId > 0 && level >= 1 && cycle >= 1;
 
   const query = useQuery({
-    queryKey: ["lae-matrix-tree", userId, level],
-    queryFn: () => fetchMatrixTree(userId!, level),
+    queryKey: ["lae-matrix-tree", userId, level, cycle],
+    queryFn: () => fetchMatrixTree(userId!, level, cycle),
     enabled,
     staleTime: 15_000,
     retry: 1,
@@ -75,20 +81,47 @@ export function useLaeMatrixTreeApi(
   };
 }
 
-/** Per-level active flag + fill counts for the matrix grid. */
-export function useLaeMatrixOverviewApi(userId: number | undefined) {
+/** @deprecated alias */
+export const useMatrixCoreTreeApi = useLaeMatrixTreeApi;
+
+export function useLaeMatrixOverviewApi(userId: number | undefined, level?: number) {
   const enabled = !!userId && userId > 0;
   const query = useQuery({
-    queryKey: ["lae-matrix-overview", userId],
-    queryFn: () => fetchMatrixOverview(userId!),
+    queryKey: ["lae-matrix-overview", userId, level],
+    queryFn: () => fetchMatrixOverview(userId!, level),
     enabled,
     staleTime: 20_000,
     retry: 1,
   });
-
   return {
     overview: query.data,
     isLoading: enabled && query.isLoading,
     isError: query.isError,
   };
 }
+
+/** @deprecated alias */
+export const useMatrixCoreOverviewApi = useLaeMatrixOverviewApi;
+
+/** User placements across levels (from API). */
+export function useLaeMatrixPlacement(userId: number | undefined) {
+  const enabled = !!userId && userId > 0;
+  return useQuery({
+    queryKey: ["lae-matrix-placement", userId],
+    queryFn: () =>
+      api.get<
+        {
+          matrixOwnerId: number;
+          level: number;
+          cycleId: number;
+          position: number;
+          occupantId: number;
+        }[]
+      >(`/api/matrix/placement/${userId}`, false),
+    enabled,
+    staleTime: 30_000,
+  });
+}
+
+/** @deprecated alias */
+export const useMatrixCorePlacement = useLaeMatrixPlacement;

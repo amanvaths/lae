@@ -169,11 +169,10 @@ contract LAEClubMatrix {
             users[ownerAddress].activeLevels[level] = true;
         }
 
-        // 20-month release: 5%/month, unlocking +1 direct referral per month
-        // (month 1 needs 1 direct ... month 20 needs 20 directs for 100%).
+        // 20-month release: 5%/month; month M (1..20) requires M+1 direct referrals (2..21).
         for (uint8 month = 0; month < VESTING_MONTHS; month++) {
             monthlyReleaseBps[month] = 500;
-            directRequirementByMonth[month] = month + 1;
+            directRequirementByMonth[month] = uint256(month) + 2; // month index 1 → 2 directs … 20 → 21
         }
     }
 

@@ -2,56 +2,62 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Panel } from "@/components/dashboard/ui";
+import { LayoutGrid } from "lucide-react";
+import { Panel, PageHeading } from "@/components/dashboard/ui";
 import { QueryLoading } from "@/components/dashboard/QueryState";
 import { MatrixVisualizer } from "@/components/lae-club/MatrixVisualizer";
-import { MatrixLevelCard } from "@/components/lae-club/MatrixLevelCard";
 import { MatrixStatusPanel } from "@/components/lae-club/MatrixStatusPanel";
-import { LAE_LEVELS } from "@/lib/lae-club/constants";
-import { buildSlotsFromApi, buildMatrixSlots } from "@/lib/lae-club/matrix-slots";
-import {
-  useLaeUser,
-  useLaeLevelPrices,
-  useLaeMatrixLevel,
-  useLaeAllMatrixLevels,
-  useLaeMatrixFillCounts,
-  useLaeIdsForAddresses,
-} from "@/lib/lae-club/hooks";
+import { MatrixLevelCard } from "@/components/lae-club/MatrixLevelCard";
+import { LAE_MATRIX_SIZE, LAE_LAST_LEVEL } from "@/lib/lae-club/constants";
+import { buildSlotsFromApi } from "@/lib/lae-club/matrix-slots";
+import { useMatrixCoreUser } from "@/lib/lae-club/matrix-core-hooks";
+import { useLaeLevelPrices } from "@/lib/lae-club/hooks";
+import { cn } from "@/lib/utils";
 import {
   useLaeMatrixTreeApi,
   useLaeMatrixOverviewApi,
 } from "@/lib/lae-club/matrix-api";
 
+const LEGEND = [
+  { label: "Active", color: "bg-emerald-400" },
+  { label: "Filled", color: "bg-[#D4AF37]" },
+  { label: "Open", color: "bg-sky-400" },
+  { label: "Locked", color: "bg-slate-500" },
+  { label: "Recycle", color: "bg-rose-400" },
+] as const;
+
 export default function MatrixPage() {
-  const [selectedLevel, setSelectedLevel] = useState<number | null>(1);
-  const user = useLaeUser();
+  const user = useMatrixCoreUser();
   const userIdNum = user.userId ? Number(user.userId) : undefined;
-  const prices = useLaeLevelPrices();
-
-  // Primary source: backend matrix tree API (contract = source of truth, served from DB).
   const overviewApi = useLaeMatrixOverviewApi(userIdNum);
-  const treeApi = useLaeMatrixTreeApi(userIdNum, selectedLevel ?? 1, {
-    enabled: selectedLevel !== null,
-  });
+  const levelPrices = useLaeLevelPrices();
+  const [selectedLevel, setSelectedLevel] = useState(1);
+  const levelData = overviewApi.overview?.levels.find((l) => l.level === selectedLevel);
+  const currentCycle = levelData?.currentCycle ?? 1;
+  const [selectedCycle, setSelectedCycle] = useState(1);
 
-  // Contract fallback — only used when the API is unavailable, plus heldForUpgrade.
-  const allLevels = useLaeAllMatrixLevels();
-  const fillCounts = useLaeMatrixFillCounts();
-  const matrix = useLaeMatrixLevel(selectedLevel ?? 1, {
-    enabled: selectedLevel !== null,
+  const overviewLevels = overviewApi.overview?.levels ?? [];
+  const priceForLevel = (lvl: number) =>
+    levelPrices.prices?.find((p) => p.level === lvl)?.priceFormatted ??
+    (0.001 * 2 ** (lvl - 1)).toString();
+  const filledForLevel = (lvl: number) => {
+    const li = overviewLevels.find((l) => l.level === lvl);
+    if (!li) return 0;
+    return li.cycles.find((c) => c.cycle === li.currentCycle)?.filled ?? 0;
+  };
+
+  const treeApi = useLaeMatrixTreeApi(userIdNum, selectedLevel, selectedCycle, {
+    enabled: !!userIdNum,
   });
-  // Safety net: resolve fallback referral addresses → #id so the tree never
-  // shows raw hex when the API momentarily fails.
-  const fallbackIds = useLaeIdsForAddresses(matrix.referrals);
 
   if (user.isLoading) {
-    return <QueryLoading label="Loading LAE Club matrix…" />;
+    return <QueryLoading label="Loading LAE Club profile…" />;
   }
 
   if (user.isError) {
     return (
       <Panel title="Matrix">
-        <p className="text-sm text-red-300">Could not load profile from chain.</p>
+        <p className="text-sm text-red-300">Could not load profile.</p>
       </Panel>
     );
   }
@@ -59,117 +65,122 @@ export default function MatrixPage() {
   if (!user.registered) {
     return (
       <Panel title="Matrix">
-        <p className="text-sm text-slate-400">Register on LAE Club to view your matrix.</p>
+        <p className="text-sm text-slate-400">Register on LAE Club to view your 14-position matrix.</p>
       </Panel>
     );
   }
 
-  const nextLevelPrice = prices.prices?.find((p) => p.level === (selectedLevel ?? 1) + 1);
-
-  // Tree rendering: prefer API slots; fall back to contract referrals only if API failed.
   const tree = treeApi.tree;
-  const apiSlots = tree ? buildSlotsFromApi(tree.slots) : undefined;
-  const treeActiveForSlots = tree?.active ?? matrix.active;
-  const fallbackSlots = !apiSlots
-    ? buildMatrixSlots(matrix.referrals, treeActiveForSlots, fallbackIds.idByAddress)
-    : undefined;
-  const renderSlots = apiSlots ?? fallbackSlots;
-  const treeActive = tree?.active ?? matrix.active;
-  const treeReinvest = tree ? BigInt(Math.max(0, tree.cycle - 1)) : matrix.reinvestCount;
-  const treeEarning = tree ? BigInt(tree.totalEarning || "0") : matrix.totalEarning;
-  const treeFilled = tree?.filledSpots ?? matrix.filledSpots;
-  const treeLoading =
-    selectedLevel !== null && treeApi.isLoading && matrix.isLoading;
-  const treeError = treeApi.isError && matrix.isError;
+  const slots = tree ? buildSlotsFromApi(tree.slots) : undefined;
+  const activeLevels = overviewApi.overview?.levels.filter((l) => l.active) ?? [{ level: 1, currentCycle: 1, cycles: [] }];
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-display text-2xl font-bold sm:text-3xl">
-          <span className="bg-gradient-to-r from-[#E8E8E8] via-[#C0C0C0] to-[#A8A8A8] bg-clip-text text-transparent">
-            Silver
-          </span>{" "}
-          <span className="text-white/50">&</span>{" "}
-          <span className="bg-gradient-to-r from-[#D4AF37] via-[#C5A028] to-[#B8860B] bg-clip-text text-transparent">
-            Gold
-          </span>{" "}
-          <span className="text-white">Matrix</span>
-        </h1>
-        <p className="mt-1.5 text-sm text-slate-400">
-          12 levels · 14 spots · live contract data · User #{String(user.userId ?? "—")}
-        </p>
-      </div>
+      <PageHeading
+        icon={LayoutGrid}
+        title="Silver & Gold Matrix"
+        subtitle={`${LAE_LAST_LEVEL} levels · ${LAE_MATRIX_SIZE} spots per level · Live contract data · User #${String(user.userId ?? "—")}`}
+        action={
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            {LEGEND.map((l) => (
+              <span key={l.label} className="inline-flex items-center gap-1.5 text-xs text-slate-400">
+                <span className={`h-2 w-2 rounded-full ${l.color}`} />
+                {l.label}
+              </span>
+            ))}
+          </div>
+        }
+      />
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {Array.from({ length: LAE_LEVELS }, (_, i) => i + 1).map((lvl) => {
-          const o = overviewApi.overview?.levels[lvl - 1];
-          const levelActive = o ? o.active : allLevels.levels[lvl - 1]?.active === true;
-          const price = prices.prices?.find((p) => p.level === lvl);
-          const filled = o ? o.filled : fillCounts.fills[lvl - 1] ?? 0;
-
+      {/* ── Level cards grid ── */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        {Array.from({ length: LAE_LAST_LEVEL }, (_, i) => i + 1).map((lvl) => {
+          const active = activeLevels.some((l) => l.level === lvl);
           return (
             <MatrixLevelCard
               key={lvl}
               level={lvl}
-              active={levelActive}
+              active={active}
               selected={selectedLevel === lvl}
-              price={price?.priceFormatted ?? "—"}
-              filled={levelActive ? filled : 0}
-              loading={
-                overviewApi.isLoading && allLevels.isLoading && fillCounts.isLoading
-              }
-              onClick={() =>
-                setSelectedLevel((prev) => (prev === lvl ? null : lvl))
-              }
+              price={priceForLevel(lvl)}
+              filled={filledForLevel(lvl)}
+              loading={overviewApi.isLoading}
+              onClick={() => {
+                setSelectedLevel(lvl);
+                setSelectedCycle(1);
+              }}
             />
           );
         })}
       </div>
 
-      <AnimatePresence mode="wait">
-        {selectedLevel !== null && (
-          <motion.div
-            key={selectedLevel}
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.28 }}
-            className="grid gap-4 lg:grid-cols-[1fr_280px]"
-          >
-            <Panel
-              title={`Level ${selectedLevel} · Matrix Tree`}
-              className="border border-[#D4AF37]/20 bg-black/40"
-            >
-              {treeLoading ? (
-                <QueryLoading label="Loading matrix tree…" />
-              ) : treeError ? (
-                <p className="text-sm text-red-300">Failed to load level {selectedLevel} data.</p>
-              ) : !treeActive ? (
-                <p className="text-sm text-slate-400">
-                  Level {selectedLevel} is locked. Upgrade to activate this slot on-chain.
-                </p>
-              ) : (
-                <MatrixVisualizer
-                  slots={renderSlots}
-                  levelActive={treeActive}
-                  level={selectedLevel}
-                  reinvestCount={treeReinvest}
-                  totalEarning={treeEarning}
-                />
+      {/* ── Cycle selector ── */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="mr-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#D4AF37]/50">
+          Cycle
+        </span>
+        {Array.from({ length: currentCycle }, (_, i) => i + 1).map((c) => {
+          const oc = levelData?.cycles.find((x) => x.cycle === c);
+          const isActive = selectedCycle === c;
+          return (
+            <button
+              key={c}
+              type="button"
+              onClick={() => setSelectedCycle(c)}
+              className={cn(
+                "rounded-full border px-3.5 py-1.5 text-xs font-medium transition-all duration-300 ease-premium",
+                isActive
+                  ? "border-[#D4AF37]/50 bg-gradient-to-r from-[#D4AF37]/15 to-[#D4AF37]/[0.05] text-[#D4AF37] shadow-[inset_0_1px_0_0_rgba(212,175,55,0.12)]"
+                  : "border-white/10 text-slate-400 hover:-translate-y-0.5 hover:border-white/20 hover:text-slate-200"
               )}
-            </Panel>
+            >
+              Cycle {c}
+              {oc ? ` · ${oc.filled}/${LAE_MATRIX_SIZE}` : ""}
+              {oc?.completed ? " ✓" : ""}
+            </button>
+          );
+        })}
+      </div>
 
-            <MatrixStatusPanel
-              level={selectedLevel}
-              filled={treeFilled}
-              cycle={treeReinvest ?? 0n}
-              totalEarning={treeEarning}
-              heldForUpgrade={matrix.heldForUpgrade}
-              nextUpgradeCost={nextLevelPrice?.priceFormatted}
-              levelActive={treeActive}
-            />
-          </motion.div>
-        )}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={`${selectedLevel}-${selectedCycle}`}
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.28 }}
+          className="grid gap-4 lg:grid-cols-[1fr_280px]"
+        >
+          <Panel
+            title={`Slot ${selectedLevel} · Cycle ${selectedCycle}`}
+            className="border border-[#D4AF37]/20 bg-black/40"
+          >
+            {treeApi.isLoading ? (
+              <QueryLoading label="Loading matrix tree from API…" />
+            ) : treeApi.isError || !tree || !slots ? (
+              <p className="text-sm text-red-300">
+                Matrix API unavailable. Ensure LAEClubMatrix is deployed and the indexer is running.
+              </p>
+            ) : (
+              <MatrixVisualizer
+                slots={slots}
+                levelActive
+                level={selectedLevel}
+                reinvestCount={BigInt(selectedCycle - 1)}
+                totalEarning={BigInt(tree.totalEarned || "0")}
+              />
+            )}
+          </Panel>
+
+          <MatrixStatusPanel
+            level={selectedLevel}
+            filled={tree?.filledSpots ?? 0}
+            cycle={BigInt(selectedCycle - 1)}
+            totalEarning={tree ? BigInt(tree.totalEarned || "0") : 0n}
+            heldForUpgrade={0n}
+            levelActive
+          />
+        </motion.div>
       </AnimatePresence>
     </div>
   );

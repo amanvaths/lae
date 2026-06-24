@@ -15,15 +15,15 @@ export function PageHeading({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="mb-6 flex flex-col gap-4 sm:mb-7 sm:flex-row sm:items-end sm:justify-between">
-      <div className="flex min-w-0 items-start gap-3">
+    <div className="mb-6 flex animate-fade-up flex-col gap-4 sm:mb-7 sm:flex-row sm:items-end sm:justify-between">
+      <div className="flex min-w-0 items-start gap-3.5">
         {Icon && (
-          <span className="mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-[#D4AF37]/15 bg-[#D4AF37]/[0.06] text-[#D4AF37] sm:h-11 sm:w-11">
+          <span className="mt-0.5 grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-[#D4AF37]/20 bg-gradient-to-br from-[#D4AF37]/[0.12] to-[#D4AF37]/[0.03] text-[#D4AF37] shadow-[inset_0_1px_0_0_rgba(212,175,55,0.15)] sm:h-12 sm:w-12">
             <Icon className="h-5 w-5" />
           </span>
         )}
         <div className="min-w-0">
-          <h1 className="font-display text-xl font-bold tracking-tight text-white sm:text-2xl md:text-3xl">
+          <h1 className="font-display text-xl font-bold tracking-tight text-white sm:text-2xl md:text-[1.75rem]">
             {title}
           </h1>
           {subtitle && (
@@ -53,16 +53,19 @@ export function Panel({
   return (
     <section
       className={cn(
-        "overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4 backdrop-blur-xl sm:p-5 md:p-6",
-        "shadow-[inset_0_1px_0_0_rgba(212,175,55,0.06),0_0_0_1px_rgba(212,175,55,0.04)]",
+        "group/panel relative overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4 backdrop-blur-xl transition-shadow duration-300 ease-premium sm:p-5 md:p-6",
+        "shadow-[inset_0_1px_0_0_rgba(212,175,55,0.06),0_8px_24px_-14px_rgba(0,0,0,0.7)]",
+        "hover:shadow-[inset_0_1px_0_0_rgba(212,175,55,0.1),0_14px_36px_-16px_rgba(0,0,0,0.8)]",
         className
       )}
     >
+      {/* subtle top hairline accent */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#D4AF37]/15 to-transparent" />
       {(title || action) && (
         <div className="mb-4 flex flex-col gap-3 sm:mb-5 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             {title && (
-              <h2 className="font-display text-sm font-semibold text-white sm:text-base">
+              <h2 className="font-display text-sm font-semibold tracking-tight text-white sm:text-base">
                 {title}
               </h2>
             )}
@@ -92,25 +95,46 @@ export function StatCard({
   trend?: { value: string; up?: boolean };
   accent?: "brand" | "violet" | "gold" | "emerald";
 }) {
-  const accents: Record<string, string> = {
-    brand: "from-[#D4AF37]/20 text-[#D4AF37]",
-    violet: "from-accent-500/20 text-accent-400",
-    gold: "from-[#D4AF37]/25 text-[#D4AF37]",
-    emerald: "from-emerald-500/20 text-emerald-400",
+  const accents: Record<string, { glow: string; text: string; ring: string; bg: string }> = {
+    brand: {
+      glow: "from-[#D4AF37]/25",
+      text: "text-[#D4AF37]",
+      ring: "border-[#D4AF37]/20",
+      bg: "from-[#D4AF37]/[0.12] to-[#D4AF37]/[0.02]",
+    },
+    gold: {
+      glow: "from-[#D4AF37]/30",
+      text: "text-[#D4AF37]",
+      ring: "border-[#D4AF37]/20",
+      bg: "from-[#D4AF37]/[0.14] to-[#D4AF37]/[0.02]",
+    },
+    violet: {
+      glow: "from-accent-500/25",
+      text: "text-accent-400",
+      ring: "border-accent-500/20",
+      bg: "from-accent-500/[0.12] to-accent-500/[0.02]",
+    },
+    emerald: {
+      glow: "from-emerald-500/25",
+      text: "text-emerald-400",
+      ring: "border-emerald-500/20",
+      bg: "from-emerald-500/[0.12] to-emerald-500/[0.02]",
+    },
   };
+  const a = accents[accent] ?? accents.brand;
   return (
     <div
       className={cn(
-        "group relative overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4 backdrop-blur-xl transition-all duration-500 sm:p-5",
-        "shadow-[inset_0_1px_0_0_rgba(212,175,55,0.06)]",
-        "hover:border-[#D4AF37]/15 hover:shadow-[0_0_24px_rgba(212,175,55,0.06),inset_0_1px_0_0_rgba(212,175,55,0.1)]"
+        "group relative overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4 backdrop-blur-xl transition-all duration-300 ease-premium sm:p-5",
+        "shadow-[inset_0_1px_0_0_rgba(212,175,55,0.06),0_8px_24px_-16px_rgba(0,0,0,0.7)]",
+        "hover:-translate-y-0.5 hover:border-[#D4AF37]/20 hover:shadow-[0_16px_36px_-18px_rgba(0,0,0,0.85),inset_0_1px_0_0_rgba(212,175,55,0.12)]"
       )}
     >
-      {/* Gold gradient glow */}
+      {/* Accent gradient glow */}
       <div
         className={cn(
-          "pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full bg-gradient-to-br to-transparent opacity-60 blur-2xl transition-opacity group-hover:opacity-100",
-          accents[accent]
+          "pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-gradient-to-br to-transparent opacity-70 blur-2xl transition-opacity duration-500 group-hover:opacity-100",
+          a.glow
         )}
       />
       <div className="relative flex items-start justify-between gap-3">
@@ -118,7 +142,7 @@ export function StatCard({
           <p className="text-[0.65rem] font-medium uppercase tracking-wider text-slate-400 sm:text-xs">
             {label}
           </p>
-          <p className="mt-1.5 truncate font-display text-xl font-bold text-white sm:mt-2 sm:text-2xl">
+          <p className="mt-1.5 truncate font-display text-xl font-bold tracking-tight text-white sm:mt-2 sm:text-2xl">
             {value}
           </p>
           {sub && <p className="mt-1 truncate text-xs text-slate-500">{sub}</p>}
@@ -126,8 +150,10 @@ export function StatCard({
         {Icon && (
           <span
             className={cn(
-              "grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[#D4AF37]/15 bg-[#D4AF37]/[0.06] sm:h-10 sm:w-10",
-              accents[accent].split(" ")[1]
+              "grid h-10 w-10 shrink-0 place-items-center rounded-xl border bg-gradient-to-br shadow-[inset_0_1px_0_0_rgba(255,255,255,0.08)] transition-transform duration-300 ease-premium group-hover:scale-105 sm:h-11 sm:w-11",
+              a.ring,
+              a.bg,
+              a.text
             )}
           >
             <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -137,8 +163,10 @@ export function StatCard({
       {trend && (
         <p
           className={cn(
-            "relative mt-3 inline-flex items-center gap-1 text-xs font-medium",
-            trend.up ? "text-emerald-400" : "text-red-400"
+            "relative mt-3 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium",
+            trend.up
+              ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400"
+              : "border-red-500/20 bg-red-500/10 text-red-400"
           )}
         >
           {trend.up ? "▲" : "▼"} {trend.value}
@@ -195,11 +223,21 @@ export function Progress({
     emerald: "from-emerald-400 to-emerald-600",
   };
   return (
-    <div className={cn("h-2 w-full overflow-hidden rounded-full bg-white/5", className)}>
+    <div
+      className={cn(
+        "h-2 w-full overflow-hidden rounded-full bg-white/[0.06] shadow-[inset_0_1px_2px_rgba(0,0,0,0.4)]",
+        className
+      )}
+    >
       <div
-        className={cn("h-full rounded-full bg-gradient-to-r", tones[tone])}
+        className={cn(
+          "relative h-full rounded-full bg-gradient-to-r transition-[width] duration-700 ease-premium",
+          tones[tone]
+        )}
         style={{ width: `${Math.min(100, Math.max(0, value))}%` }}
-      />
+      >
+        <span className="absolute inset-0 rounded-full bg-gradient-to-b from-white/30 to-transparent opacity-40" />
+      </div>
     </div>
   );
 }
@@ -278,8 +316,61 @@ export function TableWrap({
 /* ---------------- Empty / coming-soon notice ---------------- */
 export function InfoNote({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-[#D4AF37]/20 bg-[#D4AF37]/[0.06] px-4 py-3 text-sm text-[#D4AF37]/80">
+    <div className="flex items-start gap-2.5 rounded-xl border border-[#D4AF37]/20 bg-gradient-to-br from-[#D4AF37]/[0.08] to-[#D4AF37]/[0.02] px-4 py-3 text-sm text-[#D4AF37]/90 shadow-[inset_0_1px_0_0_rgba(212,175,55,0.1)]">
       {children}
+    </div>
+  );
+}
+
+/* ---------------- Skeleton primitives ---------------- */
+export function Skeleton({ className }: { className?: string }) {
+  return <div className={cn("skeleton", className)} />;
+}
+
+export function SkeletonText({
+  lines = 3,
+  className,
+}: {
+  lines?: number;
+  className?: string;
+}) {
+  return (
+    <div className={cn("space-y-2.5", className)}>
+      {Array.from({ length: lines }).map((_, i) => (
+        <div
+          key={i}
+          className="skeleton h-3.5"
+          style={{ width: `${90 - i * (60 / Math.max(1, lines))}%` }}
+        />
+      ))}
+    </div>
+  );
+}
+
+/* ---------------- Rich empty state ---------------- */
+export function EmptyState({
+  icon: Icon,
+  title,
+  desc,
+  action,
+}: {
+  icon?: LucideIcon;
+  title: string;
+  desc?: string;
+  action?: React.ReactNode;
+}) {
+  return (
+    <div className="flex animate-fade-in flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-white/10 bg-white/[0.015] px-6 py-12 text-center">
+      {Icon && (
+        <span className="grid h-12 w-12 place-items-center rounded-2xl border border-[#D4AF37]/15 bg-gradient-to-br from-[#D4AF37]/[0.1] to-transparent text-[#D4AF37]/70">
+          <Icon className="h-6 w-6" />
+        </span>
+      )}
+      <div>
+        <p className="font-display text-sm font-semibold text-white">{title}</p>
+        {desc && <p className="mt-1 max-w-sm text-xs leading-relaxed text-slate-500">{desc}</p>}
+      </div>
+      {action && <div className="mt-1">{action}</div>}
     </div>
   );
 }

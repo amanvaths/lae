@@ -1,212 +1,236 @@
 import { ethers } from "ethers";
 import { prisma } from "../../lib/prisma.js";
 import { CONTRACTS } from "../../config/chains.js";
-import { getIndexerProvider } from "./sync-engine.js";
+import { getIndexerProvider } from "./rpc-providers.js";
+import { LAE_MATRIX_READ_ABI } from "./matrix-core-abi.js";
 export const MATRIX_SIZE = 14;
-export const LAST_LEVEL = 12;
-const ZERO = "0x0000000000000000000000000000000000000000";
-const MATRIX_TREE_ABI = [
-    "function lastUserId() view returns (uint256)",
-    "function idToAddress(uint256) view returns (address)",
-    "function addressToId(address) view returns (uint256)",
-    "function isUserSlotActive(uint256 userId, uint8 slot) view returns (bool)",
-    "function usersXMatrix(address userAddress, uint8 level) view returns (address currentReferrer, uint256 reinvestCount, uint256 heldTokenForUpgrade, uint256 lastSpillUnderReceiverIndex, uint256 totalTeamSize, uint256 totalEarning)",
-    "function usersXMatrixReferrals(address userAddress, uint8 level) view returns (address[])",
-];
-let contract = null;
-function matrix() {
-    if (!contract) {
-        contract = new ethers.Contract(CONTRACTS.laeMatrix, MATRIX_TREE_ABI, getIndexerProvider());
-    }
-    return contract;
+export const LAST_LEVEL = 15;
+const matrixIface = new ethers.Interface([...LAE_MATRIX_READ_ABI]);
+function matrixContract() {
+    return new ethers.Contract(CONTRACTS.matrixCore, matrixIface, getIndexerProvider());
 }
-/** Resolve owner wallet for a userId — DB first, then contract. */
-async function resolveOwnerAddress(userId) {
-    const row = await prisma.indexedLaeUser.findUnique({
+async function walletForUserId(userId) {
+    const row = await prisma.matrixCoreUser.findUnique({
         where: { userId },
         select: { walletAddress: true },
     });
     if (row?.walletAddress)
-        return row.walletAddress;
+        return row.walletAddress.toLowerCase();
     try {
-        const addr = String(await matrix().idToAddress(userId));
-        return addr && addr !== ZERO ? addr.toLowerCase() : null;
+        const m = matrixContract();
+        const wallet = String(await m.idToAddress(userId)).toLowerCase();
+        return wallet && wallet !== "0x0000000000000000000000000000000000000000" ? wallet : null;
     }
     catch {
         return null;
     }
 }
-/** Map occupant addresses → userId (DB first, contract fallback). */
-async function resolveUserIds(addresses) {
-    const out = new Map();
-    const want = addresses
-        .filter((a) => a && a !== ZERO)
-        .map((a) => a.toLowerCase());
-    if (want.length === 0)
-        return out;
-    const rows = await prisma.indexedLaeUser.findMany({
-        where: { walletAddress: { in: want } },
-        select: { walletAddress: true, userId: true },
-    });
-    for (const r of rows)
-        out.set(r.walletAddress.toLowerCase(), r.userId);
-    for (const a of want) {
-        if (out.has(a))
-            continue;
-        try {
-            const id = Number(await matrix().addressToId(a));
-            if (id > 0)
-                out.set(a, id);
-        }
-        catch {
-            /* leave unresolved */
-        }
-    }
-    return out;
-}
-/**
- * Build the authoritative 14-spot matrix tree for (userId, level) directly from
- * the contract (the source of truth) and persist the snapshot to the DB so the
- * frontend can render without doing any hierarchy calculation itself.
- */
-export async function getMatrixTree(userId, level) {
-    if (!Number.isInteger(userId) || userId < 1)
-        return { error: "invalid userId" };
-    if (!Number.isInteger(level) || level < 1 || level > LAST_LEVEL) {
-        return { error: "invalid level" };
-    }
-    const owner = await resolveOwnerAddress(userId);
-    if (!owner)
-        return { error: "user not found" };
-    let reinvestCount = 0;
-    let totalEarning = "0";
-    let totalTeamSize = 0;
-    let active = false;
-    let referrals = [];
+async function idForAddress(address) {
     try {
-        const [m, refs, slotActive] = await Promise.all([
-            matrix().usersXMatrix(owner, level),
-            matrix().usersXMatrixReferrals(owner, level),
-            matrix().isUserSlotActive(userId, level),
-        ]);
-        reinvestCount = Number(m.reinvestCount ?? 0n);
-        totalEarning = (m.totalEarning ?? 0n).toString();
-        totalTeamSize = Number(m.totalTeamSize ?? 0n);
-        active = slotActive === true;
-        referrals = refs.map((a) => String(a).toLowerCase());
+        const m = matrixContract();
+        const id = Number(await m.addressToId(address));
+        return id > 0 ? id : null;
     }
-    catch (err) {
-        return {
-            error: `chain read failed: ${err instanceof Error ? err.message : String(err)}`,
-        };
+    catch {
+        return null;
     }
-    const cycle = reinvestCount + 1;
-    const idMap = await resolveUserIds(referrals);
-    const filled = [];
+}
+/** Build tree from indexed DB positions */
+async function treeFromDb(userId, level, cycleId) {
+    const user = await prisma.matrixCoreUser.findUnique({ where: { userId } });
+    if (!user)
+        return null;
+    const cycle = await prisma.matrixCoreCycle.findUnique({
+        where: { matrixOwnerId_level_cycleId: { matrixOwnerId: userId, level, cycleId } },
+    });
+    const positions = await prisma.matrixCorePosition.findMany({
+        where: { matrixOwnerId: userId, level, cycleId },
+        orderBy: { position: "asc" },
+    });
+    const posMap = new Map(positions.map((p) => [p.position, p]));
+    const filled = cycle?.filled ?? positions.length;
+    const completed = cycle?.completed ?? false;
+    const nextOpen = filled + 1;
     const slots = [];
-    const filledCount = referrals.filter((a) => a && a !== ZERO).length;
-    const nextOpenSpot = filledCount + 1;
-    for (let i = 0; i < MATRIX_SIZE; i++) {
-        const position = i + 1;
-        const raw = referrals[i];
-        const hasAddress = !!raw && raw !== ZERO;
-        if (!active) {
-            slots.push({ position, state: "locked", userId: null, address: null });
-            continue;
-        }
-        if (hasAddress) {
-            const occupantId = idMap.get(raw) ?? null;
+    for (let p = 1; p <= MATRIX_SIZE; p++) {
+        const row = posMap.get(p);
+        if (row) {
+            const occWallet = await walletForUserId(row.occupantId);
             slots.push({
-                position,
+                position: p,
                 state: "filled",
-                userId: occupantId,
-                address: raw,
+                userId: row.occupantId,
+                address: occWallet,
             });
-            if (occupantId)
-                filled.push({ spot: position, userId: occupantId, address: raw });
-            continue;
         }
-        slots.push({
-            position,
-            state: position === nextOpenSpot ? "open" : "waiting",
-            userId: null,
-            address: null,
-        });
+        else {
+            slots.push({
+                position: p,
+                state: !completed && p === nextOpen ? "open" : "waiting",
+                userId: null,
+                address: null,
+            });
+        }
     }
-    await persistSnapshot(userId, level, reinvestCount, filled);
     return {
         userId,
-        address: owner,
+        address: user.walletAddress,
         level,
-        cycle,
-        active,
-        filledSpots: filledCount,
-        totalEarning,
-        totalTeamSize,
+        cycle: cycleId,
+        active: true,
+        filledSpots: filled,
+        completed,
+        slot2Opened: cycle?.slot2Opened ?? false,
+        totalEarned: user.totalEarned.toString(),
+        totalCycles: user.totalCycles,
         slots,
     };
 }
-/** Persist the current-cycle snapshot, replacing any stale rows. */
-async function persistSnapshot(referrerId, level, reinvestCount, filled) {
+/** Read usersXMatrixReferrals from chain for the current cycle */
+async function treeFromChain(userId, level, cycleId) {
+    const m = matrixContract();
     try {
-        // Enrich with block/tx from indexed placement events when available.
-        const placements = await prisma.indexedLaePlacement.findMany({
-            where: { referrerId, level, cycle: reinvestCount + 1 },
-            select: { spot: true, blockNumber: true, txHash: true },
-        });
-        const meta = new Map();
-        for (const p of placements)
-            meta.set(p.spot, { blockNumber: p.blockNumber, txHash: p.txHash });
-        await prisma.$transaction([
-            prisma.indexedMatrixSlot.deleteMany({
-                where: { referrerId, level, cycle: reinvestCount },
-            }),
-            prisma.indexedMatrixSlot.createMany({
-                data: filled.map((f) => ({
-                    referrerId,
-                    level,
-                    cycle: reinvestCount,
-                    spot: f.spot,
-                    userId: f.userId,
-                    walletAddress: f.address,
-                    blockNumber: meta.get(f.spot)?.blockNumber ?? null,
-                    txHash: meta.get(f.spot)?.txHash ?? null,
-                })),
-                skipDuplicates: true,
-            }),
+        const wallet = (await walletForUserId(userId))?.toLowerCase();
+        if (!wallet)
+            return null;
+        const [details, matrixRow, slot2Active] = await Promise.all([
+            m.getUserDetails(userId),
+            m.usersXMatrix(wallet, level),
+            m.isUserSlotActive(userId, 2),
         ]);
+        const reinvestCount = Number(matrixRow.reinvestCount ?? 0);
+        const currentCycle = reinvestCount + 1;
+        const slot2Opened = Boolean(slot2Active);
+        let filled = 0;
+        let completed = false;
+        const slots = [];
+        if (cycleId === currentCycle) {
+            const rawRefs = await m.usersXMatrixReferrals(wallet, level);
+            const referralCount = Number(rawRefs?.length ?? 0);
+            filled = referralCount;
+            completed = filled >= MATRIX_SIZE;
+            for (let p = 1; p <= MATRIX_SIZE; p++) {
+                const addr = p <= referralCount
+                    ? String(typeof rawRefs.getItem === "function" ? rawRefs.getItem(p - 1) : rawRefs[p - 1])
+                    : undefined;
+                if (addr && addr !== ethers.ZeroAddress) {
+                    const occId = await idForAddress(addr);
+                    slots.push({
+                        position: p,
+                        state: "filled",
+                        userId: occId,
+                        address: addr.toLowerCase(),
+                    });
+                }
+                else {
+                    slots.push({
+                        position: p,
+                        state: !completed && p === filled + 1 ? "open" : "waiting",
+                        userId: null,
+                        address: null,
+                    });
+                }
+            }
+        }
+        else {
+            const dbTree = await treeFromDb(userId, level, cycleId);
+            if (dbTree)
+                return dbTree;
+            for (let p = 1; p <= MATRIX_SIZE; p++) {
+                slots.push({ position: p, state: "waiting", userId: null, address: null });
+            }
+        }
+        return {
+            userId,
+            address: String(details.userAddress).toLowerCase(),
+            level,
+            cycle: cycleId,
+            active: true,
+            filledSpots: filled,
+            completed,
+            slot2Opened,
+            totalEarned: String(details.totalIncome ?? "0"),
+            totalCycles: reinvestCount,
+            slots,
+        };
     }
-    catch (err) {
-        console.error("[matrix-tree] snapshot persist failed:", err);
+    catch {
+        return null;
     }
 }
-/** Per-level active flag + fill count for the matrix level grid (DB-served). */
-export async function getMatrixOverview(userId) {
+/** Authoritative matrix tree — chain for current cycle, DB for history */
+export async function getMatrixTree(userId, level, cycleId) {
     if (!Number.isInteger(userId) || userId < 1)
         return { error: "invalid userId" };
-    const owner = await resolveOwnerAddress(userId);
-    if (!owner)
-        return { error: "user not found" };
+    if (!Number.isInteger(level) || level < 1 || level > LAST_LEVEL)
+        return { error: "invalid level" };
+    if (!Number.isInteger(cycleId) || cycleId < 1)
+        return { error: "invalid cycle" };
+    const chainTree = await treeFromChain(userId, level, cycleId);
+    if (!chainTree)
+        return { error: "user not found or chain read failed" };
+    const dbTree = await treeFromDb(userId, level, cycleId);
+    if (dbTree) {
+        for (let p = 1; p <= chainTree.filledSpots; p++) {
+            const c = chainTree.slots[p - 1];
+            const d = dbTree.slots[p - 1];
+            if (c?.userId !== d?.userId) {
+                console.warn(`[matrix-tree] DB/chain mismatch user=${userId} level=${level} cycle=${cycleId} pos=${p}`);
+            }
+        }
+    }
+    return chainTree;
+}
+export async function getMatrixOverview(userId, levelFilter) {
+    if (!Number.isInteger(userId) || userId < 1)
+        return { error: "invalid userId" };
+    const user = await prisma.matrixCoreUser.findUnique({ where: { userId } });
+    let address = user?.walletAddress;
+    if (!address) {
+        address = (await walletForUserId(userId)) ?? undefined;
+        if (!address)
+            return { error: "user not found" };
+    }
+    const m = matrixContract();
     const levels = [];
-    for (let level = 1; level <= LAST_LEVEL; level++) {
+    const levelStart = levelFilter ?? 1;
+    const levelEnd = levelFilter ?? LAST_LEVEL;
+    for (let level = levelStart; level <= levelEnd; level++) {
         let active = false;
-        let filled = 0;
-        let cycle = 1;
+        let currentCycle = 1;
         try {
-            const [slotActive, refs, m] = await Promise.all([
-                matrix().isUserSlotActive(userId, level),
-                matrix().usersXMatrixReferrals(owner, level),
-                matrix().usersXMatrix(owner, level),
-            ]);
-            active = slotActive === true;
-            filled = refs.filter((a) => a && String(a).toLowerCase() !== ZERO).length;
-            cycle = Number(m.reinvestCount ?? 0n) + 1;
+            active = Boolean(await m.isUserSlotActive(userId, level));
+            if (active) {
+                const matrixRow = await m.usersXMatrix(address, level);
+                currentCycle = Number(matrixRow.reinvestCount ?? 0) + 1;
+            }
         }
         catch {
-            /* level read failed — leave defaults */
+            active = level === 1;
         }
-        levels.push({ level, active, filled: active ? filled : 0, cycle });
+        if (!active && levelFilter == null)
+            continue;
+        const cycles = [];
+        for (let c = 1; c <= currentCycle; c++) {
+            const status = await prisma.matrixCoreCycle.findUnique({
+                where: { matrixOwnerId_level_cycleId: { matrixOwnerId: userId, level, cycleId: c } },
+            });
+            cycles.push({
+                cycle: c,
+                filled: status?.filled ?? 0,
+                completed: status?.completed ?? false,
+                slot2Opened: status?.slot2Opened ?? false,
+            });
+        }
+        levels.push({ level, active, currentCycle, cycles });
     }
-    return { userId, address: owner, levels };
+    return { userId, address, levels };
+}
+/** All placements for a user across levels/cycles */
+export async function getUserPlacement(userId) {
+    return prisma.matrixCorePosition.findMany({
+        where: { occupantId: userId },
+        orderBy: [{ level: "asc" }, { cycleId: "asc" }, { position: "asc" }],
+    });
 }
 //# sourceMappingURL=matrix-tree.service.js.map

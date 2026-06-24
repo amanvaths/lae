@@ -1,1 +1,1 @@
-{"version":3,"file":"chains.d.ts","sourceRoot":"","sources":["../../src/config/chains.ts"],"names":[],"mappings":"AAAA,gFAAgF;AAChF,eAAO,MAAM,uBAAuB,QAEnC,CAAC;AAEF,eAAO,MAAM,KAAK;;;;;;;CAUR,CAAC;AAEX,eAAO,MAAM,SAAS;;;;;;;;CAuBZ,CAAC"}
+{"version":3,"file":"chains.d.ts","sourceRoot":"","sources":["../../src/config/chains.ts"],"names":[],"mappings":"AAAA,4CAA4C;AAC5C,eAAO,MAAM,wBAAwB,QAKpC,CAAC;AAEF,eAAO,MAAM,KAAK;;;;;;;CAOR,CAAC;AAEX,eAAO,MAAM,SAAS;IACpB,8CAA8C;;;;;;;;CAetC,CAAC"}

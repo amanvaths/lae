@@ -1,3 +1,3 @@
-/** Populate indexed users from on-chain getUserDetails — works without archive eth_getLogs. */
+/** Populate LAEClubMatrix users from on-chain getUserDetails. */
 export declare function backfillLaeUsersFromChain(): Promise<number>;
 //# sourceMappingURL=chain-backfill.d.ts.map

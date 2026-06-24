@@ -20,14 +20,12 @@ import {
   useLaeAllMatrixLevels,
   useLaeIncomeEvents,
   useLaeRecycleCount,
-  useLaeNftStatus,
   useLaeMatrixLevel,
   useLaeUserEvents,
-  useLaeIdsForAddresses,
   referralLinkByUserId,
 } from "@/lib/lae-club/hooks";
-import { useLaeMatrixTreeApi } from "@/lib/lae-club/matrix-api";
-import { buildSlotsFromApi, buildMatrixSlots } from "@/lib/lae-club/matrix-slots";
+import { useMatrixCoreTreeApi } from "@/lib/lae-club/matrix-api";
+import { buildSlotsFromApi } from "@/lib/lae-club/matrix-slots";
 import { sortEventsNewestFirst } from "@/lib/lae-club/event-utils";
 import { fmtEther } from "@/lib/contracts/format";
 import { truncateAddress, formatUnixDate } from "@/lib/format";
@@ -49,11 +47,9 @@ export default function DashboardHome() {
   const income = useLaeIncomeEvents();
   const userEvents = useLaeUserEvents();
   const recycles = useLaeRecycleCount();
-  const nft = useLaeNftStatus();
-  const matrixL1 = useLaeMatrixLevel(1);
+  const matrixL1 = useLaeMatrixLevel(1, 1);
   const userIdNum = user.userId ? Number(user.userId) : undefined;
-  const matrixL1Api = useLaeMatrixTreeApi(userIdNum, 1);
-  const matrixL1FallbackIds = useLaeIdsForAddresses(matrixL1.referrals);
+  const matrixL1Api = useMatrixCoreTreeApi(userIdNum, 1, 1);
   const recentEvents = sortEventsNewestFirst(userEvents.data ?? []).slice(0, 8);
 
   if (user.isLoading) {
@@ -62,29 +58,33 @@ export default function DashboardHome() {
 
   if (!user.registered) {
     return (
-      <div>
-        <h1 className="font-display text-2xl font-bold text-white">Dashboard</h1>
-        <Panel className="mt-6" title="Not registered">
-          <p className="text-sm text-slate-400">
-            Connect your wallet and complete registration to view live matrix data.
-          </p>
-          <Link href={withBasePath("/register")} className="btn-primary mt-4 inline-flex">
-            Register on LAE Club
-          </Link>
+      <div className="animate-fade-up">
+        <h1 className="font-display text-2xl font-bold tracking-tight text-white md:text-3xl">
+          Dashboard
+        </h1>
+        <Panel className="relative mt-6 overflow-hidden">
+          <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-[#D4AF37]/[0.08] blur-3xl" />
+          <div className="relative max-w-lg">
+            <span className="grid h-12 w-12 place-items-center rounded-2xl border border-[#D4AF37]/20 bg-gradient-to-br from-[#D4AF37]/[0.12] to-transparent text-[#D4AF37]">
+              <Sparkles className="h-6 w-6" />
+            </span>
+            <h2 className="mt-4 font-display text-lg font-semibold text-white">
+              Welcome to LAE Club
+            </h2>
+            <p className="mt-1.5 text-sm leading-relaxed text-slate-400">
+              Connect your wallet and complete registration to unlock your live matrix,
+              income tracking, and rewards dashboard.
+            </p>
+            <Link href={withBasePath("/register")} className="btn-primary mt-5 inline-flex">
+              Register on LAE Club
+            </Link>
+          </div>
         </Panel>
       </div>
     );
   }
 
-  const royalRank = nft.royalRank4
-    ? 4
-    : nft.royalRank3
-      ? 3
-      : nft.royalRank2
-        ? 2
-        : nft.royalRank1
-          ? 1
-          : 0;
+  const royalRank = 0;
 
   return (
     <motion.div variants={stagger} initial="hidden" animate="show">
@@ -123,69 +123,38 @@ export default function DashboardHome() {
 
       {/* ── Top Stats Row ── */}
       <motion.div variants={fadeUp} className="grid gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
-        <div className="group relative overflow-hidden rounded-2xl border border-[#D4AF37]/20 bg-ink-900/80 p-4 backdrop-blur-xl transition-all duration-500 hover:border-[#D4AF37]/40 hover:shadow-glow-gold sm:p-5">
-          <div className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-gradient-to-br from-[#D4AF37]/25 to-transparent opacity-60 blur-2xl transition-opacity group-hover:opacity-100" />
-          <div className="relative flex items-start justify-between gap-3">
-            <div className="min-w-0 flex-1">
-              <p className="text-[0.65rem] font-medium uppercase tracking-wider text-[#D4AF37]/70 sm:text-xs">Total Income</p>
-              <p className="mt-1.5 truncate font-display text-xl font-bold text-gradient-gold sm:mt-2 sm:text-2xl">
-                {fmtEther(user.totalIncome ?? income.totalMatrixIncome ?? 0n)}
-              </p>
-              <p className="mt-1 truncate text-xs text-slate-500">Royal {fmtEther(income.totalRoyalIncome)}</p>
-            </div>
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-[#D4AF37]/20 bg-[#D4AF37]/10 text-[#D4AF37] sm:h-11 sm:w-11">
-              <TrendingUp className="h-5 w-5" />
+        <StatCard
+          label="Total Income"
+          accent="gold"
+          icon={TrendingUp}
+          value={
+            <span className="text-gradient-gold">
+              {fmtEther(user.totalIncome ?? income.totalMatrixIncome ?? 0n)}
             </span>
-          </div>
-        </div>
-
-        <div className="group relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-ink-900/80 p-4 backdrop-blur-xl transition-all duration-500 hover:border-emerald-500/40 hover:shadow-[0_0_40px_-10px_rgba(16,185,129,0.3)] sm:p-5">
-          <div className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-gradient-to-br from-emerald-500/25 to-transparent opacity-60 blur-2xl transition-opacity group-hover:opacity-100" />
-          <div className="relative flex items-start justify-between gap-3">
-            <div className="min-w-0 flex-1">
-              <p className="text-[0.65rem] font-medium uppercase tracking-wider text-emerald-400/70 sm:text-xs">Direct Team</p>
-              <p className="mt-1.5 truncate font-display text-xl font-bold text-emerald-400 sm:mt-2 sm:text-2xl">
-                {String(user.directCount ?? 0n)}
-              </p>
-              <p className="mt-1 truncate text-xs text-slate-500">Total team {String(user.teamSize ?? 0n)}</p>
-            </div>
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-400 sm:h-11 sm:w-11">
-              <Users className="h-5 w-5" />
-            </span>
-          </div>
-        </div>
-
-        <div className="group relative overflow-hidden rounded-2xl border border-[#D4AF37]/20 bg-ink-900/80 p-4 backdrop-blur-xl transition-all duration-500 hover:border-[#D4AF37]/40 hover:shadow-glow-gold sm:p-5">
-          <div className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-gradient-to-br from-brand-500/25 via-[#D4AF37]/15 to-transparent opacity-60 blur-2xl transition-opacity group-hover:opacity-100" />
-          <div className="relative flex items-start justify-between gap-3">
-            <div className="min-w-0 flex-1">
-              <p className="text-[0.65rem] font-medium uppercase tracking-wider text-[#D4AF37]/70 sm:text-xs">Active Levels</p>
-              <p className="mt-1.5 truncate font-display text-xl font-bold text-white sm:mt-2 sm:text-2xl">
-                {levels.isLoading ? "…" : levels.activeCount}
-              </p>
-              <p className="mt-1 truncate text-xs text-slate-500">of 15 matrix levels</p>
-            </div>
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-[#D4AF37]/20 bg-[#D4AF37]/10 text-[#D4AF37] sm:h-11 sm:w-11">
-              <Layers className="h-5 w-5" />
-            </span>
-          </div>
-        </div>
-
-        <div className="group relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-ink-900/80 p-4 backdrop-blur-xl transition-all duration-500 hover:border-emerald-500/40 hover:shadow-[0_0_40px_-10px_rgba(16,185,129,0.3)] sm:p-5">
-          <div className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-gradient-to-br from-emerald-500/25 to-transparent opacity-60 blur-2xl transition-opacity group-hover:opacity-100" />
-          <div className="relative flex items-start justify-between gap-3">
-            <div className="min-w-0 flex-1">
-              <p className="text-[0.65rem] font-medium uppercase tracking-wider text-emerald-400/70 sm:text-xs">Recycles</p>
-              <p className="mt-1.5 truncate font-display text-xl font-bold text-emerald-400 sm:mt-2 sm:text-2xl">
-                {String(recycles.count)}
-              </p>
-              <p className="mt-1 truncate text-xs text-slate-500">NFT rank {royalRank > 0 ? `Royal ${royalRank}` : "Registration pass"}</p>
-            </div>
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-400 sm:h-11 sm:w-11">
-              <RefreshCw className="h-5 w-5" />
-            </span>
-          </div>
-        </div>
+          }
+          sub={`Royal ${fmtEther(income.totalRoyalIncome)}`}
+        />
+        <StatCard
+          label="Direct Team"
+          accent="emerald"
+          icon={Users}
+          value={<span className="text-emerald-400">{String(user.directCount ?? 0n)}</span>}
+          sub={`Total team ${String(user.teamSize ?? 0n)}`}
+        />
+        <StatCard
+          label="Active Levels"
+          accent="brand"
+          icon={Layers}
+          value={levels.isLoading ? "…" : levels.activeCount}
+          sub="of 15 matrix levels"
+        />
+        <StatCard
+          label="Recycles"
+          accent="emerald"
+          icon={RefreshCw}
+          value={<span className="text-emerald-400">{String(recycles.count)}</span>}
+          sub={`NFT rank ${royalRank > 0 ? `Royal ${royalRank}` : "Registration pass"}`}
+        />
       </motion.div>
 
       {/* ── Matrix Visualizer ── */}
@@ -201,22 +170,14 @@ export default function DashboardHome() {
               slots={
                 matrixL1Api.tree
                   ? buildSlotsFromApi(matrixL1Api.tree.slots)
-                  : buildMatrixSlots(
-                      matrixL1.referrals,
-                      matrixL1.active,
-                      matrixL1FallbackIds.idByAddress
-                    )
+                  : undefined
               }
               levelActive={matrixL1Api.tree?.active ?? matrixL1.active}
               level={1}
-              reinvestCount={
-                matrixL1Api.tree
-                  ? BigInt(Math.max(0, matrixL1Api.tree.cycle - 1))
-                  : matrixL1.reinvestCount
-              }
+              reinvestCount={BigInt(Math.max(0, (matrixL1Api.tree?.cycle ?? 1) - 1))}
               totalEarning={
                 matrixL1Api.tree
-                  ? BigInt(matrixL1Api.tree.totalEarning || "0")
+                  ? BigInt(matrixL1Api.tree.totalEarned || "0")
                   : matrixL1.totalEarning
               }
             />

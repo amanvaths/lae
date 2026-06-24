@@ -1,4 +1,4 @@
--- Authoritative matrix tree snapshot built from on-chain usersXMatrixReferrals()
+-- Legacy matrix slot snapshot (superseded by MatrixCore mc_positions)
 
 CREATE TABLE "idx_lae_matrix_slots" (
     "id" TEXT NOT NULL,

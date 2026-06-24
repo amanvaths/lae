@@ -1,23 +1,54 @@
-export type LaeUserEventRow = {
-    transactionHash: string;
-    logIndex: number;
-    eventName: string;
-    args: Record<string, unknown>;
-    blockNumber: string;
-};
-/** Fast indexed user events — avoids slow eth_getLogs on the frontend. */
-export declare function getLaeUserEvents(wallet: string, limit?: number): Promise<LaeUserEventRow[]>;
-export declare function getLaeUserIncome(wallet: string, kind?: "matrix" | "royal", limit?: number): Promise<{
-    level: number;
+export declare function getLaeUserByWallet(wallet: string): Promise<{
+    userId: number;
+    wallet: string;
+    sponsorId: number | null;
+    currentCycle: number;
+    directReferrals: number;
+    totalEarned: string;
+    totalCycles: number;
+    placements: {
+        matrixOwnerId: number;
+        level: number;
+        cycleId: number;
+        position: number;
+    }[];
+    income: {
+        level: number | null;
+        id: string;
+        createdAt: Date;
+        txHash: string;
+        amount: import("@prisma/client/runtime/library").Decimal;
+        blockNumber: bigint;
+        position: number | null;
+        logIndex: number;
+        matrixOwnerId: number | null;
+        kind: string;
+        fromUserId: number | null;
+        toUserId: number | null;
+    }[];
+} | null>;
+export declare function getLaeUserIncome(wallet: string, kind?: "matrix" | "treasury", limit?: number): Promise<{
+    level: number | null;
     id: string;
     createdAt: Date;
     txHash: string;
     amount: import("@prisma/client/runtime/library").Decimal;
     blockNumber: bigint;
+    position: number | null;
     logIndex: number;
-    receiverUserId: number;
-    receiverAddress: string | null;
+    matrixOwnerId: number | null;
+    kind: string;
     fromUserId: number | null;
-    incomeKind: string;
+    toUserId: number | null;
+}[]>;
+export declare function getLaeUserEvents(wallet: string, limit?: number): Promise<{
+    id: string;
+    walletAddress: string | null;
+    createdAt: Date;
+    txHash: string;
+    blockNumber: bigint | null;
+    payload: import("@prisma/client/runtime/library").JsonValue;
+    logIndex: number;
+    eventName: string;
 }[]>;
 //# sourceMappingURL=lae-user.service.d.ts.map

@@ -114,7 +114,7 @@ async function main() {
   tx = await coinC.setMatrixContract(matrixAddr);
   await tx.wait();
   tx = await coinC.bootstrapSupply(
-    ethers.parseEther("450000"),
+    ethers.parseEther("400000"),
     ethers.parseEther("20000"),
     ethers.parseEther("20000"),
     ethers.parseEther("10000")

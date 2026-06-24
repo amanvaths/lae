@@ -93,23 +93,47 @@ export async function analyticsRoutes(app: FastifyInstance): Promise<void> {
     return getLeaderboard(limit);
   });
 
-  /** Authoritative 14-spot matrix tree for a user/level — source of truth = contract, served from backend. */
-  app.get("/matrix/tree/:userId/:level", async (request, reply) => {
-    const params = request.params as { userId?: string; level?: string };
+  /** Authoritative 14-position matrix tree — LAEClubMatrix usersXMatrixReferrals via backend. */
+  app.get("/matrix/tree/:userId/:level/:cycle", async (request, reply) => {
+    const params = request.params as { userId?: string; level?: string; cycle?: string };
     const userId = Number(params.userId);
     const level = Number(params.level);
-    const tree = await getMatrixTree(userId, level);
+    const cycle = Number(params.cycle);
+    const tree = await getMatrixTree(userId, level, cycle);
     if ("error" in tree) return reply.code(400).send(tree);
     return tree;
   });
 
-  /** Per-level active flag + fill counts for the matrix grid. */
+  /** Backward compat — level 1 */
+  app.get("/matrix/tree/:userId/:cycle", async (request, reply) => {
+    const params = request.params as { userId?: string; cycle?: string };
+    const userId = Number(params.userId);
+    const cycle = Number(params.cycle);
+    const tree = await getMatrixTree(userId, 1, cycle);
+    if ("error" in tree) return reply.code(400).send(tree);
+    return tree;
+  });
+
+  /** Level/cycle overview for matrix owner. Optional ?level=N */
   app.get("/matrix/overview/:userId", async (request, reply) => {
     const params = request.params as { userId?: string };
+    const query = request.query as { level?: string };
     const userId = Number(params.userId);
-    const overview = await getMatrixOverview(userId);
+    const level = query.level != null ? Number(query.level) : undefined;
+    const overview = await getMatrixOverview(userId, level);
     if ("error" in overview) return reply.code(400).send(overview);
     return overview;
+  });
+
+  /** Where a user is placed in the global matrix. */
+  app.get("/matrix/placement/:userId", async (request, reply) => {
+    const userId = Number((request.params as { userId?: string }).userId);
+    if (!Number.isInteger(userId) || userId < 1) {
+      return reply.code(400).send({ error: "invalid userId" });
+    }
+    const { getUserPlacement } = await import("../blockchain/matrix-tree.service.js");
+    const row = await getUserPlacement(userId);
+    return row ?? null;
   });
 
   app.get("/indexer/status", async () => getIndexerStatus());

@@ -1,26 +1,29 @@
 import { ethers } from "ethers";
 import { prisma } from "../../lib/prisma.js";
 import { CHAIN, CONTRACTS } from "../../config/chains.js";
-const ID_TO_ADDRESS_ABI = ["function idToAddress(uint256 id) view returns (address)"];
-let idToAddressContract = null;
-function getIdToAddressContract() {
-    const addr = CONTRACTS.laeMatrix;
+const MATRIX_LOOKUP_ABI = [
+    "function idToAddress(uint256) view returns (address)",
+    "function getUserDetails(uint256 userId) view returns (address userAddress, address referrerAddress, uint256 referrerId, uint256 partnersCount, uint8 activeSlotsCount, uint256 teamSize, uint256 registrationTimestamp, uint256 totalIncome)",
+];
+let matrixContract = null;
+function getMatrixContract() {
+    const addr = CONTRACTS.matrixCore;
     if (!addr || addr === "0x0000000000000000000000000000000000000000")
         return null;
-    if (!idToAddressContract) {
+    if (!matrixContract) {
         const provider = new ethers.JsonRpcProvider(CHAIN.rpcUrl, CHAIN.chainId);
-        idToAddressContract = new ethers.Contract(addr, ID_TO_ADDRESS_ABI, provider);
+        matrixContract = new ethers.Contract(addr, MATRIX_LOOKUP_ABI, provider);
     }
-    return idToAddressContract;
+    return matrixContract;
 }
-/** Resolve wallet for a LAE user id — DB first, then on-chain idToAddress. */
+/** Resolve wallet for a LAEClubMatrix user id — DB first, then idToAddress. */
 export async function laeWalletForUserId(userId) {
     if (userId <= 0)
         return null;
-    const cached = await prisma.indexedLaeUser.findFirst({ where: { userId } });
+    const cached = await prisma.matrixCoreUser.findFirst({ where: { userId } });
     if (cached?.walletAddress)
         return cached.walletAddress;
-    const matrix = getIdToAddressContract();
+    const matrix = getMatrixContract();
     if (!matrix)
         return null;
     try {
@@ -33,28 +36,8 @@ export async function laeWalletForUserId(userId) {
         return null;
     }
 }
-/** Fill missing receiverAddress on indexed income rows after users are backfilled. */
+/** No-op — LAEClubMatrix income rows store toUserId directly. */
 export async function repairLaeIncomeReceiverAddresses() {
-    const rows = await prisma.indexedLaeIncome.findMany({
-        where: { receiverAddress: null },
-        select: { id: true, receiverUserId: true },
-    });
-    if (rows.length === 0)
-        return 0;
-    let fixed = 0;
-    for (const row of rows) {
-        const wallet = await laeWalletForUserId(row.receiverUserId);
-        if (!wallet)
-            continue;
-        await prisma.indexedLaeIncome.update({
-            where: { id: row.id },
-            data: { receiverAddress: wallet },
-        });
-        fixed++;
-    }
-    if (fixed > 0) {
-        console.log(`[backfill] Repaired ${fixed} income rows with receiverAddress`);
-    }
-    return fixed;
+    return 0;
 }
 //# sourceMappingURL=lae-user-lookup.js.map

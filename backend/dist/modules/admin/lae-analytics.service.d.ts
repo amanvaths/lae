@@ -1,12 +1,12 @@
 export declare function getLaeAdminDashboardStats(): Promise<{
     totalUsers: number;
     todayRegistrations: number;
-    levelSales: {
-        level: number;
+    positionSales: {
+        position: number | null;
         count: number;
         volume: string;
     }[];
-    royalPool: {
+    treasuryPool: {
         totalPaid: string;
         eventCount: number;
     };
@@ -14,8 +14,8 @@ export declare function getLaeAdminDashboardStats(): Promise<{
         totalPaid: string;
         eventCount: number;
     };
-    placements: number;
-    reinvests: number;
+    positions: number;
+    recycles: number;
     staking: {
         totalStaked: string;
         stakeEvents: number;
@@ -30,40 +30,44 @@ export declare function getLaeAdminDashboardStats(): Promise<{
 export declare function listLaeUsers(limit?: number, offset?: number): Promise<{
     users: {
         registeredBlock: string;
-        totalIncome: string;
+        totalEarned: string;
         walletAddress: string;
         sponsorId: number | null;
         createdAt: Date;
         userId: number;
+        directReferrals: number;
         registeredAt: Date;
-        teamSize: number;
+        currentCycle: number;
+        highestSlot: number;
+        totalCycles: number;
     }[];
     total: number;
 }>;
 export declare function listLaeIncome(limit?: number, kind?: string): Promise<{
-    level: number;
+    level: number | null;
     id: string;
     createdAt: Date;
     txHash: string;
     amount: import("@prisma/client/runtime/library").Decimal;
     blockNumber: bigint;
+    position: number | null;
     logIndex: number;
-    receiverUserId: number;
-    receiverAddress: string | null;
+    matrixOwnerId: number | null;
+    kind: string;
     fromUserId: number | null;
-    incomeKind: string;
+    toUserId: number | null;
 }[]>;
 export declare function listLaePlacements(limit?: number): Promise<{
     level: number;
     id: string;
     createdAt: Date;
-    userId: number;
     txHash: string;
     blockNumber: bigint;
+    position: number;
     logIndex: number;
-    referrerId: number;
-    cycle: number;
-    spot: number;
+    matrixOwnerId: number;
+    cycleId: number;
+    occupantId: number;
 }[]>;
 export declare function getLaeRewardsAnalytics(limit?: number): Promise<{
     allocatedCount: number;
@@ -96,8 +100,8 @@ export declare function getLaeAnalyticsSummary(): Promise<{
     topEarners: {
         userId: number;
         walletAddress: string;
-        totalIncome: string;
-        teamSize: number;
+        totalEarned: string;
+        directReferrals: number;
     }[];
 }>;
 //# sourceMappingURL=lae-analytics.service.d.ts.map

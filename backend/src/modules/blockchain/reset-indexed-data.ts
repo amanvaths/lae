@@ -1,69 +1,76 @@
 import { prisma } from "../../lib/prisma.js";
-import { CHAIN, LAE_MATRIX_DEPLOY_BLOCK } from "../../config/chains.js";
+import { CHAIN, MATRIX_CORE_DEPLOY_BLOCK } from "../../config/chains.js";
 
-/** Wipe all indexer/analytics tables and rewind cursor to matrix deploy block. */
-export async function resetIndexedAnalytics(): Promise<Record<string, number>> {
-  const deploy = LAE_MATRIX_DEPLOY_BLOCK;
-  const cursor = deploy > 0n ? deploy - 1n : 0n;
-
+export async function resetIndexedMatrixData() {
+  const deploy = MATRIX_CORE_DEPLOY_BLOCK;
   const [
-    laePlacements,
-    matrixSlots,
-    laeIncome,
-    laeUsers,
-    referrals,
-    transactions,
-    clubMatrix,
-    pilotMatrix,
+    positions,
+    cycles,
     income,
-    tokenRewards,
-    withdrawals,
-    spins,
-    stakes,
+    recycles,
+    slots,
     users,
-    chainEvents,
+    events,
+    idxUsers,
+    idxReferrals,
+    idxClub,
+    idxPilot,
+    idxTx,
+    idxIncome,
+    idxRewards,
+    idxWithdrawals,
+    idxSpins,
+    idxStakes,
   ] = await prisma.$transaction([
-    prisma.indexedLaePlacement.deleteMany(),
-    prisma.indexedMatrixSlot.deleteMany(),
-    prisma.indexedLaeIncome.deleteMany(),
-    prisma.indexedLaeUser.deleteMany(),
+    prisma.matrixCorePosition.deleteMany(),
+    prisma.matrixCoreCycle.deleteMany(),
+    prisma.matrixCoreIncome.deleteMany(),
+    prisma.matrixCoreRecycle.deleteMany(),
+    prisma.matrixCoreSlotOpening.deleteMany(),
+    prisma.matrixCoreUser.deleteMany(),
+    prisma.chainEvent.deleteMany(),
+    prisma.indexedUser.deleteMany(),
     prisma.indexedReferral.deleteMany(),
-    prisma.indexedTransaction.deleteMany(),
     prisma.indexedClubMatrix.deleteMany(),
     prisma.indexedPilotMatrix.deleteMany(),
+    prisma.indexedTransaction.deleteMany(),
     prisma.indexedIncome.deleteMany(),
     prisma.indexedTokenReward.deleteMany(),
     prisma.indexedWithdrawal.deleteMany(),
     prisma.indexedSpin.deleteMany(),
     prisma.indexedStake.deleteMany(),
-    prisma.indexedUser.deleteMany(),
-    prisma.chainEvent.deleteMany(),
   ]);
 
   await prisma.indexerState.upsert({
     where: { id: "main" },
-    create: { id: "main", chainId: CHAIN.chainId, lastBlock: cursor },
-    update: { lastBlock: cursor, lastBlockHash: null, chainId: CHAIN.chainId },
+    create: {
+      chainId: CHAIN.chainId,
+      lastBlock: deploy > 0n ? deploy - 1n : 0n,
+    },
+    update: { lastBlock: deploy > 0n ? deploy - 1n : 0n, lastBlockHash: null },
   });
 
-  console.warn(`[indexer] Analytics reset — cursor ${cursor.toString()}, laeUsers ${laeUsers.count}`);
-
   return {
-    indexedLaeUsers: laeUsers.count,
-    indexedLaeIncome: laeIncome.count,
-    indexedLaePlacements: laePlacements.count,
-    indexedMatrixSlots: matrixSlots.count,
-    chainEvents: chainEvents.count,
-    indexedUsers: users.count,
-    indexedReferrals: referrals.count,
-    indexedTransactions: transactions.count,
-    indexedClubMatrix: clubMatrix.count,
-    indexedPilotMatrix: pilotMatrix.count,
-    indexedIncome: income.count,
-    indexedTokenRewards: tokenRewards.count,
-    indexedWithdrawals: withdrawals.count,
-    indexedSpins: spins.count,
-    indexedStakes: stakes.count,
-    indexerCursorBlock: Number(cursor),
+    matrixCoreUsers: users.count,
+    matrixCorePositions: positions.count,
+    matrixCoreCycles: cycles.count,
+    matrixCoreIncome: income.count,
+    matrixCoreRecycles: recycles.count,
+    matrixCoreSlots: slots.count,
+    chainEvents: events.count,
+    indexedUsers: idxUsers.count,
+    indexedReferrals: idxReferrals.count,
+    indexedClubMatrices: idxClub.count,
+    indexedPilotMatrices: idxPilot.count,
+    indexedTransactions: idxTx.count,
+    indexedIncome: idxIncome.count,
+    indexedTokenRewards: idxRewards.count,
+    indexedWithdrawals: idxWithdrawals.count,
+    indexedSpins: idxSpins.count,
+    indexedStakes: idxStakes.count,
+    lastBlock: (deploy > 0n ? deploy - 1n : 0n).toString(),
   };
 }
+
+/** @deprecated use resetIndexedMatrixData */
+export const resetIndexedAnalytics = resetIndexedMatrixData;

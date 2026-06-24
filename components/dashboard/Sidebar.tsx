@@ -67,13 +67,17 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const initial = isReady && address ? address.slice(2, 3).toUpperCase() : "?";
 
   return (
-    <div className="flex h-full flex-col bg-[#050505]">
+    <div className="flex h-full flex-col bg-gradient-to-b from-[#0a0a0a] to-[#050505]">
       {/* Logo */}
       <div className="flex h-16 items-center gap-2.5 border-b border-[#D4AF37]/15 px-5">
-        <Link href={withBasePath("/")} className="flex items-center gap-2.5">
-          <BrandLogo size={36} />
+        <Link href={withBasePath("/")} className="group flex items-center gap-2.5">
+          <span className="transition-transform duration-300 ease-premium group-hover:scale-105">
+            <BrandLogo size={36} />
+          </span>
           <div className="leading-tight">
-            <span className="block font-display text-base font-bold text-white">LAE</span>
+            <span className="block font-display text-base font-bold tracking-tight text-white">
+              LAE
+            </span>
             <span className="block text-[10px] uppercase tracking-widest text-[#D4AF37]/80">
               Club
             </span>
@@ -115,14 +119,17 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
 
       {/* Wallet card */}
       <div className="border-t border-[#D4AF37]/10 p-3">
-        <div className="mb-2 flex items-center gap-3 rounded-xl border border-[#D4AF37]/15 bg-white/[0.03] p-3 backdrop-blur-sm">
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#D4AF37] to-[#B8860B] text-sm font-bold text-black">
+        <div className="mb-2 flex items-center gap-3 rounded-2xl border border-[#D4AF37]/15 bg-gradient-to-br from-white/[0.05] to-white/[0.01] p-3 shadow-[inset_0_1px_0_0_rgba(212,175,55,0.08)] backdrop-blur-sm">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#f5d760] via-[#D4AF37] to-[#B8860B] text-sm font-bold text-black shadow-[0_2px_8px_-2px_rgba(212,175,55,0.5)]">
             {initial}
           </span>
           <div className="min-w-0 flex-1 leading-tight">
             <p className="truncate font-mono text-sm font-semibold text-white">{display}</p>
             <p className="mt-0.5 inline-flex items-center gap-1 text-xs text-slate-500">
-              <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              <span className="relative inline-flex h-1.5 w-1.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400/60" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              </span>
               BSC Testnet
             </p>
           </div>

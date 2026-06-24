@@ -1,4 +1,4 @@
--- LAE Club / BTitan matrix indexer tables
+-- Legacy matrix indexer tables (superseded by mc_* tables)
 
 CREATE TABLE "idx_lae_users" (
     "wallet_address" TEXT NOT NULL,

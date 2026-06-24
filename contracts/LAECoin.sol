@@ -8,8 +8,8 @@ interface IERC20Pay {
 
 /**
  * @title LAECoin — LAE Club reward token (BEP-20)
- * @notice 500,000 max supply · 450,000 community reward pool (held by LAEClubMatrix)
- *         · 50,000 liquidity / ecosystem fund. Launch price $0.10.
+ * @notice 500,000 max supply · 400,000 community reward pool (held by LAEClubMatrix)
+ *         · 100,000 liquidity / ecosystem fund. Launch price $0.10.
  *         Matrix income stays in BTC — LAE is the reward layer only.
  *         Admin-configurable buy/sell/transfer tax + internal P2P marketplace.
  */
@@ -20,8 +20,8 @@ contract LAECoin {
     uint256 public constant BPS = 10_000;
 
     uint256 public constant TOTAL_SUPPLY_CAP = 500_000 ether;
-    uint256 public constant REWARD_POOL_CAP = 450_000 ether;   // 90% community reward
-    uint256 public constant RESIDUAL_SUPPLY_CAP = 50_000 ether; // 10% liquidity / ecosystem
+    uint256 public constant REWARD_POOL_CAP = 400_000 ether;   // 80% community reward
+    uint256 public constant RESIDUAL_SUPPLY_CAP = 100_000 ether; // 20% liquidity / ecosystem
 
     uint256 public immutable maxSupply;
     uint256 public totalSupply;
@@ -162,7 +162,7 @@ contract LAECoin {
     }
 
     /**
-     * @notice Mint 450k to matrix (reward pool) + up to 50k residual to admin wallets.
+     * @notice Mint 400k to matrix (reward pool) + up to 100k residual to admin wallets.
      */
     function bootstrapSupply(
         uint256 rewardPoolAmount,
@@ -171,7 +171,7 @@ contract LAECoin {
         uint256 operationsAmount
     ) external onlyOwner {
         require(matrixContract != address(0), "LAE: matrix unset");
-        require(rewardPoolAmount == REWARD_POOL_CAP, "Reward pool must be exactly 450000 LAE");
+        require(rewardPoolAmount == REWARD_POOL_CAP, "Reward pool must be exactly 400000 LAE");
         require(treasuryAmount + liquidityAmount + operationsAmount <= RESIDUAL_SUPPLY_CAP, "LAE: residual cap");
         require(totalSupply == 0, "LAE: bootstrapped");
 

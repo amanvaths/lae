@@ -7,50 +7,50 @@ function todayStart() {
 }
 export async function getLaeAdminDashboardStats() {
     const start = todayStart();
-    const [totalUsers, todayRegistrations, matrixIncomeAgg, royalIncomeAgg, placements, reinvests, indexerState, stakeAgg, activeStakes, chainEvents,] = await Promise.all([
-        prisma.indexedLaeUser.count(),
-        prisma.indexedLaeUser.count({ where: { registeredAt: { gte: start } } }),
-        prisma.indexedLaeIncome.aggregate({
-            where: { incomeKind: "matrix" },
+    const [totalUsers, todayRegistrations, matrixIncomeAgg, treasuryIncomeAgg, positions, recycles, indexerState, stakeAgg, activeStakes, chainEvents,] = await Promise.all([
+        prisma.matrixCoreUser.count(),
+        prisma.matrixCoreUser.count({ where: { registeredAt: { gte: start } } }),
+        prisma.matrixCoreIncome.aggregate({
+            where: { kind: "matrix" },
             _sum: { amount: true },
             _count: true,
         }),
-        prisma.indexedLaeIncome.aggregate({
-            where: { incomeKind: "royal" },
+        prisma.matrixCoreIncome.aggregate({
+            where: { kind: "treasury" },
             _sum: { amount: true },
             _count: true,
         }),
-        prisma.indexedLaePlacement.count(),
-        prisma.chainEvent.count({ where: { eventName: "Reinvest" } }),
+        prisma.matrixCorePosition.count(),
+        prisma.matrixCoreRecycle.count(),
         prisma.indexerState.findUnique({ where: { id: "main" } }),
         prisma.indexedStake.aggregate({ _sum: { amount: true }, _count: true }),
         prisma.indexedStake.count({ where: { released: false } }),
         prisma.chainEvent.count(),
     ]);
-    const levelSales = await prisma.indexedLaeIncome.groupBy({
-        by: ["level"],
-        where: { incomeKind: "matrix" },
+    const positionSales = await prisma.matrixCoreIncome.groupBy({
+        by: ["position"],
+        where: { kind: "matrix" },
         _count: true,
         _sum: { amount: true },
     });
     return {
         totalUsers,
         todayRegistrations,
-        levelSales: levelSales.map((r) => ({
-            level: r.level,
+        positionSales: positionSales.map((r) => ({
+            position: r.position,
             count: r._count,
             volume: r._sum.amount?.toString() ?? "0",
         })),
-        royalPool: {
-            totalPaid: royalIncomeAgg._sum.amount?.toString() ?? "0",
-            eventCount: royalIncomeAgg._count,
+        treasuryPool: {
+            totalPaid: treasuryIncomeAgg._sum.amount?.toString() ?? "0",
+            eventCount: treasuryIncomeAgg._count,
         },
         matrixIncome: {
             totalPaid: matrixIncomeAgg._sum.amount?.toString() ?? "0",
             eventCount: matrixIncomeAgg._count,
         },
-        placements,
-        reinvests,
+        positions,
+        recycles,
         staking: {
             totalStaked: stakeAgg._sum.amount?.toString() ?? "0",
             stakeEvents: stakeAgg._count,
@@ -65,32 +65,32 @@ export async function getLaeAdminDashboardStats() {
 }
 export async function listLaeUsers(limit = 100, offset = 0) {
     const [users, total] = await Promise.all([
-        prisma.indexedLaeUser.findMany({
+        prisma.matrixCoreUser.findMany({
             take: limit,
             skip: offset,
             orderBy: { userId: "desc" },
         }),
-        prisma.indexedLaeUser.count(),
+        prisma.matrixCoreUser.count(),
     ]);
     return {
         users: users.map((u) => ({
             ...u,
             registeredBlock: u.registeredBlock.toString(),
-            totalIncome: u.totalIncome.toString(),
+            totalEarned: u.totalEarned.toString(),
         })),
         total,
     };
 }
 export async function listLaeIncome(limit = 100, kind) {
-    const rows = await prisma.indexedLaeIncome.findMany({
+    const rows = await prisma.matrixCoreIncome.findMany({
         take: limit,
-        where: kind ? { incomeKind: kind } : undefined,
+        where: kind ? { kind } : undefined,
         orderBy: { blockNumber: "desc" },
     });
     return serializeForJson(rows);
 }
 export async function listLaePlacements(limit = 100) {
-    const rows = await prisma.indexedLaePlacement.findMany({
+    const rows = await prisma.matrixCorePosition.findMany({
         take: limit,
         orderBy: { blockNumber: "desc" },
     });
@@ -126,7 +126,7 @@ export async function getLaeRewardsAnalytics(limit = 100) {
                 total += BigInt(String(v ?? 0));
             }
             catch {
-                /* skip malformed */
+                /* skip */
             }
         }
         return total.toString();
@@ -154,19 +154,19 @@ export async function getLaeAnalyticsSummary() {
     const [registrationsByDay, incomeByKind, topEarners] = await Promise.all([
         prisma.$queryRaw `
       SELECT date_trunc('day', registered_at) AS day, COUNT(*)::bigint AS count
-      FROM idx_lae_users
+      FROM mc_users
       GROUP BY 1
       ORDER BY 1 DESC
       LIMIT 30
     `.catch(() => []),
-        prisma.indexedLaeIncome.groupBy({
-            by: ["incomeKind"],
+        prisma.matrixCoreIncome.groupBy({
+            by: ["kind"],
             _sum: { amount: true },
             _count: true,
         }),
-        prisma.indexedLaeUser.findMany({
+        prisma.matrixCoreUser.findMany({
             take: 10,
-            orderBy: { totalIncome: "desc" },
+            orderBy: { totalEarned: "desc" },
         }),
     ]);
     return {
@@ -175,15 +175,15 @@ export async function getLaeAnalyticsSummary() {
             count: Number(r.count),
         })),
         incomeByKind: incomeByKind.map((r) => ({
-            kind: r.incomeKind,
+            kind: r.kind,
             total: r._sum.amount?.toString() ?? "0",
             count: r._count,
         })),
         topEarners: topEarners.map((u) => ({
             userId: u.userId,
             walletAddress: u.walletAddress,
-            totalIncome: u.totalIncome.toString(),
-            teamSize: u.teamSize,
+            totalEarned: u.totalEarned.toString(),
+            directReferrals: u.directReferrals,
         })),
     };
 }

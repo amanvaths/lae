@@ -7,15 +7,15 @@ import { useAccount, useBalance, usePublicClient, useReadContract, useWriteContr
 import { ArrowLeft, CheckCircle2, Loader2, AlertTriangle, Wallet, ExternalLink } from "lucide-react";
 import { formatEther, parseEther, type PublicClient } from "viem";
 import { LAE_CONTRACTS } from "@/lib/lae-club/contracts";
-import { laeClubMatrixAbi } from "@/lib/lae-club/abis";
+import { laeClubMatrixAbi } from "@/lib/lae-club/matrix-core-abi";
 import { erc20Abi } from "@/lib/contracts/abis/erc20";
 import { parseLaeUserId, useLaeLevelPrices, useLaeUser } from "@/lib/lae-club/hooks";
+import { withLookupTimeout, isValidReferrerId } from "@/lib/lae-club/user-lookup";
 import { useRouter } from "next/navigation";
 import { withBasePath } from "@/lib/paths";
 import { useToast } from "@/providers/ToastProvider";
 import { formatWalletError } from "@/lib/wallet/errors";
 import { ConnectWallet } from "@/components/web3/ConnectWallet";
-import { isValidReferrerId, withLookupTimeout } from "@/lib/lae-club/user-lookup";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { truncateAddress } from "@/lib/format";
@@ -27,13 +27,13 @@ const REG_GAS_MAX = 5_000_000n;
 async function estimateRegistrationGas(
   client: PublicClient,
   address: `0x${string}`,
-  refId: bigint
+  referrerId: bigint
 ): Promise<bigint> {
   const estimated = await client.estimateContractGas({
     address: LAE_CONTRACTS.matrix,
     abi: laeClubMatrixAbi,
     functionName: "registrationExt",
-    args: [refId],
+    args: [referrerId],
     account: address,
   });
   const withBuffer = (estimated * REG_GAS_BUFFER_BPS) / 1000n;

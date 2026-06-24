@@ -10,7 +10,7 @@
 
 | Check | Result |
 |-------|--------|
-| Matrix slots from `usersXMatrixReferrals()` only | PASS |
+| Matrix tree from `getCyclePositions()` via API | PASS |
 | Level lock from `isUserSlotActive(userId, level)` | PASS |
 | No referral-tree matrix construction | PASS |
 | Spot index i → UI spot i+1 | PASS |

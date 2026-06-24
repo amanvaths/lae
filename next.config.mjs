@@ -4,9 +4,15 @@ const isVpsStatic = process.env.NEXT_STATIC_EXPORT === "true";
 const isStaticExport = isGithubPages || isVpsStatic;
 const basePath = isGithubPages ? "/lae" : "";
 
+const isDocker = process.env.DOCKER_BUILD === "true";
+
 const nextConfig = {
   // Static export for GitHub Pages and VPS nginx deploy — not during `next dev`
-  ...(isStaticExport ? { output: "export", trailingSlash: true } : {}),
+  ...(isStaticExport
+    ? { output: "export", trailingSlash: true }
+    : isDocker
+      ? { output: "standalone" }
+      : {}),
   ...(isStaticExport && !isGithubPages
     ? {
         async redirects() {

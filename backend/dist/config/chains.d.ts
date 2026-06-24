@@ -1,5 +1,5 @@
-/** BSC Testnet deployed contracts — matches frontend lib/contracts/config.ts */
-export declare const LAE_MATRIX_DEPLOY_BLOCK: bigint;
+/** BSC — LAEClubMatrix deployed contract */
+export declare const MATRIX_CORE_DEPLOY_BLOCK: bigint;
 export declare const CHAIN: {
     readonly chainId: number;
     readonly rpcUrl: string;
@@ -9,7 +9,8 @@ export declare const CHAIN: {
     readonly pollMs: number;
 };
 export declare const CONTRACTS: {
-    readonly laeMatrix: string;
+    /** LAEClubMatrix — 15 slots × 14 positions */
+    readonly matrixCore: string;
     readonly senso: string;
     readonly slt: string;
     readonly spin: string;

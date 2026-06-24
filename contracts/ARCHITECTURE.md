@@ -33,7 +33,7 @@ flowchart TB
 1. User calls `registrationExt(referrerId)` on **LAEClubMatrix**
 2. Matrix pulls full slot price
 3. **10%** → `liquidityPool` wallet
-4. **90%** distributed across the 14-spot matrix (BTitan-style placement)
+4. **90%** distributed across the 14-position matrix (MatrixCore placement)
 5. LAE reward calculated from the liquidity slice → **locked vesting schedule** (not transferred)
 6. Matrix runs registration + 14-spot placement
 

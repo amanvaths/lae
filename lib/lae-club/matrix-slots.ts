@@ -28,7 +28,7 @@ export type MatrixSlot = {
 };
 
 /**
- * Map contract `usersXMatrixReferrals()` → 14 UI slots.
+ * Build API slot DTO → 14 UI slots for MatrixVisualizer.
  * Index i in referrals[] = spot (i + 1). Sequential fill only.
  */
 export function buildMatrixSlots(

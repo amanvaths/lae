@@ -22,7 +22,7 @@ export function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
       <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2.5">
         <Link
           href={withBasePath("/dashboard/income")}
-          className="flex items-center gap-1.5 rounded-full border border-[#D4AF37]/20 bg-[#D4AF37]/[0.06] px-2.5 py-1.5 text-xs transition-all hover:border-[#D4AF37]/35 hover:bg-[#D4AF37]/[0.1] sm:gap-2 sm:px-3.5 sm:py-2 sm:text-sm"
+          className="flex items-center gap-1.5 rounded-full border border-[#D4AF37]/20 bg-gradient-to-r from-[#D4AF37]/[0.1] to-[#D4AF37]/[0.03] px-2.5 py-1.5 text-xs shadow-[inset_0_1px_0_0_rgba(212,175,55,0.1)] transition-all duration-300 ease-premium hover:-translate-y-0.5 hover:border-[#D4AF37]/40 hover:from-[#D4AF37]/[0.16] sm:gap-2 sm:px-3.5 sm:py-2 sm:text-sm"
         >
           <span className="max-w-[5rem] truncate font-mono font-semibold text-[#D4AF37] sm:max-w-none">
             {user.isLoading ? "…" : user.registered ? `ID #${String(user.userId)}` : "—"}
@@ -31,10 +31,11 @@ export function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
 
         <Link
           href={withBasePath("/dashboard/transactions")}
-          className="grid h-9 w-9 place-items-center rounded-xl border border-white/10 text-white transition-colors hover:border-[#D4AF37]/20 sm:h-10 sm:w-10"
+          className="relative grid h-9 w-9 place-items-center rounded-xl border border-white/10 bg-white/[0.02] text-white transition-all duration-300 ease-premium hover:-translate-y-0.5 hover:border-[#D4AF37]/30 hover:bg-[#D4AF37]/[0.06] sm:h-10 sm:w-10"
           aria-label="Notifications"
         >
           <Bell className="h-4 w-4 sm:h-[1.1rem] sm:w-[1.1rem]" />
+          <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-[#D4AF37] shadow-[0_0_6px_rgba(212,175,55,0.8)]" />
         </Link>
 
         <ConnectWallet />

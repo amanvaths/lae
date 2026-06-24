@@ -52,13 +52,14 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       <div className="lg:pl-[264px] min-w-0">
         <Topbar onMenuClick={() => setOpen(true)} />
         <main className="relative min-w-0 overflow-x-hidden px-3 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:px-5 sm:py-6 md:px-6 lg:px-8">
-          {/* Gold/silver ambient glow spots */}
+          {/* Gold/silver ambient glow spots + fine grid texture */}
           <div className="pointer-events-none fixed inset-0 -z-10">
-            <div className="absolute left-1/4 top-0 h-72 w-[500px] -translate-x-1/2 rounded-full bg-[#D4AF37]/[0.04] blur-[140px]" />
+            <div className="absolute inset-0 bg-grid-lines bg-[size:48px_48px] opacity-[0.4] [mask-image:radial-gradient(ellipse_at_top,black,transparent_75%)]" />
+            <div className="absolute left-1/4 top-0 h-72 w-[500px] -translate-x-1/2 rounded-full bg-[#D4AF37]/[0.05] blur-[140px]" />
             <div className="absolute right-[10%] top-32 h-56 w-56 rounded-full bg-[#C0C0C0]/[0.03] blur-[120px]" />
             <div className="absolute bottom-20 left-[60%] h-48 w-[400px] rounded-full bg-[#D4AF37]/[0.03] blur-[160px]" />
           </div>
-          <div className="mx-auto max-w-7xl">
+          <div className="mx-auto max-w-7xl animate-fade-in">
             <NetworkBanner />
             {children}
           </div>

@@ -17,7 +17,7 @@ export default function TeamPage() {
     <div>
       <h1 className="font-display text-2xl font-bold text-white sm:text-3xl">My Team</h1>
       <p className="mt-1.5 text-sm text-slate-400">
-        Live data from getDirectPartnerIds / getUserDetails on BTitan matrix
+        Live direct referrals from MatrixCore getDirectReferrals()
       </p>
 
       <div className="mt-5 grid gap-4 sm:grid-cols-3">

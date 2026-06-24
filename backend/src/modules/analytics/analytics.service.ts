@@ -81,7 +81,7 @@ export async function getTeamStats(wallet: string) {
   const teamWallets = direct.map((d) => d.referralAddress);
   const [registeredDirect, registeredLaeDirect] = await Promise.all([
     prisma.indexedUser.count({ where: { walletAddress: { in: teamWallets } } }),
-    prisma.indexedLaeUser.count({ where: { walletAddress: { in: teamWallets } } }),
+    prisma.matrixCoreUser.count({ where: { walletAddress: { in: teamWallets } } }),
   ]);
   return serializeForJson({
     wallet: w,

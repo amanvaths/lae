@@ -1,7 +1,7 @@
 import type { PublicClient, Address } from "viem";
 import { getAddress, isAddress } from "viem";
 import { LAE_CONTRACTS } from "./contracts";
-import { laeClubMatrixAbi } from "./abis";
+import { laeClubMatrixAbi } from "./matrix-core-abi";
 
 export type LaeUserLookup = {
   userId: bigint;
@@ -15,7 +15,18 @@ export type LaeUserLookup = {
 
 const ZERO = "0x0000000000000000000000000000000000000000" as Address;
 
-function mapDetails(userId: bigint, d: readonly [Address, Address, bigint, bigint, number, bigint, bigint, bigint]): LaeUserLookup | null {
+type UserDetailsRow = readonly [
+  Address,
+  Address,
+  bigint,
+  bigint,
+  number,
+  bigint,
+  bigint,
+  bigint,
+];
+
+function mapDetails(userId: bigint, d: UserDetailsRow): LaeUserLookup | null {
   const wallet = d[0];
   if (!wallet || wallet.toLowerCase() === ZERO.toLowerCase()) return null;
   return {
@@ -33,23 +44,14 @@ export async function lookupLaeUserById(
   client: PublicClient,
   userId: bigint
 ): Promise<LaeUserLookup | null> {
-  const wallet = (await client.readContract({
-    address: LAE_CONTRACTS.matrix,
-    abi: laeClubMatrixAbi,
-    functionName: "idToAddress",
-    args: [userId],
-  })) as Address;
-
-  if (!wallet || wallet.toLowerCase() === ZERO.toLowerCase()) return null;
-
-  const details = (await client.readContract({
+  const d = (await client.readContract({
     address: LAE_CONTRACTS.matrix,
     abi: laeClubMatrixAbi,
     functionName: "getUserDetails",
     args: [userId],
-  })) as readonly [Address, Address, bigint, bigint, number, bigint, bigint, bigint];
+  })) as UserDetailsRow;
 
-  return mapDetails(userId, details);
+  return mapDetails(userId, d);
 }
 
 export async function lookupLaeUserByAddress(
@@ -59,15 +61,6 @@ export async function lookupLaeUserByAddress(
   if (!isAddress(rawAddress)) return null;
   const wallet = getAddress(rawAddress);
 
-  const exists = (await client.readContract({
-    address: LAE_CONTRACTS.matrix,
-    abi: laeClubMatrixAbi,
-    functionName: "isUserExists",
-    args: [wallet],
-  })) as boolean;
-
-  if (!exists) return null;
-
   const userId = (await client.readContract({
     address: LAE_CONTRACTS.matrix,
     abi: laeClubMatrixAbi,
@@ -76,15 +69,7 @@ export async function lookupLaeUserByAddress(
   })) as bigint;
 
   if (!userId || userId === 0n) return null;
-
-  const details = (await client.readContract({
-    address: LAE_CONTRACTS.matrix,
-    abi: laeClubMatrixAbi,
-    functionName: "getUserDetails",
-    args: [userId],
-  })) as readonly [Address, Address, bigint, bigint, number, bigint, bigint, bigint];
-
-  return mapDetails(userId, details);
+  return lookupLaeUserById(client, userId);
 }
 
 export async function isValidReferrerId(
@@ -92,13 +77,8 @@ export async function isValidReferrerId(
   referrerId: bigint
 ): Promise<boolean> {
   if (referrerId <= 0n) return false;
-  const wallet = (await client.readContract({
-    address: LAE_CONTRACTS.matrix,
-    abi: laeClubMatrixAbi,
-    functionName: "idToAddress",
-    args: [referrerId],
-  })) as Address;
-  return !!wallet && wallet.toLowerCase() !== ZERO.toLowerCase();
+  const lookup = await lookupLaeUserById(client, referrerId);
+  return lookup != null;
 }
 
 export async function withLookupTimeout<T>(

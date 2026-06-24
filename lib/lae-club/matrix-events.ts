@@ -1,8 +1,8 @@
 import type { PublicClient, GetContractEventsReturnType } from "viem";
 import type { Address } from "viem";
-import { LAE_MATRIX_DEPLOY_BLOCK, LOG_CHUNK_BLOCKS } from "@/lib/contracts/config";
+import { MATRIX_CORE_DEPLOY_BLOCK, LOG_CHUNK_BLOCKS } from "@/lib/contracts/config";
 import { LAE_CONTRACTS } from "./contracts";
-import { laeClubMatrixAbi } from "./abis";
+import { laeClubMatrixAbi } from "./matrix-core-abi";
 
 export type MatrixUserEvent = GetContractEventsReturnType<
   typeof laeClubMatrixAbi
@@ -10,42 +10,36 @@ export type MatrixUserEvent = GetContractEventsReturnType<
 
 type EventQuery = {
   eventName: string;
-  args?: Record<string, bigint | Address>;
+  args?: Record<string, bigint | number | Address>;
 };
 
-/** User-scoped event queries — indexed filters keep RPC responses small. */
-function userEventQueries(userId: bigint, userAddress: Address): EventQuery[] {
+/** LAEClubMatrix user-scoped event queries. */
+function userEventQueries(userId: bigint): EventQuery[] {
+  const id = userId;
   return [
-    { eventName: "Registration", args: { userId } },
-    { eventName: "TokenReceived", args: { receiverId: userId } },
-    { eventName: "TokenReceived", args: { fromId: userId } },
-    { eventName: "TreasuryPool", args: { refId: userId } },
-    { eventName: "TreasuryPool", args: { userId } },
-    { eventName: "ClubPoolPayment", args: { refId: userId } },
-    { eventName: "ClubPoolPayment", args: { userId } },
-    { eventName: "NewUserPlace", args: { user: userId } },
-    { eventName: "NewUserPlace", args: { referrer: userId } },
-    { eventName: "Spillover", args: { referrerId: userId } },
-    { eventName: "Spillover", args: { receiverId: userId } },
-    { eventName: "Reinvest", args: { userId } },
-    { eventName: "Reinvest", args: { callerId: userId } },
-    { eventName: "Upgrade", args: { userId } },
-    { eventName: "MissedIncome", args: { receiverId: userId } },
-    { eventName: "MissedIncome", args: { userId } },
+    { eventName: "Registration", args: { userId: id } },
+    { eventName: "NewUserPlace", args: { referrer: id } },
+    { eventName: "NewUserPlace", args: { user: id } },
+    { eventName: "TokenReceived", args: { receiverId: id } },
+    { eventName: "TokenReceived", args: { fromId: id } },
+    { eventName: "ClubPoolPayment", args: { userId: id } },
+    { eventName: "Reinvest", args: { userId: id } },
+    { eventName: "Upgrade", args: { userId: id } },
+    { eventName: "MissedIncome", args: { receiverId: id } },
+    { eventName: "LaeRewardAllocated", args: {} },
   ];
 }
 
-/** Subsets for pages that only need income-related logs. */
 export function incomeEventQueries(userId: bigint): EventQuery[] {
+  const id = userId;
   return [
-    { eventName: "TokenReceived", args: { receiverId: userId } },
-    { eventName: "TreasuryPool", args: { refId: userId } },
-    { eventName: "ClubPoolPayment", args: { refId: userId } },
+    { eventName: "TokenReceived", args: { receiverId: id } },
+    { eventName: "ClubPoolPayment", args: { userId: id } },
   ];
 }
 
 export function allEventQueries(userId: bigint): EventQuery[] {
-  return userEventQueries(userId, "0x0000000000000000000000000000000000000000");
+  return userEventQueries(userId);
 }
 
 const CHUNK_TIMEOUT_MS = 8_000;
@@ -118,12 +112,7 @@ function dedupeEvents(events: MatrixUserEvent[]): MatrixUserEvent[] {
   });
 }
 
-function resolveFromBlock(_head: bigint): bigint {
-  // New matrix contract — always scan from deploy block (small range, full history).
-  return LAE_MATRIX_DEPLOY_BLOCK;
-}
-
-/** Fetch matrix logs using indexed filters + chunked getLogs. Never throws. */
+/** Fetch LAEClubMatrix logs — indexer API preferred; chain fallback when API empty. */
 export async function fetchMatrixUserEvents(
   client: PublicClient,
   userId: bigint,
@@ -131,19 +120,18 @@ export async function fetchMatrixUserEvents(
   options?: { queries?: EventQuery[]; timeoutMs?: number }
 ): Promise<{ events: MatrixUserEvent[]; partial: boolean }> {
   const timeoutMs = options?.timeoutMs ?? FETCH_TIMEOUT_MS;
-  const queries = options?.queries ?? userEventQueries(userId, _userAddress);
+  const queries = options?.queries ?? userEventQueries(userId);
 
   const work = async (): Promise<{ events: MatrixUserEvent[]; partial: boolean }> => {
     const head = await client.getBlockNumber();
-    const fromBlock = resolveFromBlock(head);
+    const fromBlock = MATRIX_CORE_DEPLOY_BLOCK > 0n ? MATRIX_CORE_DEPLOY_BLOCK : 0n;
 
     const batches = await mapConcurrent(queries, MAX_CONCURRENT, (q) =>
       fetchChunkedEvents(client, q, fromBlock, head)
     );
 
     const events = dedupeEvents(batches.flat());
-    const partial = events.length === 0 || fromBlock > LAE_MATRIX_DEPLOY_BLOCK;
-    return { events, partial };
+    return { events, partial: events.length === 0 };
   };
 
   const result = await withTimeout(work(), timeoutMs);

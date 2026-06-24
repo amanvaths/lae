@@ -8,7 +8,7 @@ import { triggerAdminIndexerSync, triggerAdminIndexerReset } from "@/lib/lae-clu
 import { Loader2, RefreshCw, Trash2 } from "lucide-react";
 
 const ADMIN_API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
-const MATRIX_DEPLOY_BLOCK = "115055888";
+const MATRIX_DEPLOY_BLOCK = process.env.NEXT_PUBLIC_MATRIX_CORE_DEPLOY_BLOCK ?? "0";
 
 type Settings = {
   contracts: Record<string, string>;
@@ -60,7 +60,7 @@ export default function AdminSettingsPage() {
     }
     const d = res.data.deleted;
     setSyncMsg(
-      `Reset complete — removed ${d.indexedLaeUsers ?? 0} users, ${d.chainEvents ?? 0} events. Indexer at block ${res.data.lastBlock}.`
+      `Reset complete — removed ${d.matrixCoreUsers ?? 0} users, ${d.chainEvents ?? 0} events. Indexer at block ${res.data.lastBlock}.`
     );
     loadSettings();
   }

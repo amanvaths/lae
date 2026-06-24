@@ -825,79 +825,103 @@ model IndexedStake {
   @@map("idx_stakes")
 }
 
-// ─── LAE Club / BTitan Matrix indexer ────────────────────────────────────────
+// ─── LAEClubMatrix indexer (15 slots × 14 positions) ─────────────────────────
 
-model IndexedLaeUser {
-  walletAddress   String   @id @map("wallet_address")
-  userId          Int      @unique @map("user_id")
+model MatrixCoreUser {
+  userId          Int      @id @map("user_id")
+  walletAddress   String   @unique @map("wallet_address")
   sponsorId       Int?     @map("sponsor_id")
-  teamSize        Int      @default(0) @map("team_size")
-  totalIncome     Decimal  @default(0) @map("total_income") @db.Decimal(36, 18)
-  registeredAt    DateTime @map("registered_at")
+  currentCycle    Int      @default(1) @map("current_cycle")
+  highestSlot     Int      @default(1) @map("highest_slot")
+  directReferrals Int      @default(0) @map("direct_referrals")
+  totalEarned     Decimal  @default(0) @map("total_earned") @db.Decimal(36, 18)
+  totalCycles     Int      @default(0) @map("total_cycles")
   registeredBlock BigInt   @map("registered_block")
+  registeredAt    DateTime @default(now()) @map("registered_at")
   createdAt       DateTime @default(now()) @map("created_at")
 
   @@index([sponsorId])
-  @@map("idx_lae_users")
+  @@map("mc_users")
 }
 
-model IndexedLaeIncome {
+model MatrixCoreCycle {
+  matrixOwnerId Int     @map("matrix_owner_id")
+  level         Int     @default(1)
+  cycleId       Int     @map("cycle_id")
+  filled        Int     @default(0)
+  completed     Boolean @default(false)
+  slot2Opened   Boolean @default(false) @map("slot2_opened")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@id([matrixOwnerId, level, cycleId])
+  @@map("mc_cycles")
+}
+
+model MatrixCorePosition {
   id              String   @id @default(cuid())
-  receiverUserId  Int      @map("receiver_user_id")
-  receiverAddress String?  @map("receiver_address")
+  matrixOwnerId   Int      @map("matrix_owner_id")
+  level           Int      @default(1)
+  cycleId         Int      @map("cycle_id")
+  position        Int
+  occupantId      Int      @map("occupant_id")
+  blockNumber     BigInt   @map("block_number")
+  txHash          String   @map("tx_hash")
+  logIndex        Int      @map("log_index")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@unique([matrixOwnerId, level, cycleId, position])
+  @@unique([txHash, logIndex])
+  @@index([matrixOwnerId, level, cycleId])
+  @@index([occupantId])
+  @@map("mc_positions")
+}
+
+model MatrixCoreIncome {
+  id              String   @id @default(cuid())
+  kind            String
   fromUserId      Int?     @map("from_user_id")
-  level           Int
+  toUserId        Int?     @map("to_user_id")
+  matrixOwnerId   Int?     @map("matrix_owner_id")
+  level           Int?
+  position        Int?
   amount          Decimal  @db.Decimal(36, 18)
-  incomeKind      String   @map("income_kind")
   blockNumber     BigInt   @map("block_number")
   txHash          String   @map("tx_hash")
   logIndex        Int      @map("log_index")
   createdAt       DateTime @default(now()) @map("created_at")
 
   @@unique([txHash, logIndex])
-  @@index([receiverUserId])
-  @@index([receiverAddress])
-  @@index([incomeKind])
-  @@map("idx_lae_incomes")
+  @@index([toUserId])
+  @@map("mc_income")
 }
 
-model IndexedLaePlacement {
+model MatrixCoreRecycle {
+  id              String   @id @default(cuid())
+  userId          Int      @map("user_id")
+  level           Int      @default(1)
+  completedCycle  Int      @map("completed_cycle")
+  newCycle        Int      @map("new_cycle")
+  blockNumber     BigInt   @map("block_number")
+  txHash          String   @map("tx_hash")
+  logIndex        Int      @map("log_index")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@unique([userId, level, completedCycle])
+  @@unique([txHash, logIndex])
+  @@map("mc_recycles")
+}
+
+model MatrixCoreSlotOpening {
   id          String   @id @default(cuid())
   userId      Int      @map("user_id")
-  referrerId  Int      @map("referrer_id")
-  level       Int
-  cycle       Int
-  spot        Int
+  slotId      Int      @map("slot_id")
   blockNumber BigInt   @map("block_number")
   txHash      String   @map("tx_hash")
   logIndex    Int      @map("log_index")
   createdAt   DateTime @default(now()) @map("created_at")
 
+  @@unique([userId, slotId])
   @@unique([txHash, logIndex])
-  @@index([userId])
-  @@index([referrerId])
-  @@index([level])
-  @@map("idx_lae_placements")
-}
-
-/// Authoritative per-(owner, level, cycle) matrix tree snapshot.
-/// Built from the contract's usersXMatrixReferrals() — the on-chain source of
-/// truth — so the frontend renders the tree from DB instead of recalculating.
-model IndexedMatrixSlot {
-  id            String   @id @default(cuid())
-  referrerId    Int      @map("referrer_id") // matrix owner userId
-  level         Int
-  cycle         Int
-  spot          Int // 1..14, sequential fill order
-  userId        Int      @map("user_id") // occupant userId
-  walletAddress String   @map("wallet_address") // occupant address
-  blockNumber   BigInt?  @map("block_number")
-  txHash        String?  @map("tx_hash")
-  updatedAt     DateTime @updatedAt @map("updated_at")
-  createdAt     DateTime @default(now()) @map("created_at")
-
-  @@unique([referrerId, level, cycle, spot])
-  @@index([referrerId, level])
-  @@index([userId])
-  @@map("idx_lae_matrix_slots")
+  @@map("mc_slot_openings")
 }

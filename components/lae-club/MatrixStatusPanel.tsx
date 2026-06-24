@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Coins, Layers, RotateCcw, TrendingUp, Users } from "lucide-react";
+import { Coins, Layers, RotateCcw, Shield, TrendingUp, Users } from "lucide-react";
 import { LAE_MATRIX_SIZE } from "@/lib/lae-club/constants";
 import { fmtEther } from "@/lib/contracts/format";
 import { cn } from "@/lib/utils";
@@ -33,20 +33,32 @@ export function MatrixStatusPanel({
       initial={{ opacity: 0, x: 12 }}
       animate={{ opacity: 1, x: 0 }}
       className={cn(
-        "rounded-2xl border border-[#D4AF37]/20 bg-black/40 p-4 backdrop-blur-xl sm:p-5",
+        "relative overflow-hidden rounded-2xl border border-[#D4AF37]/20 bg-black/40 p-4 backdrop-blur-xl sm:p-5",
         className
       )}
     >
-      <p className="text-[0.65rem] font-bold uppercase tracking-[0.2em] text-[#D4AF37]/70">
-        Matrix Status
-      </p>
-      <h3 className="mt-1 font-display text-lg font-bold text-white">Level {level}</h3>
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#D4AF37]/30 to-transparent" />
+      <div className="flex items-center gap-2">
+        <span className="grid h-7 w-7 place-items-center rounded-lg border border-[#D4AF37]/20 bg-[#D4AF37]/[0.08] text-[#D4AF37]">
+          <Shield className="h-3.5 w-3.5" />
+        </span>
+        <p className="text-[0.65rem] font-bold uppercase tracking-[0.2em] text-[#D4AF37]/70">
+          Matrix Status
+        </p>
+      </div>
+      <h3 className="mt-3 font-display text-lg font-bold text-white">Level {level}</h3>
       <p
         className={cn(
-          "mt-1 text-xs font-medium",
+          "mt-1 inline-flex items-center gap-1.5 text-xs font-medium",
           levelActive ? "text-emerald-400" : "text-slate-500"
         )}
       >
+        {levelActive && (
+          <span className="relative inline-flex h-1.5 w-1.5">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400/60" />
+            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
+          </span>
+        )}
         {levelActive ? "Active on-chain" : "Locked — upgrade to unlock"}
       </p>
 
