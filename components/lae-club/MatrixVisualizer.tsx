@@ -53,6 +53,13 @@ export function MatrixVisualizer({
         </span>
       </div>
 
+      <div className="relative rounded-lg border border-[#D4AF37]/15 bg-[#D4AF37]/[0.04] px-3 py-2 text-[10px] leading-relaxed text-slate-400 sm:text-[11px]">
+        <span className="font-semibold text-[#D4AF37]">Box ka number = slot position</span> (1–14,
+        sequence mein bharta hai) ·{" "}
+        <span className="font-semibold text-white">ID #</span> = us slot mein baithe user ki ID.
+        Dono alag hote hain — jaise ID #7 slot 6 mein ho sakti hai.
+      </div>
+
       <div className="relative overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <div className="mx-auto flex min-w-[min(100%,680px)] flex-col items-center gap-0 pt-3">
           <YouNode />
@@ -140,6 +147,7 @@ function SpotCard({ slot, compact }: { slot: MatrixSlot; compact: boolean }) {
       )}
     >
       <span
+        title={`Slot position ${slot.spot}`}
         className={cn(
           "absolute -top-2.5 left-1/2 z-10 flex h-[18px] w-[18px] -translate-x-1/2 items-center justify-center rounded-full text-[9px] font-bold",
           filled && isGold && "bg-gradient-to-b from-[#D4AF37] to-[#B8860B] text-[#1a1200]",
@@ -179,7 +187,7 @@ function SpotCard({ slot, compact }: { slot: MatrixSlot; compact: boolean }) {
       >
         {filled
           ? slot.userId
-            ? `#${slot.userId}`
+            ? `ID #${slot.userId}`
             : slot.address
               ? truncateAddress(slot.address, 4, 3)
               : "FILLED"
