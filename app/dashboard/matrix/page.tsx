@@ -43,7 +43,7 @@ export default function MatrixPage() {
   const filledForLevel = (lvl: number) => {
     const li = overviewLevels.find((l) => l.level === lvl);
     if (!li) return 0;
-    return li.cycles.find((c) => c.cycle === li.currentCycle)?.filled ?? 0;
+    return li.cycles?.find((c) => c.cycle === li.currentCycle)?.filled ?? 0;
   };
 
   const treeApi = useLaeMatrixTreeApi(userIdNum, selectedLevel, selectedCycle, {
@@ -120,7 +120,7 @@ export default function MatrixPage() {
           Cycle
         </span>
         {Array.from({ length: currentCycle }, (_, i) => i + 1).map((c) => {
-          const oc = levelData?.cycles.find((x) => x.cycle === c);
+          const oc = levelData?.cycles?.find((x) => x.cycle === c);
           const isActive = selectedCycle === c;
           return (
             <button

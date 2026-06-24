@@ -185,7 +185,7 @@ export function useLaeMatrixFillCounts(level = 1) {
   const levelData = overview.overview?.levels.find((l) => l.level === level);
 
   return {
-    fills: levelData?.cycles.map((c) => c.filled) ?? [],
+    fills: levelData?.cycles?.map((c) => c.filled) ?? [],
     isLoading: overview.isLoading,
     isError: overview.isError,
   };
@@ -255,13 +255,17 @@ export function useLaeAllMatrixLevels() {
   const levels = overview.overview?.levels ?? [];
 
   return {
-    levels: levels.map((l) => ({
-      level: l.level,
-      active: l.active,
-      filled: l.cycles[l.cycles.length - 1]?.filled ?? 0,
-      completed: l.cycles[l.cycles.length - 1]?.completed ?? false,
-      currentCycle: l.currentCycle,
-    })),
+    levels: levels.map((l) => {
+      const cycles = l.cycles ?? [];
+      const last = cycles[cycles.length - 1];
+      return {
+        level: l.level,
+        active: l.active,
+        filled: last?.filled ?? 0,
+        completed: last?.completed ?? false,
+        currentCycle: l.currentCycle,
+      };
+    }),
     activeCount: levels.filter((l) => l.active).length,
     currentCycle: levels[0]?.currentCycle ?? 1,
     isLoading: user.isLoading || overview.isLoading,
@@ -655,12 +659,15 @@ export function useLaeAllMatrixLevelsForUser(userId: bigint | undefined) {
   const levels = overview.overview?.levels ?? [];
 
   return {
-    levels: levels.map((l) => ({
-      level: l.level,
-      active: l.active,
-      filled: l.cycles[l.cycles.length - 1]?.filled ?? 0,
-      currentCycle: l.currentCycle,
-    })),
+    levels: levels.map((l) => {
+      const cycles = l.cycles ?? [];
+      return {
+        level: l.level,
+        active: l.active,
+        filled: cycles[cycles.length - 1]?.filled ?? 0,
+        currentCycle: l.currentCycle,
+      };
+    }),
     activeCount: levels.filter((l) => l.active).length,
     isLoading: overview.isLoading,
   };

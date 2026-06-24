@@ -104,9 +104,9 @@ type ApiSlotInput = {
  * Map backend matrix-tree API slots → UI slots. The backend (contract source of
  * truth) already decides each slot state; the frontend only attaches labels.
  */
-export function buildSlotsFromApi(apiSlots: ApiSlotInput[]): MatrixSlot[] {
+export function buildSlotsFromApi(apiSlots?: ApiSlotInput[] | null): MatrixSlot[] {
   const byPosition = new Map<number, ApiSlotInput>();
-  for (const s of apiSlots) byPosition.set(s.position, s);
+  for (const s of apiSlots ?? []) byPosition.set(s.position, s);
 
   return Array.from({ length: LAE_MATRIX_SIZE }, (_, i) => {
     const spot = i + 1;
