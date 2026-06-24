@@ -1,18 +1,21 @@
 import { prisma } from "../../lib/prisma.js";
 import { serializeForJson } from "../../lib/serialize.js";
+import { laeUserIdForWallet } from "../blockchain/lae-user-lookup.js";
 
 export async function getLaeUserByWallet(wallet: string) {
-  const w = wallet.toLowerCase();
-  const user = await prisma.matrixCoreUser.findUnique({ where: { walletAddress: w } });
+  const userId = await laeUserIdForWallet(wallet);
+  if (!userId) return null;
+
+  const user = await prisma.matrixCoreUser.findUnique({ where: { userId } });
   if (!user) return null;
 
   const placements = await prisma.matrixCorePosition.findMany({
-    where: { occupantId: user.userId },
+    where: { occupantId: userId },
     orderBy: [{ level: "asc" }, { cycleId: "asc" }],
   });
 
   const income = await prisma.matrixCoreIncome.findMany({
-    where: { OR: [{ toUserId: user.userId }, { fromUserId: user.userId }] },
+    where: { OR: [{ toUserId: userId }, { fromUserId: userId }] },
     orderBy: { blockNumber: "desc" },
     take: 100,
   });
@@ -40,16 +43,59 @@ export async function getLaeUserIncome(
   kind?: "matrix" | "treasury",
   limit = 100
 ) {
-  const w = wallet.toLowerCase();
-  const user = await prisma.matrixCoreUser.findUnique({ where: { walletAddress: w } });
-  if (!user) return [];
+  const userId = await laeUserIdForWallet(wallet);
+  if (!userId) return [];
+
   const kindFilter =
-    kind === "matrix" ? { kind: "matrix" } : kind === "treasury" ? { kind: "treasury" } : {};
+    kind === "matrix"
+      ? { kind: "matrix" }
+      : kind === "treasury"
+        ? { kind: { in: ["club", "treasury"] } }
+        : {};
+
+  const rows = await prisma.matrixCoreIncome.findMany({
+    where: { toUserId: userId, ...kindFilter },
+    orderBy: { blockNumber: "desc" },
+    take: limit,
+  });
+
+  if (rows.length > 0) return serializeForJson(rows);
+
+  // Fallback: derive income rows from indexed chain events when mc_income projection missed
+  const eventNames =
+    kind === "treasury"
+      ? ["ClubPoolPayment"]
+      : kind === "matrix"
+        ? ["TokenReceived"]
+        : ["TokenReceived", "ClubPoolPayment"];
+
+  const uid = String(userId);
+  const events = await prisma.chainEvent.findMany({
+    where: {
+      eventName: { in: eventNames },
+      OR: [
+        { payload: { path: ["receiverId"], equals: uid } },
+        { payload: { path: ["userId"], equals: uid } },
+        { payload: { path: ["toUserId"], equals: uid } },
+      ],
+    },
+    orderBy: { blockNumber: "desc" },
+    take: limit,
+  });
+
   return serializeForJson(
-    await prisma.matrixCoreIncome.findMany({
-      where: { toUserId: user.userId, ...kindFilter },
-      orderBy: { blockNumber: "desc" },
-      take: limit,
+    events.map((e) => {
+      const p = (e.payload ?? {}) as Record<string, string>;
+      return {
+        kind: e.eventName === "TokenReceived" ? "matrix" : "club",
+        fromUserId: p.fromId ? Number(p.fromId) : null,
+        toUserId: userId,
+        level: p.level ? Number(p.level) : null,
+        amount: p.amount ?? "0",
+        blockNumber: e.blockNumber,
+        txHash: e.txHash,
+        logIndex: e.logIndex,
+      };
     })
   );
 }
@@ -62,30 +108,35 @@ const MATRIX_EVENT_NAMES = [
   "Reinvest",
   "Upgrade",
   "MissedIncome",
+  "Spillover",
   "LaeRewardAllocated",
   "LaeRewardClaimed",
 ] as const;
 
+function userEventFilters(userId: number) {
+  const uid = String(userId);
+  return [
+    { payload: { path: ["userId"], equals: uid } },
+    { payload: { path: ["user"], equals: uid } },
+    { payload: { path: ["referrerId"], equals: uid } },
+    { payload: { path: ["referrer"], equals: uid } },
+    { payload: { path: ["receiverId"], equals: uid } },
+    { payload: { path: ["fromId"], equals: uid } },
+    { payload: { path: ["toUserId"], equals: uid } },
+    { payload: { path: ["fromUserId"], equals: uid } },
+    { payload: { path: ["refId"], equals: uid } },
+  ];
+}
+
 export async function getLaeUserEvents(wallet: string, limit = 150) {
   const w = wallet.toLowerCase();
-  const user = await prisma.matrixCoreUser.findUnique({ where: { walletAddress: w } });
-  if (!user) return [];
+  const userId = await laeUserIdForWallet(w);
+  if (!userId) return [];
 
-  const uid = String(user.userId);
   const events = await prisma.chainEvent.findMany({
     where: {
       eventName: { in: [...MATRIX_EVENT_NAMES] },
-      OR: [
-        { walletAddress: w },
-        { payload: { path: ["userId"], equals: uid } },
-        { payload: { path: ["user"], equals: uid } },
-        { payload: { path: ["referrerId"], equals: uid } },
-        { payload: { path: ["referrer"], equals: uid } },
-        { payload: { path: ["receiverId"], equals: uid } },
-        { payload: { path: ["fromId"], equals: uid } },
-        { payload: { path: ["toUserId"], equals: uid } },
-        { payload: { path: ["fromUserId"], equals: uid } },
-      ],
+      OR: [{ walletAddress: w }, ...userEventFilters(userId)],
     },
     orderBy: { blockNumber: "desc" },
     take: limit,

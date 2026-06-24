@@ -17,7 +17,7 @@ import { LAE_MATRIX_SIZE, LAE_LAST_LEVEL, MATRIX_SUPPORTS_LAE_REWARDS } from "./
 import { siteOrigin, withBasePath } from "@/lib/paths";
 import { fetchMatrixUserEvents, type MatrixUserEvent } from "./matrix-events";
 import { dedupeEvents, sortEventsNewestFirst } from "./event-utils";
-import { fetchLaeUserEventsFromApi } from "./user-api";
+import { fetchLaeUserEventsFromApi, fetchLaeUserIncomeFromApi } from "./user-api";
 import { LAE_USER_QUERY_KEY } from "./query-keys";
 import {
   useLaeMatrixOverviewApi,
@@ -436,8 +436,10 @@ async function loadUserEvents(
   userAddress: Address
 ): Promise<MatrixUserEvent[]> {
   const apiEvents = await fetchLaeUserEventsFromApi(userAddress);
-  if (apiEvents && apiEvents.length > 0) {
-    return sortEventsNewestFirst(dedupeEvents(apiEvents));
+  const apiIncome = await fetchLaeUserIncomeFromApi(userAddress);
+  const fromApi = dedupeEvents([...(apiEvents ?? []), ...(apiIncome ?? [])]);
+  if (fromApi.length > 0) {
+    return sortEventsNewestFirst(fromApi);
   }
 
   const chainResult = await fetchMatrixUserEvents(client, userId, userAddress, {

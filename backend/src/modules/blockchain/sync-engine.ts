@@ -4,6 +4,7 @@ import { CONTRACTS, MATRIX_CORE_DEPLOY_BLOCK, CHAIN } from "../../config/chains.
 import { MATRIX_CORE_EVENTS } from "./matrix-core-abi.js";
 import { parseEthersLog, processIndexedLog } from "./event-processor.js";
 import { syncMatrixReceiptsInRange } from "./receipt-sync.js";
+import { backfillLaeUsersFromChain } from "./chain-backfill.js";
 import {
   getIndexerProvider,
   providerForUrl,
@@ -223,6 +224,11 @@ export function startBlockchainSyncEngine(): void {
   );
   void (async () => {
     await alignIndexerToDeploy();
+    try {
+      await backfillLaeUsersFromChain();
+    } catch (err) {
+      console.warn("[indexer] user backfill:", err instanceof Error ? err.message : err);
+    }
     await runIndexerSync();
   })();
   pollTimer = setInterval(() => void runIndexerSync(), Number(process.env.INDEXER_POLL_MS ?? "8000"));
