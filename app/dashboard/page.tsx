@@ -226,7 +226,7 @@ export default function DashboardHome() {
                         rel="noreferrer"
                         className="mt-1 block truncate text-xs text-[#D4AF37]/70 hover:text-[#D4AF37] hover:underline transition-colors"
                       >
-                        {truncateAddress(row.transactionHash)}
+                        {truncateAddress(row.transactionHash ?? (row as { txHash?: string }).txHash)}
                       </a>
                     </div>
                     {typeof amount === "bigint" && (

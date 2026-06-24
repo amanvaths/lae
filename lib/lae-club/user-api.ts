@@ -2,25 +2,29 @@ import { API_BASE_URL } from "@/lib/api-client";
 import type { MatrixUserEvent } from "./matrix-events";
 
 type ApiEventRow = {
-  transactionHash: string;
+  transactionHash?: string;
+  txHash?: string;
   logIndex: number;
   eventName: string;
   blockNumber?: string;
-  args: Record<string, unknown>;
+  args?: Record<string, unknown>;
+  payload?: Record<string, unknown>;
 };
 
 function normalizeApiEvent(row: ApiEventRow): MatrixUserEvent {
+  const rawArgs = row.args ?? row.payload ?? {};
   const args: Record<string, unknown> = {};
-  for (const [k, v] of Object.entries(row.args ?? {})) {
+  for (const [k, v] of Object.entries(rawArgs)) {
     if (typeof v === "number") args[k] = BigInt(v);
     else if (typeof v === "string" && /^-?\d+$/.test(v)) args[k] = BigInt(v);
     else args[k] = v;
   }
   const blockNumber =
     row.blockNumber && /^\d+$/.test(row.blockNumber) ? BigInt(row.blockNumber) : undefined;
+  const hash = (row.transactionHash ?? row.txHash ?? "") as `0x${string}`;
 
   return {
-    transactionHash: row.transactionHash as `0x${string}`,
+    transactionHash: hash,
     logIndex: row.logIndex,
     eventName: row.eventName,
     blockNumber,
