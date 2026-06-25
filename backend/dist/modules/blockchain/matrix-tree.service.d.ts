@@ -14,18 +14,11 @@ export interface MatrixTreeDTO {
     cycle: number;
     active: boolean;
     filledSpots: number;
-    boardFilled: number;
-    overflowCount: number;
     completed: boolean;
     slot2Opened: boolean;
     totalEarned: string;
     totalCycles: number;
     slots: MatrixSlotDTO[];
-    overflowMembers: Array<{
-        userId: number;
-        address: string | null;
-        depth: number;
-    }>;
 }
 /** Authoritative matrix tree — chain for current cycle, DB for history */
 export declare function getMatrixTree(userId: number, level: number, cycleId: number): Promise<MatrixTreeDTO | {

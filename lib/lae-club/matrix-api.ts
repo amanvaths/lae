@@ -19,20 +19,11 @@ export interface ApiMatrixTree {
   cycle: number;
   active: boolean;
   filledSpots: number;
-  boardFilled?: number;
-  overflowCount?: number;
   completed: boolean;
   slot2Opened: boolean;
   totalEarned: string;
   totalCycles: number;
   slots: ApiMatrixSlot[];
-  overflowMembers?: ApiOverflowMember[];
-}
-
-export interface ApiOverflowMember {
-  userId: number;
-  address: string | null;
-  depth: number;
 }
 
 export interface ApiMatrixOverviewCycle {

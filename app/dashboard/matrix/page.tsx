@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { LayoutGrid } from "lucide-react";
 import { Panel, PageHeading } from "@/components/dashboard/ui";
@@ -35,10 +35,6 @@ export default function MatrixPage() {
   const levelData = overviewApi.overview?.levels.find((l) => l.level === selectedLevel);
   const currentCycle = levelData?.currentCycle ?? 1;
   const [selectedCycle, setSelectedCycle] = useState(1);
-
-  useEffect(() => {
-    if (levelData?.currentCycle) setSelectedCycle(levelData.currentCycle);
-  }, [selectedLevel, levelData?.currentCycle]);
 
   const overviewLevels = overviewApi.overview?.levels ?? [];
   const priceForLevel = (lvl: number) =>
@@ -76,11 +72,7 @@ export default function MatrixPage() {
 
   const tree = treeApi.tree;
   const slots = tree ? buildSlotsFromApi(tree.slots) : undefined;
-  const isLevelActive = (lvl: number) => {
-    const ol = overviewLevels.find((l) => l.level === lvl);
-    if (ol) return ol.active;
-    return lvl === 1;
-  };
+  const activeLevels = overviewApi.overview?.levels.filter((l) => l.active) ?? [{ level: 1, currentCycle: 1, cycles: [] }];
 
   return (
     <div className="space-y-6">
@@ -103,7 +95,7 @@ export default function MatrixPage() {
       {/* ── Level cards grid ── */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
         {Array.from({ length: LAE_LAST_LEVEL }, (_, i) => i + 1).map((lvl) => {
-          const active = isLevelActive(lvl);
+          const active = activeLevels.some((l) => l.level === lvl);
           return (
             <MatrixLevelCard
               key={lvl}
@@ -112,11 +104,10 @@ export default function MatrixPage() {
               selected={selectedLevel === lvl}
               price={priceForLevel(lvl)}
               filled={filledForLevel(lvl)}
-              loading={overviewApi.isLoading && !overviewApi.isError}
+              loading={overviewApi.isLoading}
               onClick={() => {
-                const li = overviewLevels.find((l) => l.level === lvl);
                 setSelectedLevel(lvl);
-                setSelectedCycle(li?.currentCycle ?? 1);
+                setSelectedCycle(1);
               }}
             />
           );
@@ -177,7 +168,6 @@ export default function MatrixPage() {
                 level={selectedLevel}
                 reinvestCount={BigInt(selectedCycle - 1)}
                 totalEarning={BigInt(tree.totalEarned || "0")}
-                filledCount={tree.filledSpots}
               />
             )}
           </Panel>

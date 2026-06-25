@@ -20,7 +20,6 @@ export function MatrixVisualizer({
   level,
   reinvestCount,
   totalEarning,
-  filledCount,
   className,
 }: {
   referrals?: readonly Address[];
@@ -29,11 +28,10 @@ export function MatrixVisualizer({
   level: number;
   reinvestCount?: bigint;
   totalEarning?: bigint;
-  filledCount?: number;
   className?: string;
 }) {
   const slots = slotsProp ?? buildMatrixSlots(referrals ?? [], levelActive);
-  const filled = filledCount ?? slots.filter((s) => s.state === "filled").length;
+  const filled = slots.filter((s) => s.state === "filled").length;
 
   return (
     <div className={cn("relative space-y-4", className)}>
@@ -56,11 +54,10 @@ export function MatrixVisualizer({
       </div>
 
       <div className="relative rounded-lg border border-[#D4AF37]/15 bg-[#D4AF37]/[0.04] px-3 py-2 text-[10px] leading-relaxed text-slate-400 sm:text-[11px]">
-        <span className="font-semibold text-[#D4AF37]">Position number (1–14)</span> = aapke matrix
-        tree mein slot ki jagah (upar se neeche, left se right).{" "}
-        <span className="font-semibold text-white">ID #</span> = us position par registered user ki
-        ID. Tree genealogy ke hisaab se bharta hai — kabhi aapka direct na ho, spillover se bhi
-        position bharti hai; isliye position number aur user ID alag ho sakte hain.
+        <span className="font-semibold text-[#D4AF37]">Box ka number = slot position</span> (1–14,
+        sequence mein bharta hai) ·{" "}
+        <span className="font-semibold text-white">ID #</span> = us slot mein baithe user ki ID.
+        Dono alag hote hain — jaise ID #7 slot 6 mein ho sakti hai.
       </div>
 
       <div className="relative overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">

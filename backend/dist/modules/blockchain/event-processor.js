@@ -1,5 +1,4 @@
 import { prisma } from "../../lib/prisma.js";
-import { snapshotGenealogyBoard, syncEntrantOnGenealogyBoards, } from "./genealogy-board.service.js";
 function num(v) {
     return Number(v ?? 0);
 }
@@ -58,12 +57,48 @@ export async function processIndexedLog(log) {
                     data: { directReferrals: { increment: 1 } },
                 });
             }
-            await syncEntrantOnGenealogyBoards(id, walletAddr, 1, blockNumber, txHash, logIndex, sponsorId);
             break;
         }
         case "NewUserPlace": {
-            // Income-board placement — logged for audit only. Genealogy tree indexing uses
-            // Registration + Reinvest (display board), not income single-pay positions.
+            const matrixOwnerId = num(args.referrer);
+            const occupantId = num(args.user);
+            const level = num(args.level) || 1;
+            const cycleId = num(args.cycle);
+            const position = num(args.spot);
+            await prisma.matrixCoreCycle.upsert({
+                where: {
+                    matrixOwnerId_level_cycleId: { matrixOwnerId, level, cycleId },
+                },
+                create: { matrixOwnerId, level, cycleId, filled: position },
+                update: { filled: position },
+            });
+            if (position >= 14) {
+                await prisma.matrixCoreCycle.updateMany({
+                    where: { matrixOwnerId, level, cycleId },
+                    data: { filled: 14, completed: true },
+                });
+            }
+            await prisma.matrixCorePosition.upsert({
+                where: {
+                    matrixOwnerId_level_cycleId_position: {
+                        matrixOwnerId,
+                        level,
+                        cycleId,
+                        position,
+                    },
+                },
+                create: {
+                    matrixOwnerId,
+                    level,
+                    cycleId,
+                    position,
+                    occupantId,
+                    blockNumber: BigInt(blockNumber),
+                    txHash,
+                    logIndex,
+                },
+                update: { occupantId },
+            });
             break;
         }
         case "TokenReceived": {
@@ -146,14 +181,17 @@ export async function processIndexedLog(log) {
         case "Reinvest": {
             const userId = num(args.userId);
             const level = num(args.level) || 1;
-            await snapshotGenealogyBoard(userId, level, blockNumber, txHash, logIndex);
             const completedCycle = await prisma.matrixCoreCycle.findFirst({
-                where: { matrixOwnerId: userId, level, completed: true },
+                where: { matrixOwnerId: userId, level, completed: false },
                 orderBy: { cycleId: "desc" },
                 select: { cycleId: true },
             });
             const prevCycle = completedCycle?.cycleId ?? 1;
             const newCycle = prevCycle + 1;
+            await prisma.matrixCoreCycle.updateMany({
+                where: { matrixOwnerId: userId, level, cycleId: prevCycle },
+                data: { filled: 14, completed: true },
+            });
             await prisma.matrixCoreRecycle.upsert({
                 where: {
                     userId_level_completedCycle: {
