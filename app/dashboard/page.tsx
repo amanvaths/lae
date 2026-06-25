@@ -20,7 +20,6 @@ import {
   useLaeAllMatrixLevels,
   useLaeIncomeEvents,
   useLaeRecycleCount,
-  useLaeMatrixLevel,
   useLaeUserEvents,
   referralLinkByUserId,
 } from "@/lib/lae-club/hooks";
@@ -47,7 +46,6 @@ export default function DashboardHome() {
   const income = useLaeIncomeEvents();
   const userEvents = useLaeUserEvents();
   const recycles = useLaeRecycleCount();
-  const matrixL1 = useLaeMatrixLevel(1, 1);
   const userIdNum = user.userId ? Number(user.userId) : undefined;
   const matrixL1Api = useMatrixCoreTreeApi(userIdNum, 1, 1);
   const recentEvents = sortEventsNewestFirst(userEvents.data ?? []).slice(0, 8);
@@ -115,7 +113,7 @@ export default function DashboardHome() {
         </div>
         <Link
           href={withBasePath("/dashboard/share")}
-          className="btn-primary justify-center gap-2 border-[#D4AF37]/30 bg-gradient-to-r from-[#D4AF37]/20 to-[#B8860B]/20 hover:from-[#D4AF37]/30 hover:to-[#B8860B]/30"
+          className="inline-flex items-center justify-center gap-2 rounded-xl border-2 border-[#D4AF37]/60 bg-[#D4AF37]/10 px-5 py-2.5 text-sm font-semibold uppercase tracking-wide text-[#D4AF37] shadow-[0_0_24px_rgba(212,175,55,0.12)] transition-all hover:border-[#D4AF37] hover:bg-[#D4AF37]/20 hover:text-[#ffe082]"
         >
           <Share2 className="h-4 w-4" /> Share referral
         </Link>
@@ -163,7 +161,7 @@ export default function DashboardHome() {
           title="Level 1 · Silver & Gold Matrix"
           className="mt-5 border-[#D4AF37]/15"
         >
-          {matrixL1Api.isLoading && matrixL1.isLoading ? (
+          {matrixL1Api.isLoading && !matrixL1Api.tree ? (
             <QueryLoading label="Loading matrix…" />
           ) : (
             <MatrixVisualizer
@@ -172,13 +170,13 @@ export default function DashboardHome() {
                   ? buildSlotsFromApi(matrixL1Api.tree.slots)
                   : undefined
               }
-              levelActive={matrixL1Api.tree?.active ?? matrixL1.active}
+              levelActive={matrixL1Api.tree?.active ?? true}
               level={1}
               reinvestCount={BigInt(Math.max(0, (matrixL1Api.tree?.cycle ?? 1) - 1))}
               totalEarning={
                 matrixL1Api.tree
                   ? BigInt(matrixL1Api.tree.totalEarned || "0")
-                  : matrixL1.totalEarning
+                  : 0n
               }
             />
           )}

@@ -4,11 +4,13 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useAccount, useBalance, usePublicClient, useReadContract, useWriteContract } from "wagmi";
+import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, CheckCircle2, Loader2, AlertTriangle, Wallet, ExternalLink } from "lucide-react";
 import { formatEther, parseEther, type PublicClient } from "viem";
 import { LAE_CONTRACTS } from "@/lib/lae-club/contracts";
 import { laeClubMatrixAbi } from "@/lib/lae-club/matrix-core-abi";
 import { erc20Abi } from "@/lib/contracts/abis/erc20";
+import { LAE_USER_QUERY_KEY } from "@/lib/lae-club/query-keys";
 import { parseLaeUserId, useLaeLevelPrices, useLaeUser } from "@/lib/lae-club/hooks";
 import { withLookupTimeout, isValidReferrerId } from "@/lib/lae-club/user-lookup";
 import { useRouter } from "next/navigation";
@@ -69,6 +71,7 @@ export function LaeRegisterPanel({ luxury = false }: { luxury?: boolean }) {
   const { address } = useAccount();
   const client = usePublicClient();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const searchParams = useSearchParams();
   const { push } = useToast();
   const user = useLaeUser();
@@ -251,7 +254,12 @@ export function LaeRegisterPanel({ luxury = false }: { luxury?: boolean }) {
         "success"
       );
 
-      await new Promise((r) => setTimeout(r, 800));
+      await queryClient.invalidateQueries({ queryKey: [LAE_USER_QUERY_KEY] });
+      await queryClient.invalidateQueries({ queryKey: ["lae-matrix-tree"] });
+      await queryClient.invalidateQueries({ queryKey: ["lae-matrix-overview"] });
+      await queryClient.invalidateQueries({ queryKey: ["lae-events"] });
+
+      await new Promise((r) => setTimeout(r, 400));
       router.replace(withBasePath("/dashboard"));
     } catch (e) {
       setPhase("idle");

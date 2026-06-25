@@ -13,6 +13,7 @@ export function ViewUserIdPanel({ initialId = "" }: { initialId?: string }) {
 
   useEffect(() => {
     setUserId(initialId);
+    setPending(false);
   }, [initialId]);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);

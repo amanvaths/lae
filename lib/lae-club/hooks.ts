@@ -69,10 +69,11 @@ export function useLaeUser() {
   const q = useQuery({
     queryKey: [LAE_USER_QUERY_KEY, address, LAE_CONTRACTS.matrix],
     enabled: !!address && !!client,
-    staleTime: 30_000,
+    staleTime: 5_000,
     gcTime: 300_000,
     retry: 1,
-    refetchOnWindowFocus: false,
+    refetchOnWindowFocus: true,
+    refetchOnMount: "always",
     queryFn: async (): Promise<LaeUserSnapshot> => {
       if (!address || !client) {
         return { registered: false, userId: undefined, details: undefined };
@@ -443,7 +444,7 @@ async function loadUserEvents(
   }
 
   const chainResult = await fetchMatrixUserEvents(client, userId, userAddress, {
-    timeoutMs: 30_000,
+    timeoutMs: 8_000,
   });
   return sortEventsNewestFirst(dedupeEvents(chainResult.events));
 }
