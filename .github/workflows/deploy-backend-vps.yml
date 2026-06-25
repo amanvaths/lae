@@ -115,12 +115,13 @@ jobs:
           DAI_CONTRACT_ADDRESS: ${{ secrets.DAI_CONTRACT_ADDRESS }}
           LAE_MATRIX_CONTRACT_ADDRESS: ${{ secrets.LAE_MATRIX_CONTRACT_ADDRESS }}
           LAE_COIN_CONTRACT_ADDRESS: ${{ secrets.LAE_COIN_CONTRACT_ADDRESS }}
+          RESET_INDEXER_ON_DEPLOY: "true"
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           password: ${{ secrets.VPS_PASSWORD }}
           port: 22
-          envs: DEPLOY_ROOT,DATABASE_URL,BSC_RPC_URL,CHAIN_ID,INDEXER_START_BLOCK,INDEXER_ADMIN_API_KEY,JWT_SECRET,CORS_ORIGIN,SENSO_CONTRACT_ADDRESS,SLT_CONTRACT_ADDRESS,SPIN_CONTRACT_ADDRESS,STAKING_CONTRACT_ADDRESS,DAI_CONTRACT_ADDRESS,ADMIN_WALLET_ADDRESSES,LAE_MATRIX_CONTRACT_ADDRESS,LAE_COIN_CONTRACT_ADDRESS
+          envs: DEPLOY_ROOT,DATABASE_URL,BSC_RPC_URL,CHAIN_ID,INDEXER_START_BLOCK,INDEXER_ADMIN_API_KEY,JWT_SECRET,CORS_ORIGIN,SENSO_CONTRACT_ADDRESS,SLT_CONTRACT_ADDRESS,SPIN_CONTRACT_ADDRESS,STAKING_CONTRACT_ADDRESS,DAI_CONTRACT_ADDRESS,ADMIN_WALLET_ADDRESSES,LAE_MATRIX_CONTRACT_ADDRESS,LAE_COIN_CONTRACT_ADDRESS,RESET_INDEXER_ON_DEPLOY
           script_stop: true
           script: |
             set -euo pipefail
@@ -141,7 +142,7 @@ jobs:
             printf '%s=%s\n' DATABASE_URL "$(sanitize "${DATABASE_URL}")" >> "${ENV_FILE}"
             printf '%s=%s\n' BSC_RPC_URL "$(sanitize "${BSC_RPC_URL:-https://data-seed-prebsc-1-s1.binance.org:8545/}")" >> "${ENV_FILE}"
             printf '%s=%s\n' CHAIN_ID "$(sanitize "${CHAIN_ID:-97}")" >> "${ENV_FILE}"
-            printf '%s=%s\n' INDEXER_START_BLOCK "$(sanitize "${INDEXER_START_BLOCK:-115421200}")" >> "${ENV_FILE}"
+            printf '%s=%s\n' INDEXER_START_BLOCK "$(sanitize "${INDEXER_START_BLOCK:-115433188}")" >> "${ENV_FILE}"
             printf '%s=%s\n' INDEXER_BATCH_SIZE 400 >> "${ENV_FILE}"
             printf '%s=%s\n' INDEXER_POLL_MS 8000 >> "${ENV_FILE}"
             printf '%s=%s\n' INDEXER_REORG_DEPTH 12 >> "${ENV_FILE}"
@@ -150,15 +151,17 @@ jobs:
             printf '%s=%s\n' SPIN_CONTRACT_ADDRESS 0xF9bdE4a2Ca487b18DA8546124b63Ec9e938ea1aE >> "${ENV_FILE}"
             printf '%s=%s\n' STAKING_CONTRACT_ADDRESS 0xdb25Af21346aD358D5e52835934AF5f326169984 >> "${ENV_FILE}"
             printf '%s=%s\n' DAI_CONTRACT_ADDRESS 0xb2bE66BE07E1AD04074B32B8b13DcdFaB6B57575 >> "${ENV_FILE}"
-            printf '%s=%s\n' LAE_MATRIX_CONTRACT_ADDRESS "$(sanitize "${LAE_MATRIX_CONTRACT_ADDRESS:-0xB65745665aFce75a7d8B804bda96B68a82adbC0D}")" >> "${ENV_FILE}"
-            printf '%s=%s\n' MATRIX_CORE_CONTRACT_ADDRESS "$(sanitize "${MATRIX_CORE_CONTRACT_ADDRESS:-0xB65745665aFce75a7d8B804bda96B68a82adbC0D}")" >> "${ENV_FILE}"
+            printf '%s=%s\n' LAE_MATRIX_CONTRACT_ADDRESS "$(sanitize "${LAE_MATRIX_CONTRACT_ADDRESS:-0xbb3dE7b61f16A2d6Bab6f19f54e03134105618CF}")" >> "${ENV_FILE}"
+            printf '%s=%s\n' MATRIX_CORE_CONTRACT_ADDRESS "$(sanitize "${MATRIX_CORE_CONTRACT_ADDRESS:-0xbb3dE7b61f16A2d6Bab6f19f54e03134105618CF}")" >> "${ENV_FILE}"
             printf '%s=%s\n' LAE_COIN_CONTRACT_ADDRESS "$(sanitize "${LAE_COIN_CONTRACT_ADDRESS:-0xD6698E6a8Ee4712cC2E36C150f1C34e59884C45A}")" >> "${ENV_FILE}"
-            printf '%s=%s\n' LAE_MATRIX_DEPLOY_BLOCK "$(sanitize "${MATRIX_CORE_DEPLOY_BLOCK:-115421200}")" >> "${ENV_FILE}"
-            printf '%s=%s\n' MATRIX_CORE_DEPLOY_BLOCK "$(sanitize "${MATRIX_CORE_DEPLOY_BLOCK:-115421200}")" >> "${ENV_FILE}"
+            printf '%s=%s\n' LAE_MATRIX_DEPLOY_BLOCK "$(sanitize "${MATRIX_CORE_DEPLOY_BLOCK:-115433188}")" >> "${ENV_FILE}"
+            printf '%s=%s\n' MATRIX_CORE_DEPLOY_BLOCK "$(sanitize "${MATRIX_CORE_DEPLOY_BLOCK:-115433188}")" >> "${ENV_FILE}"
             printf '%s=%s\n' INDEXER_ADMIN_API_KEY "$(sanitize "${INDEXER_ADMIN_API_KEY}")" >> "${ENV_FILE}"
             printf '%s=%s\n' JWT_SECRET "$(sanitize "${JWT_SECRET}")" >> "${ENV_FILE}"
             printf '%s=%s\n' CORS_ORIGIN "$(sanitize "${CORS_ORIGIN}")" >> "${ENV_FILE}"
             printf '%s=%s\n' ADMIN_WALLET_ADDRESSES "$(sanitize "${ADMIN_WALLET_ADDRESSES:-0xef9594fC5145404BfC7B5640296C3864319e3d86}")" >> "${ENV_FILE}"
+
+            printf '%s=%s\n' RESET_INDEXER_ON_DEPLOY "$(sanitize "${RESET_INDEXER_ON_DEPLOY:-}")" >> "${ENV_FILE}"
 
             chmod +x "${DEPLOY_ROOT}/backend/scripts/"*.sh
             bash "${DEPLOY_ROOT}/backend/scripts/vps-deploy.sh"

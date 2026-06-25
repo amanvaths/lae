@@ -33,6 +33,22 @@ npm run build
 echo "==> Running migrations..."
 npx prisma migrate deploy
 
+if [[ -f .env ]]; then
+  reset_flag=$(grep -E '^RESET_INDEXER_ON_DEPLOY=' .env | tail -1 | cut -d= -f2- | tr -d '"' | tr -d '\r' || true)
+  if [[ -n "${reset_flag}" ]]; then
+    export RESET_INDEXER_ON_DEPLOY="${reset_flag}"
+  fi
+fi
+
+if [[ "${RESET_INDEXER_ON_DEPLOY:-}" == "true" ]]; then
+  echo "==> Stopping API before indexer reset..."
+  if pm2 describe "${APP_NAME}" >/dev/null 2>&1; then
+    pm2 stop ecosystem.config.cjs --only "${APP_NAME}" || true
+  fi
+  echo "==> Resetting indexer + replaying from deploy block (fresh contract)..."
+  node scripts/post-deploy-reindex.mjs
+fi
+
 echo "==> PM2 restart..."
 if ! command -v pm2 >/dev/null 2>&1; then
   echo "ERROR: pm2 not installed. Run: npm install -g pm2"
