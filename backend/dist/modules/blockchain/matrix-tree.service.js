@@ -143,8 +143,12 @@ async function treeFromChain(userId, level, cycleId) {
         }
         else {
             const dbTree = await treeFromDb(userId, level, cycleId);
-            if (dbTree)
-                return dbTree;
+            if (dbTree) {
+                return {
+                    ...dbTree,
+                    totalEarned: String(details.totalIncome ?? "0"),
+                };
+            }
             for (let p = 1; p <= MATRIX_SIZE; p++) {
                 slots.push({ position: p, state: "waiting", userId: null, address: null });
             }

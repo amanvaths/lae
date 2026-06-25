@@ -15,6 +15,7 @@ import { erc20BalanceAbi, laeCoinAbi, laeStakingAbi } from "./abis";
 import { laeClubMatrixAbi } from "./matrix-core-abi";
 import { LAE_MATRIX_SIZE, LAE_LAST_LEVEL, MATRIX_SUPPORTS_LAE_REWARDS } from "./constants";
 import { siteOrigin, withBasePath } from "@/lib/paths";
+import { incomeStringToWei } from "@/lib/contracts/format";
 import { fetchMatrixUserEvents, type MatrixUserEvent } from "./matrix-events";
 import { dedupeEvents, sortEventsNewestFirst } from "./event-utils";
 import { fetchLaeUserEventsFromApi, fetchLaeUserIncomeFromApi } from "./user-api";
@@ -170,7 +171,7 @@ export function useLaeMatrixLevel(
     reinvestCount: BigInt(Math.max(0, cycle - 1)),
     heldForUpgrade: 0n,
     totalTeamSize: 0n,
-    totalEarning: tree ? BigInt(tree.totalEarned || "0") : user.totalIncome,
+    totalEarning: tree ? incomeStringToWei(tree.totalEarned) : user.totalIncome,
     referrals: [] as Address[],
     filledSpots: tree?.filledSpots ?? 0,
     slots: tree?.slots,
@@ -648,7 +649,7 @@ export function useLaeMatrixLevelForUser(
     reinvestCount: BigInt(Math.max(0, cycle - 1)),
     heldForUpgrade: 0n,
     totalTeamSize: 0n,
-    totalEarning: tree ? BigInt(tree.totalEarned || "0") : 0n,
+    totalEarning: tree ? incomeStringToWei(tree.totalEarned) : 0n,
     referrals: [] as Address[],
     filledSpots: tree?.filledSpots ?? 0,
     slots: tree?.slots,

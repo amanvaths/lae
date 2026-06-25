@@ -26,7 +26,7 @@ import {
 import { useMatrixCoreTreeApi } from "@/lib/lae-club/matrix-api";
 import { buildSlotsFromApi } from "@/lib/lae-club/matrix-slots";
 import { sortEventsNewestFirst } from "@/lib/lae-club/event-utils";
-import { fmtEther } from "@/lib/contracts/format";
+import { fmtEther, incomeStringToWei } from "@/lib/contracts/format";
 import { truncateAddress, formatUnixDate } from "@/lib/format";
 import { withBasePath } from "@/lib/paths";
 import { txUrl } from "@/lib/lae-club/contracts";
@@ -175,7 +175,7 @@ export default function DashboardHome() {
               reinvestCount={BigInt(Math.max(0, (matrixL1Api.tree?.cycle ?? 1) - 1))}
               totalEarning={
                 matrixL1Api.tree
-                  ? BigInt(matrixL1Api.tree.totalEarned || "0")
+                  ? incomeStringToWei(matrixL1Api.tree.totalEarned)
                   : 0n
               }
             />

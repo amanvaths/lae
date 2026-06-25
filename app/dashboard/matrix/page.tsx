@@ -12,7 +12,7 @@ import { LAE_MATRIX_SIZE, LAE_LAST_LEVEL } from "@/lib/lae-club/constants";
 import { buildSlotsFromApi } from "@/lib/lae-club/matrix-slots";
 import { useMatrixCoreUser } from "@/lib/lae-club/matrix-core-hooks";
 import { useLaeLevelPrices } from "@/lib/lae-club/hooks";
-import { cn } from "@/lib/utils";
+import { incomeStringToWei } from "@/lib/contracts/format";
 import {
   useLaeMatrixTreeApi,
   useLaeMatrixOverviewApi,
@@ -167,7 +167,7 @@ export default function MatrixPage() {
                 levelActive
                 level={selectedLevel}
                 reinvestCount={BigInt(selectedCycle - 1)}
-                totalEarning={BigInt(tree.totalEarned || "0")}
+                totalEarning={incomeStringToWei(tree.totalEarned)}
               />
             )}
           </Panel>
@@ -176,7 +176,7 @@ export default function MatrixPage() {
             level={selectedLevel}
             filled={tree?.filledSpots ?? 0}
             cycle={BigInt(selectedCycle - 1)}
-            totalEarning={tree ? BigInt(tree.totalEarned || "0") : 0n}
+            totalEarning={tree ? incomeStringToWei(tree.totalEarned) : 0n}
             heldForUpgrade={0n}
             levelActive
           />
