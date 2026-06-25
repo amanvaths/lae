@@ -17,6 +17,7 @@ const MATRIX =
 const ABI = [
   "function lastUserId() view returns (uint256)",
   "function idToAddress(uint256) view returns (address)",
+  "function addressToId(address) view returns (uint256)",
   "function usersXMatrix(address,uint8) view returns (address,uint256,uint256,uint256,uint256,uint256)",
   "function usersXMatrixReferrals(address,uint8) view returns (address[])",
 ];
@@ -59,7 +60,7 @@ async function backfillUser(userId) {
 
   await prisma.matrixCoreUser.upsert({
     where: { userId },
-    create: { userId, walletAddress: wallet },
+    create: { userId, walletAddress: wallet, registeredBlock: 0n },
     update: { walletAddress: wallet },
   });
 
