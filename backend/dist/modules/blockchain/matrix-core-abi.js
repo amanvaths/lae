@@ -32,6 +32,7 @@ export const LAE_MATRIX_READ_ABI = [
     "function isUserSlotActive(uint256 userId, uint8 slot) view returns (bool)",
     "function usersXMatrix(address userAddress, uint8 level) view returns (address currentReferrer, uint256 reinvestCount, uint256 heldTokenForUpgrade, uint256 lastSpillUnderReceiverIndex, uint256 totalTeamSize, uint256 totalEarning)",
     "function usersXMatrixReferrals(address userAddress, uint8 level) view returns (address[])",
+    "function genealogyOf(uint256 userId, uint8 level) view returns (uint256 parentId, uint256 leftChildId, uint256 rightChildId)",
     "function levelTokenCost(uint8 level) view returns (uint256)",
     "function PAYMENT_TOKEN() view returns (address)",
     "function TREASURY_POOL_ADDRESS() view returns (address)",

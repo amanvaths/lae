@@ -61,6 +61,171 @@ async function idForAddress(address: string): Promise<number | null> {
   }
 }
 
+function addrAt(rawRefs: ethers.Result | string[], i: number): string {
+  const raw =
+    typeof (rawRefs as ethers.Result)?.getItem === "function"
+      ? (rawRefs as ethers.Result).getItem(i)
+      : (rawRefs as string[])?.[i] ?? ethers.ZeroAddress;
+  return String(raw).toLowerCase();
+}
+
+/** On-chain 14-slot genealogy board (usersXMatrixReferrals). */
+async function readGenealogyBoard(
+  wallet: string,
+  level: number
+): Promise<{ filled: number; completed: boolean; slots: MatrixSlotDTO[] }> {
+  const m = matrixContract();
+  const rawRefs = await m.usersXMatrixReferrals(wallet, level);
+
+  let filled = 0;
+  let firstEmpty = 0;
+  const slots: MatrixSlotDTO[] = [];
+
+  for (let p = 1; p <= MATRIX_SIZE; p++) {
+    const addr = addrAt(rawRefs, p - 1);
+    const occupied = Boolean(addr) && addr !== ethers.ZeroAddress.toLowerCase();
+    if (occupied) {
+      filled += 1;
+      const occId = await idForAddress(addr);
+      slots.push({
+        position: p,
+        state: "filled",
+        userId: occId,
+        address: addr,
+      });
+    } else {
+      if (firstEmpty === 0) firstEmpty = p;
+      slots.push({
+        position: p,
+        state: "waiting",
+        userId: null,
+        address: null,
+      });
+    }
+  }
+
+  const completed = filled >= MATRIX_SIZE;
+  if (!completed && firstEmpty > 0) {
+    slots[firstEmpty - 1]!.state = "open";
+  }
+
+  return { filled, completed, slots };
+}
+
+/** Members in genealogy tree but NOT in the fixed 14-box (cycle 2 candidates). */
+async function findOffBoardMembers(
+  matrixOwnerId: number,
+  level: number
+): Promise<Array<{ userId: number; address: string | null }>> {
+  const m = matrixContract();
+  const wallet = await walletForUserId(matrixOwnerId);
+  if (!wallet) return [];
+
+  const board = await readGenealogyBoard(wallet, level);
+  const onBoard = new Set(board.slots.filter((s) => s.userId).map((s) => s.userId!));
+  const offBoard: Array<{ userId: number; address: string | null }> = [];
+
+  async function visit(nodeId: number): Promise<void> {
+    if (nodeId <= 0) return;
+    try {
+      const gen = await m.genealogyOf(nodeId, level);
+      const leftId = Number(gen.leftChildId ?? gen[1] ?? 0);
+      const rightId = Number(gen.rightChildId ?? gen[2] ?? 0);
+      for (const childId of [leftId, rightId]) {
+        if (childId <= 0) continue;
+        if (!onBoard.has(childId)) {
+          offBoard.push({
+            userId: childId,
+            address: await walletForUserId(childId),
+          });
+        }
+        await visit(childId);
+      }
+    } catch {
+      /* skip */
+    }
+  }
+
+  try {
+    const rootGen = await m.genealogyOf(matrixOwnerId, level);
+    const leftId = Number(rootGen.leftChildId ?? rootGen[1] ?? 0);
+    const rightId = Number(rootGen.rightChildId ?? rootGen[2] ?? 0);
+    if (leftId > 0) await visit(leftId);
+    if (rightId > 0) await visit(rightId);
+  } catch {
+    return offBoard;
+  }
+
+  // Registration order (16th ID = first in cycle 2 display).
+  const rows = await prisma.matrixCoreUser.findMany({
+    where: { userId: { in: offBoard.map((o) => o.userId) } },
+    select: { userId: true, registeredBlock: true },
+    orderBy: { registeredBlock: "asc" },
+  });
+  const order = new Map(rows.map((r, i) => [r.userId, i]));
+  offBoard.sort((a, b) => (order.get(a.userId) ?? a.userId) - (order.get(b.userId) ?? b.userId));
+
+  return offBoard;
+}
+
+/** Map cycle-2 members sequentially into positions 1, 2, 3… */
+function mapSequentialBoard(
+  members: Array<{ userId: number; address: string | null }>
+): { slots: MatrixSlotDTO[]; filled: number } {
+  const filled = Math.min(members.length, MATRIX_SIZE);
+  const completed = filled >= MATRIX_SIZE;
+  const nextOpen = completed ? 0 : filled + 1;
+  const slots: MatrixSlotDTO[] = [];
+
+  for (let p = 1; p <= MATRIX_SIZE; p++) {
+    const m = members[p - 1];
+    if (m) {
+      slots.push({
+        position: p,
+        state: "filled",
+        userId: m.userId,
+        address: m.address,
+      });
+    } else {
+      slots.push({
+        position: p,
+        state: !completed && p === nextOpen ? "open" : "waiting",
+        userId: null,
+        address: null,
+      });
+    }
+  }
+
+  return { slots, filled };
+}
+
+function treePayload(
+  userId: number,
+  address: string,
+  level: number,
+  cycleId: number,
+  filled: number,
+  completed: boolean,
+  slot2Opened: boolean,
+  totalEarned: string,
+  totalCycles: number,
+  slots: MatrixSlotDTO[]
+): MatrixTreeDTO {
+  return {
+    userId,
+    address,
+    level,
+    cycle: cycleId,
+    active: true,
+    filledSpots: filled,
+    completed,
+    slot2Opened,
+    totalEarned,
+    totalCycles,
+    slots,
+  };
+}
+
 /** Build tree from indexed DB positions */
 async function treeFromDb(
   userId: number,
@@ -120,7 +285,7 @@ async function treeFromDb(
   };
 }
 
-/** Read usersXMatrixReferrals from chain for the current cycle */
+/** Resolve matrix tree per cycle: cycle 1 = 14-box snapshot; cycle 2+ = new members at pos 1,2,3… */
 async function treeFromChain(
   userId: number,
   level: number,
@@ -140,73 +305,57 @@ async function treeFromChain(
     const reinvestCount = Number(matrixRow.reinvestCount ?? 0);
     const currentCycle = reinvestCount + 1;
     const slot2Opened = Boolean(slot2Active);
+    const totalEarned = String(details.totalIncome ?? "0");
 
-    let filled = 0;
-    let completed = false;
-    const slots: MatrixSlotDTO[] = [];
-
-    if (cycleId === currentCycle) {
-      // usersXMatrixReferrals returns a fixed 14-slot genealogy board; index i maps
-      // to position i+1 and empty slots are the zero address (holes are possible).
-      const rawRefs = await m.usersXMatrixReferrals(wallet, level);
-      const addrAt = (i: number): string =>
-        String(typeof rawRefs?.getItem === "function" ? rawRefs.getItem(i) : rawRefs?.[i] ?? ethers.ZeroAddress);
-
-      let firstEmpty = 0; // 1-based position of first open slot (0 = none)
-      filled = 0;
-      for (let p = 1; p <= MATRIX_SIZE; p++) {
-        const addr = addrAt(p - 1);
-        const occupied = Boolean(addr) && addr !== ethers.ZeroAddress;
-        if (occupied) filled += 1;
-        else if (firstEmpty === 0) firstEmpty = p;
-      }
-      completed = filled >= MATRIX_SIZE;
-
-      for (let p = 1; p <= MATRIX_SIZE; p++) {
-        const addr = addrAt(p - 1);
-        if (addr && addr !== ethers.ZeroAddress) {
-          const occId = await idForAddress(addr);
-          slots.push({
-            position: p,
-            state: "filled",
-            userId: occId,
-            address: addr.toLowerCase(),
-          });
-        } else {
-          slots.push({
-            position: p,
-            state: !completed && p === firstEmpty ? "open" : "waiting",
-            userId: null,
-            address: null,
-          });
-        }
-      }
-    } else {
-      const dbTree = await treeFromDb(userId, level, cycleId);
-      if (dbTree) {
-        return {
-          ...dbTree,
-          totalEarned: String(details.totalIncome ?? "0"),
-        };
-      }
-      for (let p = 1; p <= MATRIX_SIZE; p++) {
-        slots.push({ position: p, state: "waiting", userId: null, address: null });
-      }
+    // Completed cycle (e.g. Cycle 1 when now on Cycle 2) → frozen 14-box board.
+    if (cycleId < currentCycle) {
+      const board = await readGenealogyBoard(wallet, level);
+      return treePayload(
+        userId,
+        wallet,
+        level,
+        cycleId,
+        board.filled,
+        true,
+        slot2Opened,
+        totalEarned,
+        reinvestCount,
+        board.slots
+      );
     }
 
-    return {
+    // Active cycle 2+ → members beyond the 14-box, shown at spot 1, 2, 3…
+    if (reinvestCount > 0 && cycleId === currentCycle) {
+      const offBoard = await findOffBoardMembers(userId, level);
+      const { slots, filled } = mapSequentialBoard(offBoard);
+      return treePayload(
+        userId,
+        wallet,
+        level,
+        cycleId,
+        filled,
+        filled >= MATRIX_SIZE,
+        slot2Opened,
+        totalEarned,
+        reinvestCount,
+        slots
+      );
+    }
+
+    // Cycle 1 (no recycle yet) → live genealogy 14-box from chain.
+    const board = await readGenealogyBoard(wallet, level);
+    return treePayload(
       userId,
-      address: String(details.userAddress).toLowerCase(),
+      wallet,
       level,
-      cycle: cycleId,
-      active: true,
-      filledSpots: filled,
-      completed,
+      cycleId,
+      board.filled,
+      board.completed,
       slot2Opened,
-      totalEarned: String(details.totalIncome ?? "0"),
-      totalCycles: reinvestCount,
-      slots,
-    };
+      totalEarned,
+      reinvestCount,
+      board.slots
+    );
   } catch {
     return null;
   }
@@ -296,17 +445,45 @@ export async function getMatrixOverview(
 
     if (!active && levelFilter == null) continue;
 
+    const reinvestCount = currentCycle - 1;
     const cycles: MatrixOverviewCycle[] = [];
     for (let c = 1; c <= currentCycle; c++) {
+      let filled = 0;
+      let completed = false;
+      let slot2Opened = false;
+
       const status = await prisma.matrixCoreCycle.findUnique({
         where: { matrixOwnerId_level_cycleId: { matrixOwnerId: userId, level, cycleId: c } },
       });
-      cycles.push({
-        cycle: c,
-        filled: status?.filled ?? 0,
-        completed: status?.completed ?? false,
-        slot2Opened: status?.slot2Opened ?? false,
-      });
+      slot2Opened = status?.slot2Opened ?? false;
+
+      if (c < currentCycle) {
+        filled = 14;
+        completed = true;
+      } else if (reinvestCount > 0 && c === currentCycle) {
+        const offBoard = await findOffBoardMembers(userId, level);
+        filled = offBoard.length;
+        completed = filled >= MATRIX_SIZE;
+      } else {
+        try {
+          const board = await readGenealogyBoard(address, level);
+          filled = board.filled;
+          completed = board.completed;
+        } catch {
+          filled = status?.filled ?? 0;
+          completed = status?.completed ?? false;
+        }
+      }
+
+      if (!slot2Opened && c === 1 && level === 1) {
+        try {
+          slot2Opened = Boolean(await m.isUserSlotActive(userId, 2));
+        } catch {
+          /* ignore */
+        }
+      }
+
+      cycles.push({ cycle: c, filled, completed, slot2Opened });
     }
 
     levels.push({ level, active, currentCycle, cycles });
