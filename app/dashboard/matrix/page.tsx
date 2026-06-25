@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { LayoutGrid } from "lucide-react";
 import { Panel, PageHeading } from "@/components/dashboard/ui";
@@ -35,6 +35,10 @@ export default function MatrixPage() {
   const levelData = overviewApi.overview?.levels.find((l) => l.level === selectedLevel);
   const currentCycle = levelData?.currentCycle ?? 1;
   const [selectedCycle, setSelectedCycle] = useState(1);
+
+  useEffect(() => {
+    if (levelData?.currentCycle) setSelectedCycle(levelData.currentCycle);
+  }, [selectedLevel, levelData?.currentCycle]);
 
   const overviewLevels = overviewApi.overview?.levels ?? [];
   const priceForLevel = (lvl: number) =>
@@ -106,8 +110,9 @@ export default function MatrixPage() {
               filled={filledForLevel(lvl)}
               loading={overviewApi.isLoading}
               onClick={() => {
+                const li = overviewLevels.find((l) => l.level === lvl);
                 setSelectedLevel(lvl);
-                setSelectedCycle(1);
+                setSelectedCycle(li?.currentCycle ?? 1);
               }}
             />
           );
@@ -168,6 +173,7 @@ export default function MatrixPage() {
                 level={selectedLevel}
                 reinvestCount={BigInt(selectedCycle - 1)}
                 totalEarning={BigInt(tree.totalEarned || "0")}
+                filledCount={tree.filledSpots}
               />
             )}
           </Panel>

@@ -3,37 +3,12 @@ import { prisma } from "../../lib/prisma.js";
 import { CONTRACTS } from "../../config/chains.js";
 import { getIndexerProvider } from "./rpc-providers.js";
 import { LAE_MATRIX_READ_ABI } from "./matrix-core-abi.js";
+import { chainCycleInfo, readGenealogyBoard, walletForUserId, } from "./genealogy-board.service.js";
 export const MATRIX_SIZE = 14;
 export const LAST_LEVEL = 15;
 const matrixIface = new ethers.Interface([...LAE_MATRIX_READ_ABI]);
 function matrixContract() {
     return new ethers.Contract(CONTRACTS.matrixCore, matrixIface, getIndexerProvider());
-}
-async function walletForUserId(userId) {
-    const row = await prisma.matrixCoreUser.findUnique({
-        where: { userId },
-        select: { walletAddress: true },
-    });
-    if (row?.walletAddress)
-        return row.walletAddress.toLowerCase();
-    try {
-        const m = matrixContract();
-        const wallet = String(await m.idToAddress(userId)).toLowerCase();
-        return wallet && wallet !== "0x0000000000000000000000000000000000000000" ? wallet : null;
-    }
-    catch {
-        return null;
-    }
-}
-async function idForAddress(address) {
-    try {
-        const m = matrixContract();
-        const id = Number(await m.addressToId(address));
-        return id > 0 ? id : null;
-    }
-    catch {
-        return null;
-    }
 }
 /** Build tree from indexed DB positions */
 async function treeFromDb(userId, level, cycleId) {
@@ -48,9 +23,9 @@ async function treeFromDb(userId, level, cycleId) {
         orderBy: { position: "asc" },
     });
     const posMap = new Map(positions.map((p) => [p.position, p]));
-    const filled = cycle?.filled ?? positions.length;
-    const completed = cycle?.completed ?? false;
-    const nextOpen = filled + 1;
+    const filled = positions.length;
+    const completed = cycle?.completed ?? filled >= MATRIX_SIZE;
+    const nextOpen = completed ? 0 : filled + 1;
     const slots = [];
     for (let p = 1; p <= MATRIX_SIZE; p++) {
         const row = posMap.get(p);
@@ -86,72 +61,84 @@ async function treeFromDb(userId, level, cycleId) {
         slots,
     };
 }
-/** Read usersXMatrixReferrals from chain for the current cycle */
+function emptyBoardSlots() {
+    return Array.from({ length: MATRIX_SIZE }, (_, i) => ({
+        position: i + 1,
+        state: i === 0 ? "open" : "waiting",
+        userId: null,
+        address: null,
+    }));
+}
+/** Resolve matrix tree: genealogy board on chain for cycle 1; DB snapshots for history / post-recycle cycles. */
 async function treeFromChain(userId, level, cycleId) {
     const m = matrixContract();
     try {
         const wallet = (await walletForUserId(userId))?.toLowerCase();
         if (!wallet)
             return null;
-        const [details, matrixRow, slot2Active] = await Promise.all([
+        const [details, slot2Active, cycleInfo] = await Promise.all([
             m.getUserDetails(userId),
-            m.usersXMatrix(wallet, level),
             m.isUserSlotActive(userId, 2),
+            chainCycleInfo(userId, level),
         ]);
-        const reinvestCount = Number(matrixRow.reinvestCount ?? 0);
-        const currentCycle = reinvestCount + 1;
+        if (!cycleInfo)
+            return null;
+        const { reinvestCount, currentCycle } = cycleInfo;
         const slot2Opened = Boolean(slot2Active);
-        let filled = 0;
-        let completed = false;
-        const slots = [];
-        if (cycleId === currentCycle) {
-            const rawRefs = await m.usersXMatrixReferrals(wallet, level);
-            const referralCount = Number(rawRefs?.length ?? 0);
-            filled = referralCount;
-            completed = filled >= MATRIX_SIZE;
-            for (let p = 1; p <= MATRIX_SIZE; p++) {
-                const addr = p <= referralCount
-                    ? String(typeof rawRefs.getItem === "function" ? rawRefs.getItem(p - 1) : rawRefs[p - 1])
-                    : undefined;
-                if (addr && addr !== ethers.ZeroAddress) {
-                    const occId = await idForAddress(addr);
-                    slots.push({
-                        position: p,
-                        state: "filled",
-                        userId: occId,
-                        address: addr.toLowerCase(),
-                    });
-                }
-                else {
-                    slots.push({
-                        position: p,
-                        state: !completed && p === filled + 1 ? "open" : "waiting",
-                        userId: null,
-                        address: null,
-                    });
-                }
-            }
-        }
-        else {
+        const totalEarned = String(details.totalIncome ?? "0");
+        // Completed past cycle → DB snapshot, or live genealogy if snapshot missing.
+        if (cycleId < currentCycle) {
             const dbTree = await treeFromDb(userId, level, cycleId);
-            if (dbTree)
-                return dbTree;
-            for (let p = 1; p <= MATRIX_SIZE; p++) {
-                slots.push({ position: p, state: "waiting", userId: null, address: null });
-            }
+            if (dbTree && dbTree.filledSpots > 0)
+                return { ...dbTree, totalEarned, totalCycles: reinvestCount };
+            const board = await readGenealogyBoard(wallet, level);
+            return {
+                userId,
+                address: wallet,
+                level,
+                cycle: cycleId,
+                active: true,
+                filledSpots: board.filled,
+                completed: true,
+                slot2Opened,
+                totalEarned,
+                totalCycles: reinvestCount,
+                slots: board.slots,
+            };
         }
+        // Current cycle with no recycle yet → live genealogy board from chain.
+        if (reinvestCount === 0) {
+            const board = await readGenealogyBoard(wallet, level);
+            return {
+                userId,
+                address: wallet,
+                level,
+                cycle: cycleId,
+                active: true,
+                filledSpots: board.filled,
+                completed: board.completed,
+                slot2Opened,
+                totalEarned,
+                totalCycles: reinvestCount,
+                slots: board.slots,
+            };
+        }
+        // Post-recycle current cycle → fresh board from DB (chain tree still holds cycle-1 members).
+        const dbTree = await treeFromDb(userId, level, cycleId);
+        if (dbTree)
+            return { ...dbTree, totalEarned, totalCycles: reinvestCount, slot2Opened };
         return {
             userId,
-            address: String(details.userAddress).toLowerCase(),
+            address: wallet,
             level,
             cycle: cycleId,
             active: true,
-            filledSpots: filled,
-            completed,
+            filledSpots: 0,
+            completed: false,
             slot2Opened,
-            totalEarned: String(details.totalIncome ?? "0"),
+            totalEarned,
             totalCycles: reinvestCount,
-            slots,
+            slots: emptyBoardSlots(),
         };
     }
     catch {
@@ -169,16 +156,6 @@ export async function getMatrixTree(userId, level, cycleId) {
     const chainTree = await treeFromChain(userId, level, cycleId);
     if (!chainTree)
         return { error: "user not found or chain read failed" };
-    const dbTree = await treeFromDb(userId, level, cycleId);
-    if (dbTree) {
-        for (let p = 1; p <= chainTree.filledSpots; p++) {
-            const c = chainTree.slots[p - 1];
-            const d = dbTree.slots[p - 1];
-            if (c?.userId !== d?.userId) {
-                console.warn(`[matrix-tree] DB/chain mismatch user=${userId} level=${level} cycle=${cycleId} pos=${p}`);
-            }
-        }
-    }
     return chainTree;
 }
 export async function getMatrixOverview(userId, levelFilter) {
@@ -211,16 +188,42 @@ export async function getMatrixOverview(userId, levelFilter) {
         if (!active && levelFilter == null)
             continue;
         const cycles = [];
+        const cycleInfo = active ? await chainCycleInfo(userId, level) : null;
+        const reinvestCount = cycleInfo?.reinvestCount ?? 0;
+        if (cycleInfo)
+            currentCycle = cycleInfo.currentCycle;
         for (let c = 1; c <= currentCycle; c++) {
+            let filled = 0;
+            let completed = false;
+            let slot2Opened = false;
             const status = await prisma.matrixCoreCycle.findUnique({
                 where: { matrixOwnerId_level_cycleId: { matrixOwnerId: userId, level, cycleId: c } },
             });
-            cycles.push({
-                cycle: c,
-                filled: status?.filled ?? 0,
-                completed: status?.completed ?? false,
-                slot2Opened: status?.slot2Opened ?? false,
-            });
+            slot2Opened = status?.slot2Opened ?? false;
+            if (c < currentCycle) {
+                filled = 14;
+                completed = true;
+            }
+            else if (reinvestCount === 0 && cycleInfo) {
+                const board = await readGenealogyBoard(cycleInfo.wallet, level);
+                filled = board.filled;
+                completed = board.completed;
+            }
+            else {
+                filled = await prisma.matrixCorePosition.count({
+                    where: { matrixOwnerId: userId, level, cycleId: c },
+                });
+                completed = filled >= MATRIX_SIZE;
+            }
+            if (!slot2Opened && c === 1 && level === 1) {
+                try {
+                    slot2Opened = Boolean(await m.isUserSlotActive(userId, 2));
+                }
+                catch {
+                    /* ignore */
+                }
+            }
+            cycles.push({ cycle: c, filled, completed, slot2Opened });
         }
         levels.push({ level, active, currentCycle, cycles });
     }
