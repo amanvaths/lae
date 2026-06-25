@@ -4,12 +4,25 @@
 
 ---
 
-## ⚡ PLACEMENT-FIX REDEPLOY (only LAEClubMatrix)
+## ⚡ INCOME-FOLLOWS-TREE REDEPLOY (only LAEClubMatrix)
 
-> Use this when you only changed the matrix placement (the genealogy fix so every
-> member shows under its **own sponsor's leg**, top→bottom / left→right).
-> **LAECoin is unchanged — do NOT redeploy it.** Income/recycle/upgrade/LAE logic
-> is byte-for-byte the same; only the display tree was corrected.
+> Use this for the matrix fix where **income now follows the same genealogy tree
+> shown on the dashboard**. A member is placed under its own sponsor's leg
+> (top→bottom / left→right) and the income for that registration is decided by the
+> member's **position in its sponsor's board** — single recipient, exactly the
+> original role table (1,2 = upline; 3,6,8,9,11,12 = self; 4 = reserve/upgrade hold;
+> 5 = auto-upgrade; 7,10 = 1st downline; 13 = 2nd downline; 14 = recycle). The
+> upline/downline/self earner now receives it as **real matrix income** (it shows
+> on the dashboard and increments on-chain `totalIncome`) instead of silently going
+> to the treasury.
+>
+> **LAECoin is unchanged — do NOT redeploy it.** The LAE reward + 10% liquidity
+> split is untouched.
+>
+> ⚠️ **Known simplification:** once a sponsor's 3-generation board (14 slots) is
+> completely full, any further direct of that exact sponsor overflows to the
+> treasury (no automatic re-entry/recycle of a fresh board yet). This only happens
+> after a single sponsor has 14 people in their own 3-gen board — rare in testing.
 
 **Steps:**
 

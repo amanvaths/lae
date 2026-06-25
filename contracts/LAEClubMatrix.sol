@@ -351,12 +351,13 @@ contract LAEClubMatrix {
         users[referrerAddress].directReferrals.push(userAddress);
         emit Registration(currentUserId, referrerId, userAddress);
 
-        address freeReferrer = _findFreeReferrer(userAddress, 1);
-        users[userAddress].xMatrix[1].currentReferrer = freeReferrer;
-        _processNewPlacement(userAddress, freeReferrer, 1);
-
-        // Display genealogy: place the entrant directly under its own sponsor's leg.
+        // Income now FOLLOWS the genealogy tree: the entrant is placed under its
+        // own sponsor's leg, and income is paid by the entrant's position in that
+        // tree (single recipient). Display and income are one and the same.
+        users[userAddress].xMatrix[1].currentReferrer = referrerAddress;
         _placeGenealogy(userAddress, referrerAddress, 1);
+        _bumpTeamSize(referrerAddress);
+        _payByGenealogy(userAddress, 1);
     }
 
     function _registerPartner(address userAddress, uint256 partnerId) private {
@@ -371,125 +372,167 @@ contract LAEClubMatrix {
         users[owner].directReferrals.push(userAddress);
         emit Registration(partnerId, 1, userAddress);
 
-        address freeReferrer = _findFreeReferrer(userAddress, 1);
-        require(freeReferrer == owner, "Owner must be the L1 referrer for initial partners.");
-        users[userAddress].xMatrix[1].currentReferrer = freeReferrer;
-        _processNewPlacement(userAddress, freeReferrer, 1);
-
-        // Display genealogy: initial partners sit directly under the owner.
+        // Initial partners sit directly under the owner (genealogy = income).
+        users[userAddress].xMatrix[1].currentReferrer = owner;
         _placeGenealogy(userAddress, owner, 1);
+        _bumpTeamSize(owner);
+        _payByGenealogy(userAddress, 1);
     }
 
-    function _processNewPlacement(address newUser, address referrer, uint8 level) private {
-        XMatrix storage matrix = users[referrer].xMatrix[level];
-        uint256 spotIndex = matrix.referrals.length;
-        bool isOwnerRef = referrer == owner;
+    /**
+     * @dev Increment total team size up the sponsor chain (bounded for gas).
+     *      "Direct team" is tracked separately via directReferrals.
+     */
+    function _bumpTeamSize(address sponsor) private {
+        address cur = sponsor;
+        for (uint256 i = 0; i < 64 && cur != address(0); i++) {
+            users[cur].teamSize++;
+            cur = users[cur].referrer;
+        }
+    }
+
+    /**
+     * @dev Locate the board owner that earns from `entrant` and the entrant's
+     *      position (1..14) in that board. Income follows the genealogy tree: the
+     *      board owner is the entrant's SPONSOR (the person who referred it). The
+     *      entrant was placed under the sponsor's leg, so its position in the
+     *      sponsor's board decides the role exactly as shown on the dashboard.
+     *      Single recipient — exactly the original economics, genealogy-correct.
+     */
+    function _locate(address entrant, uint8 level) private view returns (address boardOwner, uint8 pos) {
+        address sponsor = users[entrant].referrer;
+        if (sponsor == address(0)) sponsor = owner;
+        boardOwner = sponsor;
+        pos = _genPosition(sponsor, entrant, level);
+    }
+
+    /**
+     * @dev Position (1..14) of `node` inside `boardOwner`'s genealogy board using
+     *      the fixed 2-4-8 layout (children of position p are 2p and 2p+1).
+     *      `node` is at most 3 levels below `boardOwner`.
+     */
+    function _genPosition(address boardOwner, address node, uint8 level) private view returns (uint8) {
+        uint8[3] memory dir; // 1 = left (gChild0), 2 = right (gChild1)
+        uint8 depth = 0;
+        address cur = node;
+        while (cur != boardOwner && depth < 3) {
+            address par = users[cur].gParent[level];
+            if (par == address(0)) return 0;
+            dir[depth] = (users[par].gChild0[level] == cur) ? 1 : 2;
+            depth++;
+            cur = par;
+        }
+        if (cur != boardOwner) return 0;
+
+        uint8 p = 0;
+        for (uint8 i = depth; i > 0; i--) {
+            p = p * 2 + dir[i - 1];
+        }
+        return p;
+    }
+
+    /**
+     * @dev Distribute the 90% matrix share for `entrant` based on its position in
+     *      the genealogy board of its earning ancestor. Single recipient. The role
+     *      table matches the dashboard: 1,2 = upline; 3,6,8,9,11,12 = self;
+     *      4 = reserve/upgrade hold; 5 = auto-upgrade; 7,10 = 1st downline;
+     *      13 = 2nd downline; 14 = recycle credit.
+     */
+    function _payByGenealogy(address entrant, uint8 level) private {
+        (address O, uint8 pos) = _locate(entrant, level);
+        if (O == address(0) || pos == 0) {
+            // Root with no ancestor board (e.g. owner self) — route to treasury.
+            _sendToPlatformTreasury(levelTokenCost[level]);
+            return;
+        }
+
+        XMatrix storage m = users[O].xMatrix[level];
         uint256 amount = levelTokenCost[level];
-        uint256 referrerId = users[referrer].id;
-
-        require(spotIndex < MATRIX_SIZE, "LAEClubMatrix: matrix full");
-
-        matrix.referrals.push(newUser);
-        users[referrer].teamSize++;
-        matrix.totalTeamSize++;
-
-        emit NewUserPlace(users[newUser].id, referrerId, level, matrix.reinvestCount + 1, uint8(spotIndex + 1));
-
-        // Spot 1 & 2 (index 0,1): spill to upline.
-        if (spotIndex == 0) {
-            if (isOwnerRef) {
-                _sendToPlatformTreasury(amount);
-                return;
-            }
-            address upline = _findEligibleUplineTarget(newUser, referrer, 1, level);
-            emit Spillover(referrerId, users[upline].id, level, matrix.reinvestCount + 1, 15);
-            _processNewPlacement(newUser, upline, level);
-            return;
-        }
-
-        if (spotIndex == 1) {
-            if (isOwnerRef) {
-                _sendToPlatformTreasury(amount);
-                return;
-            }
-            address upline = _findEligibleUplineTarget(newUser, referrer, 2, level);
-            emit Spillover(referrerId, users[upline].id, level, matrix.reinvestCount + 1, 16);
-            _processNewPlacement(newUser, upline, level);
-            return;
-        }
-
-        bool isFirstCycle = matrix.reinvestCount == 0;
+        bool isOwnerO = O == owner;
+        bool isFirstCycle = m.reinvestCount == 0;
         bool isLastLevel = level == LAST_LEVEL;
+        uint256 ownerId = users[O].id;
 
-        // Spot 4 (index 3): first cycle holds funds for auto-upgrade; later cycles → Club Pool.
-        if (spotIndex == 3) {
-            if (isFirstCycle && !isLastLevel && !isOwnerRef) {
-                matrix.heldTokenForUpgrade = amount;
-            } else {
-                _sendToClubPool(referrer, newUser, level, amount);
-            }
-            return;
-        }
+        emit NewUserPlace(users[entrant].id, ownerId, level, m.reinvestCount + 1, pos);
 
-        // Spot 5 (index 4): first cycle triggers the free auto-upgrade; later cycles → self income.
-        if (spotIndex == 4) {
-            if (isFirstCycle && !isLastLevel && !isOwnerRef) {
-                matrix.heldTokenForUpgrade = 0;
-                _upgradeLevel(referrer, level + 1);
-            } else {
-                _sendTokenDividends(referrer, newUser, level, amount);
-            }
-            return;
-        }
-
-        // Self income spots: 3,6,8,9,11,12 (index 2,5,7,8,10,11).
-        if (spotIndex == 2 || spotIndex == 5 || spotIndex == 7 || spotIndex == 8 || spotIndex == 10 || spotIndex == 11) {
-            _sendTokenDividends(referrer, newUser, level, amount);
-            return;
-        }
-
-        // Spot 7 & 10 (index 6,9): 1st downline spillover.
-        if (spotIndex == 6 || spotIndex == 9) {
-            address downline = _findEligibleDownlineUser(newUser, referrer, 1, level);
-            emit Spillover(referrerId, users[downline].id, level, matrix.reinvestCount + 1, spotIndex == 6 ? 17 : 18);
-            if (downline == owner) {
+        // Spot 1 & 2 → upline income (owner has no upline → treasury).
+        if (pos == 1 || pos == 2) {
+            if (isOwnerO) {
                 _sendToPlatformTreasury(amount);
+                return;
+            }
+            address upline = _findEligibleUplineTarget(entrant, O, pos, level);
+            emit Spillover(ownerId, users[upline].id, level, m.reinvestCount + 1, pos == 1 ? 15 : 16);
+            // The upline earns as real matrix income (shows on dashboard) — even
+            // when that upline is the owner. Treasury only collects when the board
+            // owner itself is the owner (handled above via isOwnerO).
+            _sendTokenDividends(upline, entrant, level, amount);
+            return;
+        }
+
+        // Spot 4 → first cycle holds for auto-upgrade; otherwise Club Pool.
+        if (pos == 4) {
+            if (isFirstCycle && !isLastLevel && !isOwnerO) {
+                m.heldTokenForUpgrade = amount;
             } else {
-                _processNewPlacement(newUser, downline, level);
+                _sendToClubPool(O, entrant, level, amount);
             }
             return;
         }
 
-        // Spot 13 (index 12): 2nd downline spillover.
-        if (spotIndex == 12) {
-            address downline = _findEligibleDownlineUser(newUser, referrer, 2, level);
-            emit Spillover(referrerId, users[downline].id, level, matrix.reinvestCount + 1, 19);
-            if (downline == owner) {
-                _sendToPlatformTreasury(amount);
+        // Spot 5 → first cycle triggers the free auto-upgrade; otherwise self income.
+        if (pos == 5) {
+            if (isFirstCycle && !isLastLevel && !isOwnerO) {
+                m.heldTokenForUpgrade = 0;
+                _upgradeLevel(O, level + 1);
             } else {
-                _processNewPlacement(newUser, downline, level);
+                _sendTokenDividends(O, entrant, level, amount);
             }
             return;
         }
 
-        // Spot 14 (index 13): recycle / reinvest.
-        if (spotIndex == 13) {
-            _recycleCurrentLevel(referrer, level, newUser);
+        // Self income → 3,6,8,9,11,12.
+        if (pos == 3 || pos == 6 || pos == 8 || pos == 9 || pos == 11 || pos == 12) {
+            _sendTokenDividends(O, entrant, level, amount);
+            return;
+        }
+
+        // Spot 7 & 10 → 1st downline income.
+        if (pos == 7 || pos == 10) {
+            address downline = _findEligibleDownlineUser(entrant, O, 1, level);
+            emit Spillover(ownerId, users[downline].id, level, m.reinvestCount + 1, pos == 7 ? 17 : 18);
+            _sendTokenDividends(downline, entrant, level, amount);
+            return;
+        }
+
+        // Spot 13 → 2nd downline income.
+        if (pos == 13) {
+            address downline = _findEligibleDownlineUser(entrant, O, 2, level);
+            emit Spillover(ownerId, users[downline].id, level, m.reinvestCount + 1, 19);
+            _sendTokenDividends(downline, entrant, level, amount);
+            return;
+        }
+
+        // Spot 14 → board complete: reinvest credit to the board owner.
+        if (pos == 14) {
+            m.reinvestCount++;
+            emit Reinvest(ownerId, ownerId, users[entrant].id, level);
+            _sendTokenDividends(O, entrant, level, amount);
+            return;
         }
     }
 
     function _upgradeLevel(address userAddress, uint8 nextLevel) private {
         users[userAddress].activeLevels[nextLevel] = true;
-        address freeReferrer = _findFreeReferrer(userAddress, nextLevel);
-        users[userAddress].xMatrix[nextLevel].currentReferrer = freeReferrer;
-        _processNewPlacement(userAddress, freeReferrer, nextLevel);
 
-        // Display genealogy for this level: place under the user's own sponsor.
+        // Place under the user's own sponsor at this level, then pay by genealogy.
         address sponsorForLevel = users[userAddress].referrer;
         if (sponsorForLevel == address(0)) sponsorForLevel = owner;
+        users[userAddress].xMatrix[nextLevel].currentReferrer = sponsorForLevel;
         _placeGenealogy(userAddress, sponsorForLevel, nextLevel);
+        _payByGenealogy(userAddress, nextLevel);
 
-        emit Upgrade(users[userAddress].id, users[freeReferrer].id, nextLevel);
+        emit Upgrade(users[userAddress].id, users[sponsorForLevel].id, nextLevel);
     }
 
     /**
@@ -526,19 +569,6 @@ contract LAEClubMatrix {
                 queue[tail++] = users[node].gChild1[level];
             }
         }
-    }
-
-    function _recycleCurrentLevel(address userAddress, uint8 level, address caller) private {
-        XMatrix storage matrix = users[userAddress].xMatrix[level];
-        matrix.referrals = new address[](0);
-        matrix.reinvestCount++;
-        matrix.heldTokenForUpgrade = 0;
-        matrix.lastSpillUnderReceiverIndex = 0;
-
-        address freeReferrer = _findFreeReferrer(userAddress, level);
-        users[userAddress].xMatrix[level].currentReferrer = freeReferrer;
-        emit Reinvest(users[userAddress].id, users[freeReferrer].id, users[caller].id, level);
-        _processNewPlacement(userAddress, freeReferrer, level);
     }
 
     function _findFreeReferrer(address userAddress, uint8 level) public view returns (address) {
