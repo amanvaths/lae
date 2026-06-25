@@ -76,7 +76,11 @@ export default function MatrixPage() {
 
   const tree = treeApi.tree;
   const slots = tree ? buildSlotsFromApi(tree.slots) : undefined;
-  const activeLevels = overviewApi.overview?.levels.filter((l) => l.active) ?? [{ level: 1, currentCycle: 1, cycles: [] }];
+  const isLevelActive = (lvl: number) => {
+    const ol = overviewLevels.find((l) => l.level === lvl);
+    if (ol) return ol.active;
+    return lvl === 1;
+  };
 
   return (
     <div className="space-y-6">
@@ -99,7 +103,7 @@ export default function MatrixPage() {
       {/* ── Level cards grid ── */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
         {Array.from({ length: LAE_LAST_LEVEL }, (_, i) => i + 1).map((lvl) => {
-          const active = activeLevels.some((l) => l.level === lvl);
+          const active = isLevelActive(lvl);
           return (
             <MatrixLevelCard
               key={lvl}
@@ -108,7 +112,7 @@ export default function MatrixPage() {
               selected={selectedLevel === lvl}
               price={priceForLevel(lvl)}
               filled={filledForLevel(lvl)}
-              loading={overviewApi.isLoading}
+              loading={overviewApi.isLoading && !overviewApi.isError}
               onClick={() => {
                 const li = overviewLevels.find((l) => l.level === lvl);
                 setSelectedLevel(lvl);
@@ -174,7 +178,6 @@ export default function MatrixPage() {
                 reinvestCount={BigInt(selectedCycle - 1)}
                 totalEarning={BigInt(tree.totalEarned || "0")}
                 filledCount={tree.filledSpots}
-                overflowMembers={tree.overflowMembers}
               />
             )}
           </Panel>

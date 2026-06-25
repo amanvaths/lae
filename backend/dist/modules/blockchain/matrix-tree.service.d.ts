@@ -1,4 +1,3 @@
-import { type OverflowMemberDTO } from "./genealogy-board.service.js";
 export declare const MATRIX_SIZE = 14;
 export declare const LAST_LEVEL = 15;
 export type SlotState = "locked" | "waiting" | "open" | "filled";
@@ -22,7 +21,11 @@ export interface MatrixTreeDTO {
     totalEarned: string;
     totalCycles: number;
     slots: MatrixSlotDTO[];
-    overflowMembers: OverflowMemberDTO[];
+    overflowMembers: Array<{
+        userId: number;
+        address: string | null;
+        depth: number;
+    }>;
 }
 /** Authoritative matrix tree — chain for current cycle, DB for history */
 export declare function getMatrixTree(userId: number, level: number, cycleId: number): Promise<MatrixTreeDTO | {

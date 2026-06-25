@@ -275,6 +275,33 @@ export async function findOffBoardGenealogyMembers(matrixOwnerId, level) {
     }
     return overflow;
 }
+/** Map off-board / cycle-2 members into the standard 14-position tree (pos 1, 2, 3…). */
+export function mapMembersToBoardSlots(members) {
+    const filled = Math.min(members.length, GENEALOGY_MATRIX_SIZE);
+    const completed = filled >= GENEALOGY_MATRIX_SIZE;
+    const nextOpen = completed ? 0 : filled + 1;
+    const slots = [];
+    for (let p = 1; p <= GENEALOGY_MATRIX_SIZE; p++) {
+        const m = members[p - 1];
+        if (m) {
+            slots.push({
+                position: p,
+                state: "filled",
+                userId: m.userId,
+                address: m.address,
+            });
+        }
+        else {
+            slots.push({
+                position: p,
+                state: !completed && p === nextOpen ? "open" : "waiting",
+                userId: null,
+                address: null,
+            });
+        }
+    }
+    return { slots, filled };
+}
 async function isInGenealogySubtree(entrantId, matrixOwnerId, level) {
     if (entrantId === matrixOwnerId)
         return false;
@@ -296,34 +323,13 @@ async function isInGenealogySubtree(entrantId, matrixOwnerId, level) {
     }
     return false;
 }
-/** Overflow members relevant to a specific cycle (post-recycle registrations for cycle 2+). */
+/** Off-board members shown in the current cycle tree (cycle 2+ after recycle). */
 export async function overflowMembersForCycle(matrixOwnerId, level, cycleId, reinvestCount, currentCycle) {
-    const fromChain = await findOffBoardGenealogyMembers(matrixOwnerId, level);
-    if (fromChain.length === 0)
+    if (reinvestCount === 0 || cycleId < currentCycle)
         return [];
-    if (cycleId < currentCycle)
+    if (cycleId !== currentCycle)
         return [];
-    if (reinvestCount === 0 && cycleId === 1) {
-        return fromChain;
-    }
-    if (cycleId === currentCycle && reinvestCount > 0) {
-        const recycle = await prisma.matrixCoreRecycle.findFirst({
-            where: { userId: matrixOwnerId, level, completedCycle: cycleId - 1 },
-            select: { blockNumber: true },
-        });
-        const afterBlock = recycle?.blockNumber ?? 0n;
-        const filtered = [];
-        for (const o of fromChain) {
-            const row = await prisma.matrixCoreUser.findUnique({
-                where: { userId: o.userId },
-                select: { registeredBlock: true },
-            });
-            if (row && row.registeredBlock > afterBlock)
-                filtered.push(o);
-        }
-        return filtered;
-    }
-    return [];
+    return findOffBoardGenealogyMembers(matrixOwnerId, level);
 }
 async function recordOverflowPlacement(matrixOwnerId, level, cycleId, entrantId, blockNumber, txHash, logIndex) {
     const overflowCount = await prisma.matrixCorePosition.count({

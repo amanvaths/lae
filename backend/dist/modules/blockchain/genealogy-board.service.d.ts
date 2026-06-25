@@ -24,6 +24,11 @@ export interface OverflowMemberDTO {
 }
 /** Members in the genealogy tree but NOT in the fixed 14-position board (depth 4+). */
 export declare function findOffBoardGenealogyMembers(matrixOwnerId: number, level: number): Promise<OverflowMemberDTO[]>;
-/** Overflow members relevant to a specific cycle (post-recycle registrations for cycle 2+). */
+/** Map off-board / cycle-2 members into the standard 14-position tree (pos 1, 2, 3…). */
+export declare function mapMembersToBoardSlots(members: OverflowMemberDTO[]): {
+    slots: MatrixSlotDTO[];
+    filled: number;
+};
+/** Off-board members shown in the current cycle tree (cycle 2+ after recycle). */
 export declare function overflowMembersForCycle(matrixOwnerId: number, level: number, cycleId: number, reinvestCount: number, currentCycle: number): Promise<OverflowMemberDTO[]>;
 //# sourceMappingURL=genealogy-board.service.d.ts.map

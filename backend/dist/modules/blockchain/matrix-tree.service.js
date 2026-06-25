@@ -3,10 +3,20 @@ import { prisma } from "../../lib/prisma.js";
 import { CONTRACTS } from "../../config/chains.js";
 import { getIndexerProvider } from "./rpc-providers.js";
 import { LAE_MATRIX_READ_ABI } from "./matrix-core-abi.js";
-import { chainCycleInfo, readGenealogyBoard, walletForUserId, overflowMembersForCycle, } from "./genealogy-board.service.js";
+import { chainCycleInfo, readGenealogyBoard, walletForUserId, overflowMembersForCycle, mapMembersToBoardSlots, } from "./genealogy-board.service.js";
 export const MATRIX_SIZE = 14;
 export const LAST_LEVEL = 15;
 const matrixIface = new ethers.Interface([...LAE_MATRIX_READ_ABI]);
+function packTree(base) {
+    const boardFilled = base.slots.filter((s) => s.state === "filled").length;
+    return {
+        ...base,
+        boardFilled,
+        overflowCount: 0,
+        filledSpots: boardFilled,
+        overflowMembers: [],
+    };
+}
 function matrixContract() {
     return new ethers.Contract(CONTRACTS.matrixCore, matrixIface, getIndexerProvider());
 }
@@ -18,7 +28,7 @@ async function treeFromDb(userId, level, cycleId) {
     const cycle = await prisma.matrixCoreCycle.findUnique({
         where: { matrixOwnerId_level_cycleId: { matrixOwnerId: userId, level, cycleId } },
     });
-    const positions = await prisma.matrixCorePosition.findMany({
+    const boardPositions = await prisma.matrixCorePosition.findMany({
         where: { matrixOwnerId: userId, level, cycleId, position: { lte: MATRIX_SIZE } },
         orderBy: { position: "asc" },
     });
@@ -26,77 +36,81 @@ async function treeFromDb(userId, level, cycleId) {
         where: { matrixOwnerId: userId, level, cycleId, position: { gt: MATRIX_SIZE } },
         orderBy: { position: "asc" },
     });
-    const posMap = new Map(positions.map((p) => [p.position, p]));
-    const boardFilled = positions.length;
-    const overflowCount = overflowRows.length;
-    const filled = boardFilled + overflowCount;
+    let slots;
+    let filled;
+    // Cycle 2+: map overflow / off-board rows into positions 1–14 sequentially.
+    if (boardPositions.length === 0 && overflowRows.length > 0) {
+        const members = overflowRows.map((row) => ({
+            userId: row.occupantId,
+            address: null,
+            depth: 4,
+        }));
+        for (const m of members) {
+            m.address = await walletForUserId(m.userId);
+        }
+        const mapped = mapMembersToBoardSlots(members);
+        slots = mapped.slots;
+        filled = mapped.filled;
+    }
+    else {
+        const posMap = new Map(boardPositions.map((p) => [p.position, p]));
+        filled = boardPositions.length;
+        const completed = cycle?.completed ?? filled >= MATRIX_SIZE;
+        const nextOpen = completed ? 0 : filled + 1;
+        slots = [];
+        for (let p = 1; p <= MATRIX_SIZE; p++) {
+            const row = posMap.get(p);
+            if (row) {
+                const occWallet = await walletForUserId(row.occupantId);
+                slots.push({
+                    position: p,
+                    state: "filled",
+                    userId: row.occupantId,
+                    address: occWallet,
+                });
+            }
+            else {
+                slots.push({
+                    position: p,
+                    state: !completed && p === nextOpen ? "open" : "waiting",
+                    userId: null,
+                    address: null,
+                });
+            }
+        }
+    }
     const completed = cycle?.completed ?? filled >= MATRIX_SIZE;
-    const nextOpen = completed ? 0 : filled + 1;
-    const slots = [];
-    for (let p = 1; p <= MATRIX_SIZE; p++) {
-        const row = posMap.get(p);
-        if (row) {
-            const occWallet = await walletForUserId(row.occupantId);
-            slots.push({
-                position: p,
-                state: "filled",
-                userId: row.occupantId,
-                address: occWallet,
-            });
-        }
-        else {
-            slots.push({
-                position: p,
-                state: !completed && p === nextOpen ? "open" : "waiting",
-                userId: null,
-                address: null,
-            });
-        }
-    }
-    const overflowMembers = overflowRows.map((row) => ({
-        userId: row.occupantId,
-        address: null,
-        depth: 4,
-    }));
-    for (const om of overflowMembers) {
-        om.address = await walletForUserId(om.userId);
-    }
-    return {
+    return packTree({
         userId,
         address: user.walletAddress,
         level,
         cycle: cycleId,
         active: true,
         filledSpots: filled,
-        boardFilled,
-        overflowCount,
         completed,
         slot2Opened: cycle?.slot2Opened ?? false,
         totalEarned: user.totalEarned.toString(),
         totalCycles: user.totalCycles,
         slots,
-        overflowMembers,
-    };
+    });
 }
-function emptyBoardSlots() {
-    return Array.from({ length: MATRIX_SIZE }, (_, i) => ({
-        position: i + 1,
-        state: i === 0 ? "open" : "waiting",
-        userId: null,
-        address: null,
-    }));
-}
-async function finalizeTree(base, matrixOwnerId, level, cycleId, reinvestCount, currentCycle) {
-    const boardFilled = base.slots.filter((s) => s.state === "filled").length;
-    const overflowMembers = await overflowMembersForCycle(matrixOwnerId, level, cycleId, reinvestCount, currentCycle);
-    const overflowCount = overflowMembers.length;
-    return {
-        ...base,
-        boardFilled,
-        overflowCount,
-        filledSpots: boardFilled + overflowCount,
-        overflowMembers,
-    };
+/** Cycle 2+ tree: cycle-1 overflow members mapped into the 14-slot board. */
+async function treeFromCycleOverflow(userId, level, cycleId, reinvestCount, currentCycle, wallet, slot2Opened, totalEarned) {
+    const members = await overflowMembersForCycle(userId, level, cycleId, reinvestCount, currentCycle);
+    const { slots, filled } = mapMembersToBoardSlots(members);
+    return packTree({
+        userId,
+        address: wallet,
+        level,
+        cycle: cycleId,
+        active: true,
+        filledSpots: filled,
+        completed: filled >= MATRIX_SIZE,
+        slot2Opened,
+        totalEarned,
+        totalCycles: reinvestCount,
+        slots,
+    });
 }
 /** Resolve matrix tree: genealogy board on chain for cycle 1; DB snapshots for history / post-recycle cycles. */
 async function treeFromChain(userId, level, cycleId) {
@@ -122,7 +136,7 @@ async function treeFromChain(userId, level, cycleId) {
                 return { ...dbTree, totalEarned, totalCycles: reinvestCount, slot2Opened };
             }
             const board = await readGenealogyBoard(wallet, level);
-            return finalizeTree({
+            return packTree({
                 userId,
                 address: wallet,
                 level,
@@ -134,43 +148,31 @@ async function treeFromChain(userId, level, cycleId) {
                 totalEarned,
                 totalCycles: reinvestCount,
                 slots: board.slots,
-            }, userId, level, cycleId, reinvestCount, currentCycle);
+            });
         }
-        // Current cycle with no recycle yet → live genealogy board from chain.
-        if (reinvestCount === 0) {
-            const board = await readGenealogyBoard(wallet, level);
-            return finalizeTree({
-                userId,
-                address: wallet,
-                level,
-                cycle: cycleId,
-                active: true,
-                filledSpots: board.filled,
-                completed: board.completed,
-                slot2Opened,
-                totalEarned,
-                totalCycles: reinvestCount,
-                slots: board.slots,
-            }, userId, level, cycleId, reinvestCount, currentCycle);
+        // Post-recycle cycles → cycle-1 overflow members in the 14-slot tree.
+        if (reinvestCount > 0 && cycleId === currentCycle) {
+            const dbTree = await treeFromDb(userId, level, cycleId);
+            if (dbTree && dbTree.boardFilled > 0) {
+                return { ...dbTree, totalEarned, totalCycles: reinvestCount, slot2Opened };
+            }
+            return treeFromCycleOverflow(userId, level, cycleId, reinvestCount, currentCycle, wallet, slot2Opened, totalEarned);
         }
-        // Post-recycle current cycle → fresh board from DB (chain tree still holds cycle-1 members).
-        const dbTree = await treeFromDb(userId, level, cycleId);
-        if (dbTree) {
-            return finalizeTree({ ...dbTree, totalEarned, totalCycles: reinvestCount, slot2Opened }, userId, level, cycleId, reinvestCount, currentCycle);
-        }
-        return finalizeTree({
+        // Cycle 1 (no recycle yet) → live genealogy board from chain.
+        const board = await readGenealogyBoard(wallet, level);
+        return packTree({
             userId,
             address: wallet,
             level,
             cycle: cycleId,
             active: true,
-            filledSpots: 0,
-            completed: false,
+            filledSpots: board.filled,
+            completed: board.completed,
             slot2Opened,
             totalEarned,
             totalCycles: reinvestCount,
-            slots: emptyBoardSlots(),
-        }, userId, level, cycleId, reinvestCount, currentCycle);
+            slots: board.slots,
+        });
     }
     catch {
         return null;
@@ -237,12 +239,16 @@ export async function getMatrixOverview(userId, levelFilter) {
             }
             else if (reinvestCount === 0 && cycleInfo) {
                 const board = await readGenealogyBoard(cycleInfo.wallet, level);
-                const overflow = await overflowMembersForCycle(userId, level, c, reinvestCount, currentCycle);
-                filled = board.filled + overflow.length;
+                filled = board.filled;
                 completed = board.completed;
             }
+            else if (c === currentCycle && reinvestCount > 0) {
+                const overflow = await overflowMembersForCycle(userId, level, c, reinvestCount, currentCycle);
+                filled = overflow.length;
+                completed = filled >= MATRIX_SIZE;
+            }
             else {
-                const boardFilled = await prisma.matrixCorePosition.count({
+                filled = await prisma.matrixCorePosition.count({
                     where: {
                         matrixOwnerId: userId,
                         level,
@@ -250,9 +256,7 @@ export async function getMatrixOverview(userId, levelFilter) {
                         position: { lte: MATRIX_SIZE },
                     },
                 });
-                const overflow = await overflowMembersForCycle(userId, level, c, reinvestCount, currentCycle);
-                filled = boardFilled + overflow.length;
-                completed = boardFilled >= MATRIX_SIZE;
+                completed = filled >= MATRIX_SIZE;
             }
             if (!slot2Opened && c === 1 && level === 1) {
                 try {
