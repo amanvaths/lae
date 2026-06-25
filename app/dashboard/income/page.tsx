@@ -60,9 +60,9 @@ export default function IncomePage() {
     );
   }
 
-  const totalOnChain = user.totalIncome ?? directMatrix + lapseTotal;
   const directMatrix = income.totalMatrixIncome;
   const lapseTotal = income.totalLapseIncome;
+  const totalOnChain = user.totalIncome ?? directMatrix + lapseTotal;
 
   return (
     <div>

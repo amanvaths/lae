@@ -429,7 +429,7 @@ contract LAEClubMatrix {
                     paid = true;
                 }
 
-                _afterFill(cur, slot, level);
+                _afterFill(cur, slot, level, member);
             }
             cur = users[cur].referrer;
             hops++;
@@ -454,17 +454,21 @@ contract LAEClubMatrix {
 
     /**
      * @dev Progression hooks: slot 5 unlocks the owner's next level (free); slot 14
-     *      completes the cycle and recycles the board.
+     *      completes the cycle, recycles the board, and places the 14th member at
+     *      position 1 of the new cycle (same ID carries into Cycle 2).
      */
-    function _afterFill(address boardOwner, uint8 slot, uint8 level) private {
+    function _afterFill(address boardOwner, uint8 slot, uint8 level, address member) private {
         if (slot == 5) {
             _unlockNextLevel(boardOwner, level + 1);
         }
         if (slot == MATRIX_SIZE) {
             Board storage b = users[boardOwner].board[level];
-            delete b.slots;            // reset for the next cycle
+            delete b.slots;
             b.reinvestCount += 1;
             emit Reinvest(users[boardOwner].id, users[boardOwner].id, users[boardOwner].id, level);
+            b.slots.push(member);
+            b.totalFilled += 1;
+            emit NewUserPlace(users[member].id, users[boardOwner].id, level, b.reinvestCount + 1, 1);
         }
     }
 
