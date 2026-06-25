@@ -40,6 +40,15 @@ export declare function getLaeUserIncome(wallet: string, kind?: "matrix" | "trea
     kind: string;
     fromUserId: number | null;
     toUserId: number | null;
+}[] | {
+    kind: string;
+    fromUserId: number | null;
+    toUserId: number;
+    level: number | null;
+    amount: string;
+    blockNumber: bigint | null;
+    txHash: string;
+    logIndex: number;
 }[]>;
 export declare function getLaeUserEvents(wallet: string, limit?: number): Promise<{
     id: string;

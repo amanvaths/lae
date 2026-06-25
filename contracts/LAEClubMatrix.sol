@@ -51,6 +51,13 @@ contract LAEClubMatrix {
         uint256 totalIncome;                // Total BTC earned across all slots
         mapping(uint8 => bool) activeLevels;
         mapping(uint8 => XMatrix) xMatrix;
+        // --- Genealogy placement tree (display only; does NOT affect income) ---
+        // Every entrant is placed under its own sponsor's leg, top->bottom/left->right
+        // (spillover down). This guarantees the matrix view shows each member under
+        // the correct parent. Income distribution above is fully independent of this.
+        mapping(uint8 => address) gParent;  // genealogy placement parent (per level)
+        mapping(uint8 => address) gChild0;  // genealogy left child  (per level)
+        mapping(uint8 => address) gChild1;  // genealogy right child (per level)
     }
 
     struct LaeRewardSchedule {
@@ -305,6 +312,11 @@ contract LAEClubMatrix {
             target.lastSpillUnderReceiverIndex = source.lastSpillUnderReceiverIndex;
             target.totalTeamSize = source.totalTeamSize;
             target.totalEarning = source.totalEarning;
+
+            // Preserve the display-genealogy roots (owner has no parent).
+            newUser.gParent[level] = oldUser.gParent[level];
+            newUser.gChild0[level] = oldUser.gChild0[level];
+            newUser.gChild1[level] = oldUser.gChild1[level];
         }
 
         delete users[oldOwner];
@@ -342,6 +354,9 @@ contract LAEClubMatrix {
         address freeReferrer = _findFreeReferrer(userAddress, 1);
         users[userAddress].xMatrix[1].currentReferrer = freeReferrer;
         _processNewPlacement(userAddress, freeReferrer, 1);
+
+        // Display genealogy: place the entrant directly under its own sponsor's leg.
+        _placeGenealogy(userAddress, referrerAddress, 1);
     }
 
     function _registerPartner(address userAddress, uint256 partnerId) private {
@@ -360,6 +375,9 @@ contract LAEClubMatrix {
         require(freeReferrer == owner, "Owner must be the L1 referrer for initial partners.");
         users[userAddress].xMatrix[1].currentReferrer = freeReferrer;
         _processNewPlacement(userAddress, freeReferrer, 1);
+
+        // Display genealogy: initial partners sit directly under the owner.
+        _placeGenealogy(userAddress, owner, 1);
     }
 
     function _processNewPlacement(address newUser, address referrer, uint8 level) private {
@@ -465,7 +483,49 @@ contract LAEClubMatrix {
         address freeReferrer = _findFreeReferrer(userAddress, nextLevel);
         users[userAddress].xMatrix[nextLevel].currentReferrer = freeReferrer;
         _processNewPlacement(userAddress, freeReferrer, nextLevel);
+
+        // Display genealogy for this level: place under the user's own sponsor.
+        address sponsorForLevel = users[userAddress].referrer;
+        if (sponsorForLevel == address(0)) sponsorForLevel = owner;
+        _placeGenealogy(userAddress, sponsorForLevel, nextLevel);
+
         emit Upgrade(users[userAddress].id, users[freeReferrer].id, nextLevel);
+    }
+
+    /**
+     * @dev Display-only placement. Attaches `entrant` to the first open child slot
+     *      in `sponsor`'s genealogy subtree using breadth-first (top->bottom,
+     *      left->right) order. This is what the matrix VIEW renders; it never moves
+     *      money and never touches the income/recycle logic above. Idempotent: a
+     *      user is placed at most once per level (recycles do not re-place).
+     */
+    function _placeGenealogy(address entrant, address sponsor, uint8 level) private {
+        if (entrant == address(0) || sponsor == address(0)) return;
+        if (entrant == sponsor) return;
+        if (users[entrant].gParent[level] != address(0)) return; // already placed
+
+        address[] memory queue = new address[](4096);
+        uint256 head = 0;
+        uint256 tail = 0;
+        queue[tail++] = sponsor;
+
+        while (head < tail) {
+            address node = queue[head++];
+            if (users[node].gChild0[level] == address(0)) {
+                users[node].gChild0[level] = entrant;
+                users[entrant].gParent[level] = node;
+                return;
+            }
+            if (users[node].gChild1[level] == address(0)) {
+                users[node].gChild1[level] = entrant;
+                users[entrant].gParent[level] = node;
+                return;
+            }
+            if (tail + 2 <= queue.length) {
+                queue[tail++] = users[node].gChild0[level];
+                queue[tail++] = users[node].gChild1[level];
+            }
+        }
     }
 
     function _recycleCurrentLevel(address userAddress, uint8 level, address caller) private {
@@ -865,7 +925,44 @@ contract LAEClubMatrix {
         );
     }
 
+    /**
+     * @notice Returns the 14-position genealogy board for `userAddress` at `level`.
+     * @dev Index i (0..13) maps to matrix position i+1, arranged as a 2-4-8 tree:
+     *      positions 1,2 = level 1; 3..6 = level 2; 7..14 = level 3. Empty slots are
+     *      address(0). Each occupant sits under its own sponsor's leg (top->bottom,
+     *      left->right). Occupants here may differ from the internal income array;
+     *      income distribution is independent of this display tree.
+     */
     function usersXMatrixReferrals(address userAddress, uint8 level) external view returns (address[] memory) {
-        return users[userAddress].xMatrix[level].referrals;
+        address[] memory board = new address[](MATRIX_SIZE);
+
+        // Level-order fill. Positions 0,1 are the owner's children; for any later
+        // position p, its parent position is (p-2)/2 and it is the parent's left
+        // child when p is even, right child when p is odd. Parents are always filled
+        // before their children, so a single forward pass is sufficient.
+        board[0] = users[userAddress].gChild0[level];
+        board[1] = users[userAddress].gChild1[level];
+
+        for (uint256 p = 2; p < MATRIX_SIZE; p++) {
+            address parentAddr = board[(p - 2) / 2];
+            if (parentAddr == address(0)) continue;
+            board[p] = (p % 2 == 0)
+                ? users[parentAddr].gChild0[level]
+                : users[parentAddr].gChild1[level];
+        }
+
+        return board;
+    }
+
+    /// @notice Genealogy parent / children of a user at a level (display tree).
+    function genealogyOf(uint256 userId, uint8 level)
+        external
+        view
+        returns (uint256 parentId, uint256 leftChildId, uint256 rightChildId)
+    {
+        address userAddress = idToAddress[userId];
+        parentId = addressToId[users[userAddress].gParent[level]];
+        leftChildId = addressToId[users[userAddress].gChild0[level]];
+        rightChildId = addressToId[users[userAddress].gChild1[level]];
     }
 }

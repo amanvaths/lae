@@ -15,12 +15,14 @@
  */
 import { ethers } from "ethers";
 
-const ADDR = "0x199a54D9a56f5083c872BeB5176B4fE036b83828";
+const ADDR = "0x9Ec1F6A3d37F086dB51543dd81839e5e9E0e0e68";
 const RPC = process.env.BSC_RPC_URL ?? "https://bsc-testnet.bnbchain.org";
 const FUNDER = process.env.FUNDER_PRIVATE_KEY;
-const SPONSOR_ID = BigInt(process.env.SPONSOR_ID ?? "2");
+// We create a FRESH sponsor (empty matrix) under SEED_REFERRER, then register
+// COUNT wallets under it so positions fill cleanly 1..14 (then recycle).
+const SEED_REFERRER = BigInt(process.env.SEED_REFERRER ?? "2");
 const COUNT = Number(process.env.COUNT ?? "15");
-const FUND_BNB = ethers.parseEther(process.env.FUND_BNB ?? "0.01");
+const FUND_BNB = ethers.parseEther(process.env.FUND_BNB ?? "0.003");
 
 if (!FUNDER) {
   console.error("Set FUNDER_PRIVATE_KEY (a testnet wallet with BNB to fund gas).");
@@ -46,11 +48,9 @@ const provider = new ethers.JsonRpcProvider(RPC, 97, { staticNetwork: true });
 const funder = new ethers.Wallet(FUNDER, provider);
 const matrix = new ethers.Contract(ADDR, MATRIX_ABI, provider);
 
-const sponsorWallet = await matrix.idToAddress(SPONSOR_ID);
-if (sponsorWallet === ethers.ZeroAddress) throw new Error(`sponsor id ${SPONSOR_ID} not found`);
 const PAY = await matrix.PAYMENT_TOKEN();
 const price = await matrix.levelTokenCost(1);
-console.log(`Sponsor id=${SPONSOR_ID} wallet=${sponsorWallet}`);
+console.log(`Funder=${funder.address}`);
 console.log(`Payment token=${PAY} level1 price=${ethers.formatEther(price)}\n`);
 
 function posOf(refs, addr) {
@@ -58,27 +58,34 @@ function posOf(refs, addr) {
   return i >= 0 ? i + 1 : null;
 }
 
+async function fundFaucetApproveRegister(w, referrerId) {
+  await (await funder.sendTransaction({ to: w.address, value: FUND_BNB })).wait();
+  const token = new ethers.Contract(PAY, ERC20_ABI, w);
+  await (await token.faucet(price * 2n)).wait();
+  await (await token.approve(ADDR, price)).wait();
+  const tx = await matrix.connect(w).registrationExt(referrerId, { gasLimit: 3_000_000n });
+  return await tx.wait();
+}
+
+// ---- Create a FRESH sponsor with an empty matrix ----
+console.log("Creating fresh sponsor...");
+const sponsor = ethers.Wallet.createRandom().connect(provider);
+await fundFaucetApproveRegister(sponsor, SEED_REFERRER);
+const sponsorId = Number(await matrix.addressToId(sponsor.address));
+const sponsorWallet = sponsor.address;
+console.log(`Fresh sponsor id=${sponsorId} wallet=${sponsorWallet} (registered under id ${SEED_REFERRER})\n`);
+
 const results = [];
 for (let n = 1; n <= COUNT; n++) {
   const w = ethers.Wallet.createRandom().connect(provider);
-  // 1) fund gas
-  await (await funder.sendTransaction({ to: w.address, value: FUND_BNB })).wait();
-  // 2) faucet payment token
-  const token = new ethers.Contract(PAY, ERC20_ABI, w);
-  await (await token.faucet(price * 2n)).wait();
-  // 3) approve
-  await (await token.approve(ADDR, price)).wait();
-  // 4) register
-  const m = matrix.connect(w);
-  const tx = await m.registrationExt(SPONSOR_ID, { gasLimit: 3_000_000n });
-  const rcpt = await tx.wait();
+  const rcpt = await fundFaucetApproveRegister(w, BigInt(sponsorId));
 
-  // 5) IMMEDIATELY verify sponsor matrix storage
+  // IMMEDIATELY verify sponsor matrix storage (real on-chain, no cache)
   const refs = await matrix.usersXMatrixReferrals(sponsorWallet, 1);
   const userId = Number(await matrix.addressToId(w.address));
   const pos = posOf(refs, w.address);
   const expected = ((n - 1) % 14) + 1; // sponsor matrix fills 1..14 then recycles
-  const match = pos === expected ? "YES" : pos == null ? "SPILLED-OUT" : "NO";
+  const match = pos === expected ? "YES" : pos == null ? "SPILLED/RECYCLED" : "NO";
   results.push({ n, userId, wallet: w.address, pos, expected, match, len: refs.length, tx: rcpt.hash });
   console.log(`Reg#${String(n).padStart(2)} | User${userId} | sponsorMatrixPos=${pos ?? "-"} | expected=${expected} | ${match} | len=${refs.length} | ${rcpt.hash}`);
 }

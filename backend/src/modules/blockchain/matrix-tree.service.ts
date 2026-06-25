@@ -146,16 +146,24 @@ async function treeFromChain(
     const slots: MatrixSlotDTO[] = [];
 
     if (cycleId === currentCycle) {
+      // usersXMatrixReferrals returns a fixed 14-slot genealogy board; index i maps
+      // to position i+1 and empty slots are the zero address (holes are possible).
       const rawRefs = await m.usersXMatrixReferrals(wallet, level);
-      const referralCount = Number(rawRefs?.length ?? 0);
-      filled = referralCount;
+      const addrAt = (i: number): string =>
+        String(typeof rawRefs?.getItem === "function" ? rawRefs.getItem(i) : rawRefs?.[i] ?? ethers.ZeroAddress);
+
+      let firstEmpty = 0; // 1-based position of first open slot (0 = none)
+      filled = 0;
+      for (let p = 1; p <= MATRIX_SIZE; p++) {
+        const addr = addrAt(p - 1);
+        const occupied = Boolean(addr) && addr !== ethers.ZeroAddress;
+        if (occupied) filled += 1;
+        else if (firstEmpty === 0) firstEmpty = p;
+      }
       completed = filled >= MATRIX_SIZE;
 
       for (let p = 1; p <= MATRIX_SIZE; p++) {
-        const addr =
-          p <= referralCount
-            ? String(typeof rawRefs.getItem === "function" ? rawRefs.getItem(p - 1) : rawRefs[p - 1])
-            : undefined;
+        const addr = addrAt(p - 1);
         if (addr && addr !== ethers.ZeroAddress) {
           const occId = await idForAddress(addr);
           slots.push({
@@ -167,7 +175,7 @@ async function treeFromChain(
         } else {
           slots.push({
             position: p,
-            state: !completed && p === filled + 1 ? "open" : "waiting",
+            state: !completed && p === firstEmpty ? "open" : "waiting",
             userId: null,
             address: null,
           });

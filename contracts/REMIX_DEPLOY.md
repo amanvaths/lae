@@ -4,6 +4,43 @@
 
 ---
 
+## ⚡ PLACEMENT-FIX REDEPLOY (only LAEClubMatrix)
+
+> Use this when you only changed the matrix placement (the genealogy fix so every
+> member shows under its **own sponsor's leg**, top→bottom / left→right).
+> **LAECoin is unchanged — do NOT redeploy it.** Income/recycle/upgrade/LAE logic
+> is byte-for-byte the same; only the display tree was corrected.
+
+**Steps:**
+
+1. **Compile** `LAEClubMatrix.sol` — Solidity **0.8.26**, Optimizer **ON (200)**, **Enable via IR ON**.
+2. **Deploy** `LAEClubMatrix` with the same 4 constructor args (see table below). Save the new address → call it `NEW_MATRIX`.
+3. **Wire on the NEW matrix:**
+   ```
+   setLaeCoin(0xD6698E6a8Ee4712cC2E36C150f1C34e59884C45A)
+   setLiquidityPool(0xef9594fC5145404BfC7B5640296C3864319e3d86)
+   ```
+4. **Point LAECoin at the new matrix** (call on existing LAECoin `0xD6698E…`):
+   ```
+   setMatrixContract(NEW_MATRIX)
+   setTaxExempt(NEW_MATRIX, true)
+   ```
+5. **Note the deploy block number** (from the deploy tx on BscScan) → `NEW_BLOCK`.
+6. **Initialize partners** (if your old setup had initial partners) the same way you did originally.
+7. **Rewire app** — update these 4 places with `NEW_MATRIX` (and `NEW_BLOCK`), then push:
+   - `.github/workflows/deploy-vps.yml` → `NEXT_PUBLIC_LAE_MATRIX_CONTRACT`, `NEXT_PUBLIC_MATRIX_CORE_CONTRACT`
+   - `.github/workflows/deploy-backend-vps.yml` → `LAE_MATRIX_CONTRACT_ADDRESS`, `MATRIX_CORE_CONTRACT_ADDRESS`, `INDEXER_START_BLOCK` (= `NEW_BLOCK`)
+   - `lib/lae-club/contracts.ts` → fallback address
+   - `contracts/deployed-bsc-testnet.json` → `LAEClubMatrix` + `deployBlock`
+8. After backend redeploys, the indexer re-syncs from `NEW_BLOCK`. The matrix tree
+   (`/api/matrix/tree`) now reads the corrected genealogy board automatically — **no
+   frontend code change needed**.
+
+> ⚠️ A new address = a **fresh contract**: all current test users (ID 1–28) start
+> over on the new contract. This is expected (testnet).
+
+---
+
 ## Compiler settings
 
 | Setting | Value |
