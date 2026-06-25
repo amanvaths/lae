@@ -4,25 +4,30 @@
 
 ---
 
-## ⚡ INCOME-FOLLOWS-TREE REDEPLOY (only LAEClubMatrix)
+## ⚡ MODEL B — BOARD DRIVES SLOT UNLOCK (only LAEClubMatrix)
 
-> Use this for the matrix fix where **income now follows the same genealogy tree
-> shown on the dashboard**. A member is placed under its own sponsor's leg
-> (top→bottom / left→right) and the income for that registration is decided by the
-> member's **position in its sponsor's board** — single recipient, exactly the
-> original role table (1,2 = upline; 3,6,8,9,11,12 = self; 4 = reserve/upgrade hold;
-> 5 = auto-upgrade; 7,10 = 1st downline; 13 = 2nd downline; 14 = recycle). The
-> upline/downline/self earner now receives it as **real matrix income** (it shows
-> on the dashboard and increments on-chain `totalIncome`) instead of silently going
-> to the treasury.
+> Two things are now cleanly separated:
+>
+> **1. INCOME (money) — single recipient per registration.** A member is placed
+> under its own sponsor's leg (top→bottom / left→right) and the money is decided by
+> the member's **position in its sponsor's board** using the role table:
+> `1,2 = upline · 3,6,8,9,11,12 = self · 4,5,14 = treasury · 7,10 = 1st downline ·
+> 13 = 2nd downline`. The earner receives it as real matrix income (shows on the
+> dashboard, increments on-chain `totalIncome`).
+>
+> **2. PROGRESSION (slot unlock / recycle) — follows the DISPLAYED board.** When
+> **your displayed board's position 5 fills** (even by spillover from your upline),
+> **your next slot unlocks for FREE** (`_progressUpgrades` → `_upgradeLevel`,
+> idempotent). When position 14 fills, the board records a recycle. So the slot
+> unlock now matches exactly what the dashboard tree shows — fixing the case where
+> "4th & 5th positions filled but slot 2 stayed locked".
 >
 > **LAECoin is unchanged — do NOT redeploy it.** The LAE reward + 10% liquidity
 > split is untouched.
 >
-> ⚠️ **Known simplification:** once a sponsor's 3-generation board (14 slots) is
-> completely full, any further direct of that exact sponsor overflows to the
-> treasury (no automatic re-entry/recycle of a fresh board yet). This only happens
-> after a single sponsor has 14 people in their own 3-gen board — rare in testing.
+> ⚠️ **Known simplification:** the 3-generation board is capped at 14 slots, so a
+> recycle records the completed cycle but does not yet hand the owner a brand-new
+> board for further cycles. Rare in testing.
 
 **Steps:**
 

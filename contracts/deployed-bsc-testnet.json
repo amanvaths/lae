@@ -3,10 +3,10 @@
   "network": "bsc-testnet",
   "deployedAt": "2026-06-25",
   "contracts": {
-    "LAEClubMatrix": "0xF724Ea7Fc7436EAe6c504592b9FFbEdf4B0d236c",
+    "LAEClubMatrix": "0xB65745665aFce75a7d8B804bda96B68a82adbC0D",
     "LAECoin": "0xD6698E6a8Ee4712cC2E36C150f1C34e59884C45A",
     "TestPaymentToken": "0xb2bE66BE07E1AD04074B32B8b13DcdFaB6B57575"
   },
-  "deployBlock": 115414028,
+  "deployBlock": 115421200,
   "owner": "0xef9594fC5145404BfC7B5640296C3864319e3d86"
 }

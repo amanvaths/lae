@@ -358,6 +358,7 @@ contract LAEClubMatrix {
         _placeGenealogy(userAddress, referrerAddress, 1);
         _bumpTeamSize(referrerAddress);
         _payByGenealogy(userAddress, 1);
+        _progressUpgrades(userAddress, 1);
     }
 
     function _registerPartner(address userAddress, uint256 partnerId) private {
@@ -377,6 +378,7 @@ contract LAEClubMatrix {
         _placeGenealogy(userAddress, owner, 1);
         _bumpTeamSize(owner);
         _payByGenealogy(userAddress, 1);
+        _progressUpgrades(userAddress, 1);
     }
 
     /**
@@ -448,52 +450,26 @@ contract LAEClubMatrix {
 
         XMatrix storage m = users[O].xMatrix[level];
         uint256 amount = levelTokenCost[level];
-        bool isOwnerO = O == owner;
-        bool isFirstCycle = m.reinvestCount == 0;
-        bool isLastLevel = level == LAST_LEVEL;
         uint256 ownerId = users[O].id;
 
         emit NewUserPlace(users[entrant].id, ownerId, level, m.reinvestCount + 1, pos);
 
-        // Spot 1 & 2 → upline income (owner has no upline → treasury).
+        // Spot 1 & 2 → upline income (board owner is the owner → treasury).
         if (pos == 1 || pos == 2) {
-            if (isOwnerO) {
+            if (O == owner) {
                 _sendToPlatformTreasury(amount);
                 return;
             }
             address upline = _findEligibleUplineTarget(entrant, O, pos, level);
             emit Spillover(ownerId, users[upline].id, level, m.reinvestCount + 1, pos == 1 ? 15 : 16);
-            // The upline earns as real matrix income (shows on dashboard) — even
-            // when that upline is the owner. Treasury only collects when the board
-            // owner itself is the owner (handled above via isOwnerO).
             _sendTokenDividends(upline, entrant, level, amount);
             return;
         }
 
-        // Spot 4 → first cycle holds for auto-upgrade; otherwise Club Pool.
-        if (pos == 4) {
-            if (isFirstCycle && !isLastLevel && !isOwnerO) {
-                m.heldTokenForUpgrade = amount;
-            } else {
-                _sendToClubPool(O, entrant, level, amount);
-            }
-            return;
-        }
-
-        // Spot 5 → first cycle triggers the free auto-upgrade; otherwise self income.
-        if (pos == 5) {
-            if (isFirstCycle && !isLastLevel && !isOwnerO) {
-                m.heldTokenForUpgrade = 0;
-                _upgradeLevel(O, level + 1);
-            } else {
-                _sendTokenDividends(O, entrant, level, amount);
-            }
-            return;
-        }
-
-        // Self income → 3,6,8,9,11,12.
-        if (pos == 3 || pos == 6 || pos == 8 || pos == 9 || pos == 11 || pos == 12) {
-            _sendTokenDividends(O, entrant, level, amount);
+        // Spot 4 & 5 (slot upgrade funding) and 14 (recycle) → platform treasury.
+        // The free slot unlock / recycle itself is handled by _progressUpgrades.
+        if (pos == 4 || pos == 5 || pos == 14) {
+            _sendToPlatformTreasury(amount);
             return;
         }
 
@@ -513,26 +489,67 @@ contract LAEClubMatrix {
             return;
         }
 
-        // Spot 14 → board complete: reinvest credit to the board owner.
-        if (pos == 14) {
-            m.reinvestCount++;
-            emit Reinvest(ownerId, ownerId, users[entrant].id, level);
-            _sendTokenDividends(O, entrant, level, amount);
-            return;
+        // Self income → 3,6,8,9,11,12.
+        _sendTokenDividends(O, entrant, level, amount);
+    }
+
+    /**
+     * @dev MODEL B progression (display board drives level unlocks). Independent of
+     *      the single-pay income above. When `entrant` fills an ancestor's board at
+     *      position 5, that ancestor's NEXT level unlocks (free). At position 14 the
+     *      ancestor's board recycles. An entrant only ever lands at pos 5 of its
+     *      genealogy grandparent's board, and at pos 14 of its great-grandparent's.
+     */
+    function _progressUpgrades(address entrant, uint8 level) private {
+        address a1 = users[entrant].gParent[level];
+        if (a1 == address(0)) return;
+        address a2 = users[a1].gParent[level];
+        if (a2 != address(0)) {
+            if (_genPosition(a2, entrant, level) == 5) {
+                _upgradeLevel(a2, level + 1);
+            }
+            address a3 = users[a2].gParent[level];
+            if (a3 != address(0) && _genPosition(a3, entrant, level) == 14) {
+                _recycleBoard(a3, level);
+            }
         }
     }
 
-    function _upgradeLevel(address userAddress, uint8 nextLevel) private {
-        users[userAddress].activeLevels[nextLevel] = true;
+    /**
+     * @dev Free auto-upgrade: unlock `nextLevel` for `user` and place it under its
+     *      own sponsor's leg at that level, then cascade progression. Idempotent — a
+     *      level is unlocked at most once.
+     *
+     *      NOTE: the upgrade does NOT move tokens. Registration only ever funds the
+     *      level-1 cost into the contract, so paying out higher-level income on a
+     *      free upgrade would drain the contract. The slot simply unlocks (matches
+     *      the dashboard board); per-level token income for L2+ is a separate
+     *      funding decision.
+     */
+    function _upgradeLevel(address user, uint8 nextLevel) private {
+        if (nextLevel > LAST_LEVEL) return;
+        if (users[user].activeLevels[nextLevel]) return;
+        users[user].activeLevels[nextLevel] = true;
 
-        // Place under the user's own sponsor at this level, then pay by genealogy.
-        address sponsorForLevel = users[userAddress].referrer;
+        address sponsorForLevel = users[user].referrer;
         if (sponsorForLevel == address(0)) sponsorForLevel = owner;
-        users[userAddress].xMatrix[nextLevel].currentReferrer = sponsorForLevel;
-        _placeGenealogy(userAddress, sponsorForLevel, nextLevel);
-        _payByGenealogy(userAddress, nextLevel);
+        users[user].xMatrix[nextLevel].currentReferrer = sponsorForLevel;
+        _placeGenealogy(user, sponsorForLevel, nextLevel);
 
-        emit Upgrade(users[userAddress].id, users[sponsorForLevel].id, nextLevel);
+        emit Upgrade(users[user].id, users[sponsorForLevel].id, nextLevel);
+
+        _progressUpgrades(user, nextLevel);
+    }
+
+    /**
+     * @dev Board recycle marker. The 3-generation genealogy board is capped at 14,
+     *      so it never overflows; this records the completed cycle. (Structural
+     *      re-entry for additional cycles is intentionally deferred.)
+     */
+    function _recycleBoard(address boardOwner, uint8 level) private {
+        XMatrix storage m = users[boardOwner].xMatrix[level];
+        m.reinvestCount++;
+        emit Reinvest(users[boardOwner].id, users[boardOwner].id, users[boardOwner].id, level);
     }
 
     /**
