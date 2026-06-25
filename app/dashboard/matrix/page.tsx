@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { LayoutGrid } from "lucide-react";
+import { useAccount, useReadContract, useReadContracts } from "wagmi";
 import { Panel, PageHeading } from "@/components/dashboard/ui";
 import { QueryLoading } from "@/components/dashboard/QueryState";
 import { MatrixVisualizer } from "@/components/lae-club/MatrixVisualizer";
@@ -13,10 +14,13 @@ import { buildSlotsFromApi } from "@/lib/lae-club/matrix-slots";
 import { useMatrixCoreUser } from "@/lib/lae-club/matrix-core-hooks";
 import { useLaeLevelPrices } from "@/lib/lae-club/hooks";
 import { incomeStringToWei } from "@/lib/contracts/format";
+import { LAE_CONTRACTS } from "@/lib/lae-club/contracts";
+import { laeClubMatrixAbi } from "@/lib/lae-club/matrix-core-abi";
 import {
   useLaeMatrixTreeApi,
   useLaeMatrixOverviewApi,
 } from "@/lib/lae-club/matrix-api";
+import { cn } from "@/lib/utils";
 
 const LEGEND = [
   { label: "Active", color: "bg-emerald-400" },
@@ -28,27 +32,72 @@ const LEGEND = [
 
 export default function MatrixPage() {
   const user = useMatrixCoreUser();
+  const { address } = useAccount();
   const userIdNum = user.userId ? Number(user.userId) : undefined;
   const overviewApi = useLaeMatrixOverviewApi(userIdNum);
   const levelPrices = useLaeLevelPrices();
   const [selectedLevel, setSelectedLevel] = useState(1);
-  const levelData = overviewApi.overview?.levels.find((l) => l.level === selectedLevel);
-  const currentCycle = levelData?.currentCycle ?? 1;
   const [selectedCycle, setSelectedCycle] = useState(1);
 
-  const overviewLevels = overviewApi.overview?.levels ?? [];
-  const priceForLevel = (lvl: number) =>
-    levelPrices.prices?.find((p) => p.level === lvl)?.priceFormatted ??
-    (0.001 * 2 ** (lvl - 1)).toString();
-  const filledForLevel = (lvl: number) => {
-    const li = overviewLevels.find((l) => l.level === lvl);
-    if (!li) return 0;
-    return li.cycles?.find((c) => c.cycle === li.currentCycle)?.filled ?? 0;
-  };
+  const slotActiveReads = useReadContracts({
+    contracts: Array.from({ length: LAE_LAST_LEVEL }, (_, i) => ({
+      address: LAE_CONTRACTS.matrix,
+      abi: laeClubMatrixAbi,
+      functionName: "isUserSlotActive" as const,
+      args: user.userId ? [user.userId, i + 1] : undefined,
+    })),
+    query: { enabled: !!user.userId, staleTime: 15_000 },
+  });
+
+  const selectedMatrixRow = useReadContract({
+    address: LAE_CONTRACTS.matrix,
+    abi: laeClubMatrixAbi,
+    functionName: "usersXMatrix",
+    args: address ? [address, selectedLevel] : undefined,
+    query: { enabled: !!address, staleTime: 10_000 },
+  });
 
   const treeApi = useLaeMatrixTreeApi(userIdNum, selectedLevel, selectedCycle, {
     enabled: !!userIdNum,
   });
+
+  const overviewLevels = overviewApi.overview?.levels ?? [];
+  const levelData = overviewLevels.find((l) => l.level === selectedLevel);
+  const chainReinvest = selectedMatrixRow.data
+    ? Number((selectedMatrixRow.data as readonly unknown[])[1] ?? 0)
+    : 0;
+  const currentCycle =
+    levelData?.currentCycle ?? (chainReinvest > 0 ? chainReinvest + 1 : 1);
+
+  useEffect(() => {
+    setSelectedCycle(currentCycle);
+  }, [selectedLevel]);
+
+  const priceForLevel = (lvl: number) =>
+    levelPrices.prices?.find((p) => p.level === lvl)?.priceFormatted ??
+    (0.001 * 2 ** (lvl - 1)).toString();
+
+  const isLevelActiveOnChain = (lvl: number) => {
+    const r = slotActiveReads.data?.[lvl - 1];
+    return Boolean(r?.result);
+  };
+
+  const isLevelActive = (lvl: number) => {
+    const fromOverview = overviewLevels.find((l) => l.level === lvl);
+    if (fromOverview?.active) return true;
+    return isLevelActiveOnChain(lvl);
+  };
+
+  const filledForLevel = (lvl: number) => {
+    const li = overviewLevels.find((l) => l.level === lvl);
+    if (li) {
+      return li.cycles?.find((c) => c.cycle === li.currentCycle)?.filled ?? 0;
+    }
+    if (lvl === selectedLevel && treeApi.tree) {
+      return treeApi.tree.filledSpots;
+    }
+    return 0;
+  };
 
   if (user.isLoading) {
     return <QueryLoading label="Loading LAE Club profile…" />;
@@ -72,7 +121,10 @@ export default function MatrixPage() {
 
   const tree = treeApi.tree;
   const slots = tree ? buildSlotsFromApi(tree.slots) : undefined;
-  const activeLevels = overviewApi.overview?.levels.filter((l) => l.active) ?? [{ level: 1, currentCycle: 1, cycles: [] }];
+  const cardsLoading =
+    overviewApi.isLoading &&
+    overviewLevels.length === 0 &&
+    slotActiveReads.isLoading;
 
   return (
     <div className="space-y-6">
@@ -92,35 +144,38 @@ export default function MatrixPage() {
         }
       />
 
-      {/* ── Level cards grid ── */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
         {Array.from({ length: LAE_LAST_LEVEL }, (_, i) => i + 1).map((lvl) => {
-          const active = activeLevels.some((l) => l.level === lvl);
+          const li = overviewLevels.find((l) => l.level === lvl);
           return (
             <MatrixLevelCard
               key={lvl}
               level={lvl}
-              active={active}
+              active={isLevelActive(lvl)}
               selected={selectedLevel === lvl}
               price={priceForLevel(lvl)}
               filled={filledForLevel(lvl)}
-              loading={overviewApi.isLoading}
+              loading={cardsLoading}
               onClick={() => {
                 setSelectedLevel(lvl);
-                setSelectedCycle(1);
+                setSelectedCycle(li?.currentCycle ?? 1);
               }}
             />
           );
         })}
       </div>
 
-      {/* ── Cycle selector ── */}
       <div className="flex flex-wrap items-center gap-2">
         <span className="mr-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#D4AF37]/50">
           Cycle
         </span>
         {Array.from({ length: currentCycle }, (_, i) => i + 1).map((c) => {
           const oc = levelData?.cycles?.find((x) => x.cycle === c);
+          const treeFilled =
+            c === selectedCycle && tree && selectedLevel === levelData?.level
+              ? tree.filledSpots
+              : undefined;
+          const filled = treeFilled ?? oc?.filled;
           const isActive = selectedCycle === c;
           return (
             <button
@@ -135,7 +190,7 @@ export default function MatrixPage() {
               )}
             >
               Cycle {c}
-              {oc ? ` · ${oc.filled}/${LAE_MATRIX_SIZE}` : ""}
+              {filled != null ? ` · ${filled}/${LAE_MATRIX_SIZE}` : ""}
               {oc?.completed ? " ✓" : ""}
             </button>
           );

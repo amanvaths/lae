@@ -426,67 +426,73 @@ export async function getMatrixOverview(
   }
 
   const m = matrixContract();
-  const levels: MatrixOverviewLevel[] = [];
   const levelStart = levelFilter ?? 1;
   const levelEnd = levelFilter ?? LAST_LEVEL;
+  const levelCount = levelEnd - levelStart + 1;
 
-  for (let level = levelStart; level <= levelEnd; level++) {
-    let active = false;
-    let currentCycle = 1;
-    try {
-      active = Boolean(await m.isUserSlotActive(userId, level));
-      if (active) {
-        const matrixRow = await m.usersXMatrix(address, level);
-        currentCycle = Number(matrixRow.reinvestCount ?? 0) + 1;
+  const activeFlags = await Promise.all(
+    Array.from({ length: levelCount }, async (_, i) => {
+      const level = levelStart + i;
+      try {
+        return Boolean(await m.isUserSlotActive(userId, level));
+      } catch {
+        return level === 1;
       }
-    } catch {
-      active = level === 1;
-    }
+    })
+  );
 
-    if (!active && levelFilter == null) continue;
+  const reinvestByLevel = await Promise.all(
+    Array.from({ length: levelCount }, async (_, i) => {
+      const level = levelStart + i;
+      if (!activeFlags[i]) return 0;
+      try {
+        const matrixRow = await m.usersXMatrix(address, level);
+        return Number(matrixRow.reinvestCount ?? 0);
+      } catch {
+        return 0;
+      }
+    })
+  );
 
-    const reinvestCount = currentCycle - 1;
+  const cycleRows = await prisma.matrixCoreCycle.findMany({
+    where: {
+      matrixOwnerId: userId,
+      level: { gte: levelStart, lte: levelEnd },
+    },
+  });
+  const cycleStatus = new Map(
+    cycleRows.map((r) => [`${r.level}-${r.cycleId}`, r])
+  );
+
+  const levels: MatrixOverviewLevel[] = [];
+
+  for (let i = 0; i < levelCount; i++) {
+    const level = levelStart + i;
+    const active = activeFlags[i]!;
+    const reinvestCount = reinvestByLevel[i] ?? 0;
+    const currentCycle = active ? reinvestCount + 1 : 1;
+
     const cycles: MatrixOverviewCycle[] = [];
     for (let c = 1; c <= currentCycle; c++) {
-      let filled = 0;
-      let completed = false;
-      let slot2Opened = false;
-
-      const status = await prisma.matrixCoreCycle.findUnique({
-        where: { matrixOwnerId_level_cycleId: { matrixOwnerId: userId, level, cycleId: c } },
-      });
-      slot2Opened = status?.slot2Opened ?? false;
+      const status = cycleStatus.get(`${level}-${c}`);
+      let filled = status?.filled ?? 0;
+      let completed = status?.completed ?? false;
+      let slot2Opened = status?.slot2Opened ?? false;
 
       if (c < currentCycle) {
-        filled = 14;
+        filled = MATRIX_SIZE;
         completed = true;
-      } else if (reinvestCount > 0 && c === currentCycle) {
-        const offBoard = await findOffBoardMembers(userId, level);
-        filled = offBoard.length;
-        completed = filled >= MATRIX_SIZE;
-      } else {
-        try {
-          const board = await readGenealogyBoard(address, level);
-          filled = board.filled;
-          completed = board.completed;
-        } catch {
-          filled = status?.filled ?? 0;
-          completed = status?.completed ?? false;
-        }
-      }
-
-      if (!slot2Opened && c === 1 && level === 1) {
-        try {
-          slot2Opened = Boolean(await m.isUserSlotActive(userId, 2));
-        } catch {
-          /* ignore */
-        }
       }
 
       cycles.push({ cycle: c, filled, completed, slot2Opened });
     }
 
-    levels.push({ level, active, currentCycle, cycles });
+    levels.push({
+      level,
+      active,
+      currentCycle,
+      cycles,
+    });
   }
 
   return { userId, address, levels };
