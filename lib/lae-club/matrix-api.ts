@@ -69,7 +69,14 @@ export function useLaeMatrixTreeApi(
     queryKey: ["lae-matrix-tree", userId, level, cycle],
     queryFn: () => fetchMatrixTree(userId!, level, cycle),
     enabled,
-    staleTime: 15_000,
+    // Live matrix must reflect every new registration immediately. The backend
+    // reads usersXMatrixReferrals straight from chain, so poll it instead of
+    // serving a stale cache (this was the "position appears one registration
+    // late" bug — storage/event/API were correct, only the UI cache lagged).
+    staleTime: 0,
+    refetchInterval: 6_000,
+    refetchOnWindowFocus: true,
+    refetchOnMount: "always",
     retry: 1,
   });
 
@@ -90,7 +97,10 @@ export function useLaeMatrixOverviewApi(userId: number | undefined, level?: numb
     queryKey: ["lae-matrix-overview", userId, level],
     queryFn: () => fetchMatrixOverview(userId!, level),
     enabled,
-    staleTime: 20_000,
+    staleTime: 0,
+    refetchInterval: 8_000,
+    refetchOnWindowFocus: true,
+    refetchOnMount: "always",
     retry: 1,
   });
   return {
