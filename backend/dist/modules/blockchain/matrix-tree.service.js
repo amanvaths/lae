@@ -78,87 +78,6 @@ async function readGenealogyBoard(wallet, level) {
     }
     return { filled, completed, slots };
 }
-/** Members in genealogy tree but NOT in the fixed 14-box (cycle 2 candidates). */
-async function findOffBoardMembers(matrixOwnerId, level) {
-    const m = matrixContract();
-    const wallet = await walletForUserId(matrixOwnerId);
-    if (!wallet)
-        return [];
-    const board = await readGenealogyBoard(wallet, level);
-    const onBoard = new Set(board.slots.filter((s) => s.userId).map((s) => s.userId));
-    const offBoard = [];
-    async function visit(nodeId) {
-        if (nodeId <= 0)
-            return;
-        try {
-            const gen = await m.genealogyOf(nodeId, level);
-            const leftId = Number(gen.leftChildId ?? gen[1] ?? 0);
-            const rightId = Number(gen.rightChildId ?? gen[2] ?? 0);
-            for (const childId of [leftId, rightId]) {
-                if (childId <= 0)
-                    continue;
-                if (!onBoard.has(childId)) {
-                    offBoard.push({
-                        userId: childId,
-                        address: await walletForUserId(childId),
-                    });
-                }
-                await visit(childId);
-            }
-        }
-        catch {
-            /* skip */
-        }
-    }
-    try {
-        const rootGen = await m.genealogyOf(matrixOwnerId, level);
-        const leftId = Number(rootGen.leftChildId ?? rootGen[1] ?? 0);
-        const rightId = Number(rootGen.rightChildId ?? rootGen[2] ?? 0);
-        if (leftId > 0)
-            await visit(leftId);
-        if (rightId > 0)
-            await visit(rightId);
-    }
-    catch {
-        return offBoard;
-    }
-    // Registration order (16th ID = first in cycle 2 display).
-    const rows = await prisma.matrixCoreUser.findMany({
-        where: { userId: { in: offBoard.map((o) => o.userId) } },
-        select: { userId: true, registeredBlock: true },
-        orderBy: { registeredBlock: "asc" },
-    });
-    const order = new Map(rows.map((r, i) => [r.userId, i]));
-    offBoard.sort((a, b) => (order.get(a.userId) ?? a.userId) - (order.get(b.userId) ?? b.userId));
-    return offBoard;
-}
-/** Map cycle-2 members sequentially into positions 1, 2, 3… */
-function mapSequentialBoard(members) {
-    const filled = Math.min(members.length, MATRIX_SIZE);
-    const completed = filled >= MATRIX_SIZE;
-    const nextOpen = completed ? 0 : filled + 1;
-    const slots = [];
-    for (let p = 1; p <= MATRIX_SIZE; p++) {
-        const m = members[p - 1];
-        if (m) {
-            slots.push({
-                position: p,
-                state: "filled",
-                userId: m.userId,
-                address: m.address,
-            });
-        }
-        else {
-            slots.push({
-                position: p,
-                state: !completed && p === nextOpen ? "open" : "waiting",
-                userId: null,
-                address: null,
-            });
-        }
-    }
-    return { slots, filled };
-}
 function treePayload(userId, address, level, cycleId, filled, completed, slot2Opened, totalEarned, totalCycles, slots) {
     return {
         userId,
@@ -225,7 +144,14 @@ async function treeFromDb(userId, level, cycleId) {
         slots,
     };
 }
-/** Resolve matrix tree per cycle: cycle 1 = 14-box snapshot; cycle 2+ = new members at pos 1,2,3… */
+/**
+ * Resolve matrix tree per cycle.
+ *
+ * New contract model: each board is a sequential 14-slot list (the owner's whole
+ * downline in arrival order) that resets on recycle. So `usersXMatrixReferrals`
+ * always returns the LIVE current-cycle board. Historical (completed) cycles are
+ * no longer on-chain — they come from the indexed DB positions instead.
+ */
 async function treeFromChain(userId, level, cycleId) {
     const m = matrixContract();
     try {
@@ -241,18 +167,21 @@ async function treeFromChain(userId, level, cycleId) {
         const currentCycle = reinvestCount + 1;
         const slot2Opened = Boolean(slot2Active);
         const totalEarned = String(details.totalIncome ?? "0");
-        // Completed cycle (e.g. Cycle 1 when now on Cycle 2) → frozen 14-box board.
+        // Completed (historical) cycle → on-chain board has been reset, so rebuild
+        // from indexed DB positions. Fall back to a full 14-box if DB lags.
         if (cycleId < currentCycle) {
-            const board = await readGenealogyBoard(wallet, level);
-            return treePayload(userId, wallet, level, cycleId, board.filled, true, slot2Opened, totalEarned, reinvestCount, board.slots);
+            const dbTree = await treeFromDb(userId, level, cycleId);
+            if (dbTree)
+                return dbTree;
+            const filledSlots = Array.from({ length: MATRIX_SIZE }, (_, i) => ({
+                position: i + 1,
+                state: "filled",
+                userId: null,
+                address: null,
+            }));
+            return treePayload(userId, wallet, level, cycleId, MATRIX_SIZE, true, slot2Opened, totalEarned, reinvestCount, filledSlots);
         }
-        // Active cycle 2+ → members beyond the 14-box, shown at spot 1, 2, 3…
-        if (reinvestCount > 0 && cycleId === currentCycle) {
-            const offBoard = await findOffBoardMembers(userId, level);
-            const { slots, filled } = mapSequentialBoard(offBoard);
-            return treePayload(userId, wallet, level, cycleId, filled, filled >= MATRIX_SIZE, slot2Opened, totalEarned, reinvestCount, slots);
-        }
-        // Cycle 1 (no recycle yet) → live genealogy 14-box from chain.
+        // Current cycle → live sequential board straight from chain.
         const board = await readGenealogyBoard(wallet, level);
         return treePayload(userId, wallet, level, cycleId, board.filled, board.completed, slot2Opened, totalEarned, reinvestCount, board.slots);
     }
@@ -294,65 +223,61 @@ export async function getMatrixOverview(userId, levelFilter) {
             return { error: "user not found" };
     }
     const m = matrixContract();
-    const levels = [];
     const levelStart = levelFilter ?? 1;
     const levelEnd = levelFilter ?? LAST_LEVEL;
-    for (let level = levelStart; level <= levelEnd; level++) {
-        let active = false;
-        let currentCycle = 1;
+    const levelCount = levelEnd - levelStart + 1;
+    const activeFlags = await Promise.all(Array.from({ length: levelCount }, async (_, i) => {
+        const level = levelStart + i;
         try {
-            active = Boolean(await m.isUserSlotActive(userId, level));
-            if (active) {
-                const matrixRow = await m.usersXMatrix(address, level);
-                currentCycle = Number(matrixRow.reinvestCount ?? 0) + 1;
-            }
+            return Boolean(await m.isUserSlotActive(userId, level));
         }
         catch {
-            active = level === 1;
+            return level === 1;
         }
-        if (!active && levelFilter == null)
-            continue;
-        const reinvestCount = currentCycle - 1;
+    }));
+    const reinvestByLevel = await Promise.all(Array.from({ length: levelCount }, async (_, i) => {
+        const level = levelStart + i;
+        if (!activeFlags[i])
+            return 0;
+        try {
+            const matrixRow = await m.usersXMatrix(address, level);
+            return Number(matrixRow.reinvestCount ?? 0);
+        }
+        catch {
+            return 0;
+        }
+    }));
+    const cycleRows = await prisma.matrixCoreCycle.findMany({
+        where: {
+            matrixOwnerId: userId,
+            level: { gte: levelStart, lte: levelEnd },
+        },
+    });
+    const cycleStatus = new Map(cycleRows.map((r) => [`${r.level}-${r.cycleId}`, r]));
+    const levels = [];
+    for (let i = 0; i < levelCount; i++) {
+        const level = levelStart + i;
+        const active = activeFlags[i];
+        const reinvestCount = reinvestByLevel[i] ?? 0;
+        const currentCycle = active ? reinvestCount + 1 : 1;
         const cycles = [];
         for (let c = 1; c <= currentCycle; c++) {
-            let filled = 0;
-            let completed = false;
-            let slot2Opened = false;
-            const status = await prisma.matrixCoreCycle.findUnique({
-                where: { matrixOwnerId_level_cycleId: { matrixOwnerId: userId, level, cycleId: c } },
-            });
-            slot2Opened = status?.slot2Opened ?? false;
+            const status = cycleStatus.get(`${level}-${c}`);
+            let filled = status?.filled ?? 0;
+            let completed = status?.completed ?? false;
+            let slot2Opened = status?.slot2Opened ?? false;
             if (c < currentCycle) {
-                filled = 14;
+                filled = MATRIX_SIZE;
                 completed = true;
-            }
-            else if (reinvestCount > 0 && c === currentCycle) {
-                const offBoard = await findOffBoardMembers(userId, level);
-                filled = offBoard.length;
-                completed = filled >= MATRIX_SIZE;
-            }
-            else {
-                try {
-                    const board = await readGenealogyBoard(address, level);
-                    filled = board.filled;
-                    completed = board.completed;
-                }
-                catch {
-                    filled = status?.filled ?? 0;
-                    completed = status?.completed ?? false;
-                }
-            }
-            if (!slot2Opened && c === 1 && level === 1) {
-                try {
-                    slot2Opened = Boolean(await m.isUserSlotActive(userId, 2));
-                }
-                catch {
-                    /* ignore */
-                }
             }
             cycles.push({ cycle: c, filled, completed, slot2Opened });
         }
-        levels.push({ level, active, currentCycle, cycles });
+        levels.push({
+            level,
+            active,
+            currentCycle,
+            cycles,
+        });
     }
     return { userId, address, levels };
 }

@@ -16,48 +16,71 @@ interface ILAECoin {
 
 /**
  * @title LAEClubMatrix
- * @notice 15-slot Smart Matrix. Each slot is a 14-position recycling matrix.
- *         Registration / upgrades are paid in BTC (BEP-20). 90% of every payment
- *         is distributed across the matrix, 10% funds the liquidity pool and mints
- *         a vested LAE reward allocation released over 20 months (5%/month, gated by
- *         new direct referrals). No NFTs are used anywhere in this plan.
+ * @notice Brand-new Smart Matrix with UNLIMITED-UPLINE sequential placement.
+ *
+ *  PLACEMENT (display / team building)
+ *  -----------------------------------
+ *  Every user owns an independent 14-slot board per level. When a new member
+ *  joins, it is appended to the next free slot of its sponsor's board AND of
+ *  every upline's board, all the way to the top (top->bottom / left->right is
+ *  expressed here as simple arrival order: slot 1, 2, 3 …). So each user's
+ *  board shows their entire downline in the order it grew. At 14 the board
+ *  recycles (a new cycle starts at slot 1).
+ *
+ *  INCOME (money) — SINGLE recipient per registration
+ *  --------------------------------------------------
+ *  A registration produces exactly ONE 90% matrix payout, decided by the new
+ *  member's slot in its DIRECT SPONSOR's board using the role table:
+ *      1,2            -> sponsor's 1st / 2nd upline
+ *      3,6,8,9,11,12  -> sponsor (self)
+ *      4,5,14         -> treasury
+ *      7,10           -> sponsor's 1st downline
+ *      13             -> sponsor's 2nd downline
+ *  Paying only once (not once per upline board) keeps the contract solvent
+ *  while reproducing the exact recipients of the intended design, because the
+ *  eligibility / lapse rules below route the money up to the right person.
+ *
+ *  ELIGIBILITY + LAPSE
+ *  -------------------
+ *  A user must have >= 2 direct referrals to receive matrix income (owner is
+ *  always eligible). If the intended recipient is not eligible, the income
+ *  lapses to its immediate upline, then to the 2nd upline; if neither of the
+ *  two uplines qualifies the income goes to the Treasury. The search never
+ *  goes beyond 2 uplines.
+ *
+ *  REVENUE SPLIT (unchanged)
+ *  -------------------------
+ *  90% of every registration flows through the matrix; 10% funds the liquidity
+ *  pool and mints a vested LAE reward released over 20 months. No NFTs.
  */
 contract LAEClubMatrix {
     // --- Constants ---
-    uint8 public constant LAST_LEVEL = 15;       // 15 slots
-    uint8 public constant MATRIX_SIZE = 14;      // 14 positions per slot
+    uint8 public constant LAST_LEVEL = 15;       // 15 slots / levels
+    uint8 public constant MATRIX_SIZE = 14;      // 14 positions per board
     uint256 public constant BPS = 10_000;
-    uint8 public constant VESTING_MONTHS = 20;   // 20-month release protocol
+    uint8 public constant VESTING_MONTHS = 20;   // 20-month LAE release protocol
     uint256 public constant MONTH_DURATION = 30 days;
+    uint256 public constant MAX_UPLINE = 60;     // safety bound for upward propagation
 
     // --- Structs ---
-    struct XMatrix {
-        address currentReferrer;            // Upline that physically placed this matrix
-        address[] referrals;                // 14 spots (index 0..13)
-        uint256 reinvestCount;              // Cycle count (0 = first cycle)
-        uint256 heldTokenForUpgrade;        // BTC held at spot 4 for the auto-upgrade
-        uint256 lastSpillUnderReceiverIndex;// Round-robin pointer for downline spill
-        uint256 totalTeamSize;              // Total placements in this matrix (all cycles)
-        uint256 totalEarning;               // Total BTC earned from this matrix
+    struct Board {
+        address[] slots;        // current-cycle fills (length 0..14)
+        uint256 reinvestCount;  // completed cycles (0 = first cycle)
+        uint256 totalFilled;    // lifetime placements (all cycles)
+        uint256 totalEarning;   // BTC earned by this board's owner at this level
     }
 
     struct User {
         uint256 id;
-        address referrer;                   // Initial sponsor
+        address referrer;                   // sponsor (the placement upline = referral upline)
         uint256 referrerId;
         address[] directReferrals;
         uint256 teamSize;
         uint256 registrationTimestamp;
-        uint256 totalIncome;                // Total BTC earned across all slots
+        uint256 totalIncome;                // total BTC earned across all levels
         mapping(uint8 => bool) activeLevels;
-        mapping(uint8 => XMatrix) xMatrix;
-        // --- Genealogy placement tree (display only; does NOT affect income) ---
-        // Every entrant is placed under its own sponsor's leg, top->bottom/left->right
-        // (spillover down). This guarantees the matrix view shows each member under
-        // the correct parent. Income distribution above is fully independent of this.
-        mapping(uint8 => address) gParent;  // genealogy placement parent (per level)
-        mapping(uint8 => address) gChild0;  // genealogy left child  (per level)
-        mapping(uint8 => address) gChild1;  // genealogy right child (per level)
+        mapping(uint8 => Board) board;      // per-level 14-slot board
+        mapping(uint8 => uint256) lastDownlineIdx; // round-robin pointer for downline payouts
     }
 
     struct LaeRewardSchedule {
@@ -71,8 +94,8 @@ contract LAEClubMatrix {
     // --- Core state ---
     address public owner;
     address public PAYMENT_TOKEN;            // BTC (BEP-20) used for registration & income
-    address public CLUB_POOL_ADDRESS;        // "Club Pool" (spot 4 in recycle cycles)
-    address public TREASURY_POOL_ADDRESS;    // Platform treasury (owner-matrix spillover)
+    address public CLUB_POOL_ADDRESS;        // legacy pool (kept for ABI compatibility)
+    address public TREASURY_POOL_ADDRESS;    // platform treasury (lapse / role 4,5,14)
 
     mapping(address => User) private users;
     mapping(uint256 => address) public idToAddress;
@@ -110,6 +133,7 @@ contract LAEClubMatrix {
     event Reinvest(uint256 indexed userId, uint256 indexed newReferrerId, uint256 indexed callerId, uint8 level);
     event Upgrade(uint256 indexed userId, uint256 indexed newReferrerId, uint8 level);
     event MissedIncome(uint256 indexed receiverId, uint256 indexed userId, uint8 level);
+    event LapseIncome(uint256 indexed receiverId, uint256 indexed fromId, uint8 level, uint256 amount);
     event TokenTransferFailed(address indexed recipient, uint256 amount, string reason);
     event PoolAddressesUpdated(address indexed newClubPool, address indexed newTreasuryPool);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
@@ -160,26 +184,26 @@ contract LAEClubMatrix {
         TREASURY_POOL_ADDRESS = platformTreasuryAddress;
 
         // Slot 1 full price = 0.001 BTC; each slot doubles up to slot 15 (16.384 BTC).
-        // 90% of each price flows through the matrix (slot 1 matrix share = 0.0009 BTC).
         levelTokenCost[1] = 1e15;
         for (uint8 i = 2; i <= LAST_LEVEL; i++) {
             levelTokenCost[i] = levelTokenCost[i - 1] * 2;
         }
 
-        users[ownerAddress].id = 1;
-        users[ownerAddress].referrer = address(0);
-        users[ownerAddress].referrerId = 0;
-        users[ownerAddress].registrationTimestamp = block.timestamp;
+        User storage o = users[ownerAddress];
+        o.id = 1;
+        o.referrer = address(0);
+        o.referrerId = 0;
+        o.registrationTimestamp = block.timestamp;
         idToAddress[1] = ownerAddress;
         addressToId[ownerAddress] = 1;
         for (uint8 level = 1; level <= LAST_LEVEL; level++) {
-            users[ownerAddress].activeLevels[level] = true;
+            o.activeLevels[level] = true;
         }
 
-        // 20-month release: 5%/month; month M (1..20) requires M+1 direct referrals (2..21).
+        // 20-month release: 5%/month; month M (1..20) requires M+1 direct referrals.
         for (uint8 month = 0; month < VESTING_MONTHS; month++) {
             monthlyReleaseBps[month] = 500;
-            directRequirementByMonth[month] = uint256(month) + 2; // month index 1 → 2 directs … 20 → 21
+            directRequirementByMonth[month] = uint256(month) + 2;
         }
     }
 
@@ -289,8 +313,7 @@ contract LAEClubMatrix {
         require(newOwner != address(0), "LAEClubMatrix: zero owner");
         require(!isUserExists(newOwner), "LAEClubMatrix: user exists");
 
-        address oldOwner = owner;
-        User storage oldUser = users[oldOwner];
+        User storage oldUser = users[owner];
         User storage newUser = users[newOwner];
 
         newUser.id = oldUser.id;
@@ -303,22 +326,16 @@ contract LAEClubMatrix {
 
         for (uint8 level = 1; level <= LAST_LEVEL; level++) {
             newUser.activeLevels[level] = oldUser.activeLevels[level];
-            XMatrix storage source = oldUser.xMatrix[level];
-            XMatrix storage target = newUser.xMatrix[level];
-            target.currentReferrer = source.currentReferrer;
-            target.referrals = source.referrals;
-            target.reinvestCount = source.reinvestCount;
-            target.heldTokenForUpgrade = source.heldTokenForUpgrade;
-            target.lastSpillUnderReceiverIndex = source.lastSpillUnderReceiverIndex;
-            target.totalTeamSize = source.totalTeamSize;
-            target.totalEarning = source.totalEarning;
-
-            // Preserve the display-genealogy roots (owner has no parent).
-            newUser.gParent[level] = oldUser.gParent[level];
-            newUser.gChild0[level] = oldUser.gChild0[level];
-            newUser.gChild1[level] = oldUser.gChild1[level];
+            Board storage src = oldUser.board[level];
+            Board storage dst = newUser.board[level];
+            dst.slots = src.slots;
+            dst.reinvestCount = src.reinvestCount;
+            dst.totalFilled = src.totalFilled;
+            dst.totalEarning = src.totalEarning;
+            newUser.lastDownlineIdx[level] = oldUser.lastDownlineIdx[level];
         }
 
+        address oldOwner = owner;
         delete users[oldOwner];
         idToAddress[1] = newOwner;
         addressToId[oldOwner] = 0;
@@ -334,11 +351,12 @@ contract LAEClubMatrix {
         uint256 referrerId = users[referrerAddress].id;
         uint256 currentUserId = lastUserId;
 
-        users[userAddress].id = currentUserId;
-        users[userAddress].referrer = referrerAddress;
-        users[userAddress].referrerId = referrerId;
-        users[userAddress].activeLevels[1] = true;
-        users[userAddress].registrationTimestamp = block.timestamp;
+        User storage u = users[userAddress];
+        u.id = currentUserId;
+        u.referrer = referrerAddress;
+        u.referrerId = referrerId;
+        u.activeLevels[1] = true;
+        u.registrationTimestamp = block.timestamp;
 
         idToAddress[currentUserId] = userAddress;
         addressToId[userAddress] = currentUserId;
@@ -351,260 +369,206 @@ contract LAEClubMatrix {
         users[referrerAddress].directReferrals.push(userAddress);
         emit Registration(currentUserId, referrerId, userAddress);
 
-        // Income now FOLLOWS the genealogy tree: the entrant is placed under its
-        // own sponsor's leg, and income is paid by the entrant's position in that
-        // tree (single recipient). Display and income are one and the same.
-        users[userAddress].xMatrix[1].currentReferrer = referrerAddress;
-        _placeGenealogy(userAddress, referrerAddress, 1);
         _bumpTeamSize(referrerAddress);
-        _payByGenealogy(userAddress, 1);
-        _progressUpgrades(userAddress, 1);
+        // Sequential placement into every upline's level-1 board; pays income once
+        // (decided by the new member's slot in its direct sponsor's board).
+        _placeMember(userAddress, 1, true);
     }
 
     function _registerPartner(address userAddress, uint256 partnerId) private {
-        users[userAddress].id = partnerId;
-        users[userAddress].referrer = owner;
-        users[userAddress].referrerId = 1;
-        users[userAddress].activeLevels[1] = true;
-        users[userAddress].registrationTimestamp = block.timestamp;
+        User storage u = users[userAddress];
+        u.id = partnerId;
+        u.referrer = owner;
+        u.referrerId = 1;
+        u.activeLevels[1] = true;
+        u.registrationTimestamp = block.timestamp;
 
         idToAddress[partnerId] = userAddress;
         addressToId[userAddress] = partnerId;
         users[owner].directReferrals.push(userAddress);
         emit Registration(partnerId, 1, userAddress);
 
-        // Initial partners sit directly under the owner (genealogy = income).
-        users[userAddress].xMatrix[1].currentReferrer = owner;
-        _placeGenealogy(userAddress, owner, 1);
         _bumpTeamSize(owner);
-        _payByGenealogy(userAddress, 1);
-        _progressUpgrades(userAddress, 1);
+        // Initial partners are placed for free (setup) — no payout from an unfunded contract.
+        _placeMember(userAddress, 1, false);
     }
 
     /**
      * @dev Increment total team size up the sponsor chain (bounded for gas).
-     *      "Direct team" is tracked separately via directReferrals.
      */
     function _bumpTeamSize(address sponsor) private {
         address cur = sponsor;
-        for (uint256 i = 0; i < 64 && cur != address(0); i++) {
+        for (uint256 i = 0; i < MAX_UPLINE && cur != address(0); i++) {
             users[cur].teamSize++;
             cur = users[cur].referrer;
         }
     }
 
     /**
-     * @dev Locate the board owner that earns from `entrant` and the entrant's
-     *      position (1..14) in that board. Income follows the genealogy tree: the
-     *      board owner is the entrant's SPONSOR (the person who referred it). The
-     *      entrant was placed under the sponsor's leg, so its position in the
-     *      sponsor's board decides the role exactly as shown on the dashboard.
-     *      Single recipient — exactly the original economics, genealogy-correct.
+     * @dev Place `member` into the level-`level` board of its sponsor and of every
+     *      upline that owns this level (top to bottom). The FIRST active board
+     *      encountered (the direct sponsor for level 1) decides the single income
+     *      payout. All other boards are filled for display only (no money moves).
+     *      When a board reaches slot 5 the owner's next level unlocks for free;
+     *      slot 14 recycles the board.
      */
-    function _locate(address entrant, uint8 level) private view returns (address boardOwner, uint8 pos) {
-        address sponsor = users[entrant].referrer;
-        if (sponsor == address(0)) sponsor = owner;
-        boardOwner = sponsor;
-        pos = _genPosition(sponsor, entrant, level);
-    }
+    function _placeMember(address member, uint8 level, bool doPay) private {
+        if (level == 0 || level > LAST_LEVEL) return;
 
-    /**
-     * @dev Position (1..14) of `node` inside `boardOwner`'s genealogy board using
-     *      the fixed 2-4-8 layout (children of position p are 2p and 2p+1).
-     *      `node` is at most 3 levels below `boardOwner`.
-     */
-    function _genPosition(address boardOwner, address node, uint8 level) private view returns (uint8) {
-        uint8[3] memory dir; // 1 = left (gChild0), 2 = right (gChild1)
-        uint8 depth = 0;
-        address cur = node;
-        while (cur != boardOwner && depth < 3) {
-            address par = users[cur].gParent[level];
-            if (par == address(0)) return 0;
-            dir[depth] = (users[par].gChild0[level] == cur) ? 1 : 2;
-            depth++;
-            cur = par;
-        }
-        if (cur != boardOwner) return 0;
+        address cur = users[member].referrer;
+        uint256 hops = 0;
+        bool paid = false;
 
-        uint8 p = 0;
-        for (uint8 i = depth; i > 0; i--) {
-            p = p * 2 + dir[i - 1];
-        }
-        return p;
-    }
+        while (cur != address(0) && hops < MAX_UPLINE) {
+            if (users[cur].activeLevels[level]) {
+                uint8 slot = _appendBoard(cur, member, level);
+                emit NewUserPlace(users[member].id, users[cur].id, level, users[cur].board[level].reinvestCount + 1, slot);
 
-    /**
-     * @dev Distribute the 90% matrix share for `entrant` based on its position in
-     *      the genealogy board of its earning ancestor. Single recipient. The role
-     *      table matches the dashboard: 1,2 = upline; 3,6,8,9,11,12 = self;
-     *      4 = reserve/upgrade hold; 5 = auto-upgrade; 7,10 = 1st downline;
-     *      13 = 2nd downline; 14 = recycle credit.
-     */
-    function _payByGenealogy(address entrant, uint8 level) private {
-        (address O, uint8 pos) = _locate(entrant, level);
-        if (O == address(0) || pos == 0) {
-            // Root with no ancestor board (e.g. owner self) — route to treasury.
-            _sendToPlatformTreasury(levelTokenCost[level]);
-            return;
-        }
+                if (doPay && !paid) {
+                    _payByRole(member, cur, slot, level);
+                    paid = true;
+                }
 
-        XMatrix storage m = users[O].xMatrix[level];
-        uint256 amount = levelTokenCost[level];
-        uint256 ownerId = users[O].id;
-
-        emit NewUserPlace(users[entrant].id, ownerId, level, m.reinvestCount + 1, pos);
-
-        // Spot 1 & 2 → upline income (board owner is the owner → treasury).
-        if (pos == 1 || pos == 2) {
-            if (O == owner) {
-                _sendToPlatformTreasury(amount);
-                return;
+                _afterFill(cur, slot, level);
             }
-            address upline = _findEligibleUplineTarget(entrant, O, pos, level);
-            emit Spillover(ownerId, users[upline].id, level, m.reinvestCount + 1, pos == 1 ? 15 : 16);
-            _sendTokenDividends(upline, entrant, level, amount);
-            return;
+            cur = users[cur].referrer;
+            hops++;
         }
 
-        // Spot 4 & 5 (slot upgrade funding) and 14 (recycle) → platform treasury.
-        // The free slot unlock / recycle itself is handled by _progressUpgrades.
-        if (pos == 4 || pos == 5 || pos == 14) {
+        // No active upline to earn from (e.g. very top) — route the share to treasury.
+        if (doPay && !paid) {
+            _sendToPlatformTreasury(levelTokenCost[level]);
+        }
+    }
+
+    /**
+     * @dev Append `member` to `boardOwner`'s current-cycle board and return its
+     *      1-based slot (1..14).
+     */
+    function _appendBoard(address boardOwner, address member, uint8 level) private returns (uint8 slot) {
+        Board storage b = users[boardOwner].board[level];
+        b.slots.push(member);
+        b.totalFilled += 1;
+        slot = uint8(b.slots.length);
+    }
+
+    /**
+     * @dev Progression hooks: slot 5 unlocks the owner's next level (free); slot 14
+     *      completes the cycle and recycles the board.
+     */
+    function _afterFill(address boardOwner, uint8 slot, uint8 level) private {
+        if (slot == 5) {
+            _unlockNextLevel(boardOwner, level + 1);
+        }
+        if (slot == MATRIX_SIZE) {
+            Board storage b = users[boardOwner].board[level];
+            delete b.slots;            // reset for the next cycle
+            b.reinvestCount += 1;
+            emit Reinvest(users[boardOwner].id, users[boardOwner].id, users[boardOwner].id, level);
+        }
+    }
+
+    /**
+     * @dev Free level unlock. Marks `nextLevel` active for `user` and places `user`
+     *      into its uplines' boards at that level (display/progression only — no
+     *      token movement, exactly as the prior contract treated upgrades).
+     */
+    function _unlockNextLevel(address user, uint8 nextLevel) private {
+        if (nextLevel > LAST_LEVEL) return;
+        if (users[user].activeLevels[nextLevel]) return;
+        users[user].activeLevels[nextLevel] = true;
+        emit Upgrade(users[user].id, users[users[user].referrer].id, nextLevel);
+        _placeMember(user, nextLevel, false);
+    }
+
+    // --- INCOME (single 90% payout, role table + eligibility/lapse) ---
+
+    function _payByRole(address member, address boardOwner, uint8 slot, uint8 level) private {
+        uint256 amount = levelTokenCost[level];
+
+        // Treasury slots.
+        if (slot == 4 || slot == 5 || slot == 14) {
             _sendToPlatformTreasury(amount);
             return;
         }
 
-        // Spot 7 & 10 → 1st downline income.
-        if (pos == 7 || pos == 10) {
-            address downline = _findEligibleDownlineUser(entrant, O, 1, level);
-            emit Spillover(ownerId, users[downline].id, level, m.reinvestCount + 1, pos == 7 ? 17 : 18);
-            _sendTokenDividends(downline, entrant, level, amount);
-            return;
+        address target;
+        if (slot == 1 || slot == 2) {
+            target = _uplineOf(boardOwner, slot == 1 ? 1 : 2);
+            if (target == address(0)) target = boardOwner; // lapse to board owner (e.g. owner has no upline)
+        } else if (slot == 7 || slot == 10) {
+            target = _downlineOf(boardOwner, 1, level);
+            if (target == address(0)) target = boardOwner;
+        } else if (slot == 13) {
+            target = _downlineOf(boardOwner, 2, level);
+            if (target == address(0)) target = boardOwner;
+        } else {
+            // 3,6,8,9,11,12 -> self
+            target = boardOwner;
         }
 
-        // Spot 13 → 2nd downline income.
-        if (pos == 13) {
-            address downline = _findEligibleDownlineUser(entrant, O, 2, level);
-            emit Spillover(ownerId, users[downline].id, level, m.reinvestCount + 1, 19);
-            _sendTokenDividends(downline, entrant, level, amount);
-            return;
-        }
-
-        // Self income → 3,6,8,9,11,12.
-        _sendTokenDividends(O, entrant, level, amount);
-    }
-
-    /**
-     * @dev MODEL B progression (display board drives level unlocks). Independent of
-     *      the single-pay income above. When `entrant` fills an ancestor's board at
-     *      position 5, that ancestor's NEXT level unlocks (free). At position 14 the
-     *      ancestor's board recycles. An entrant only ever lands at pos 5 of its
-     *      genealogy grandparent's board, and at pos 14 of its great-grandparent's.
-     */
-    function _progressUpgrades(address entrant, uint8 level) private {
-        address a1 = users[entrant].gParent[level];
-        if (a1 == address(0)) return;
-        address a2 = users[a1].gParent[level];
-        if (a2 != address(0)) {
-            if (_genPosition(a2, entrant, level) == 5) {
-                _upgradeLevel(a2, level + 1);
-            }
-            address a3 = users[a2].gParent[level];
-            if (a3 != address(0) && _genPosition(a3, entrant, level) == 14) {
-                _recycleBoard(a3, level);
-            }
+        (address recipient, bool isTreasury) = _resolveRecipient(target, member, level);
+        if (isTreasury) {
+            _sendToPlatformTreasury(amount);
+        } else {
+            _sendTokenDividends(recipient, member, level, amount);
         }
     }
 
     /**
-     * @dev Free auto-upgrade: unlock `nextLevel` for `user` and place it under its
-     *      own sponsor's leg at that level, then cascade progression. Idempotent — a
-     *      level is unlocked at most once.
-     *
-     *      NOTE: the upgrade does NOT move tokens. Registration only ever funds the
-     *      level-1 cost into the contract, so paying out higher-level income on a
-     *      free upgrade would drain the contract. The slot simply unlocks (matches
-     *      the dashboard board); per-level token income for L2+ is a separate
-     *      funding decision.
+     * @dev Eligibility + lapse: a recipient needs >= 2 directs (owner exempt). If
+     *      not eligible, lapse to the 1st upline, then the 2nd upline; otherwise
+     *      treasury. Never searches beyond 2 uplines.
      */
-    function _upgradeLevel(address user, uint8 nextLevel) private {
-        if (nextLevel > LAST_LEVEL) return;
-        if (users[user].activeLevels[nextLevel]) return;
-        users[user].activeLevels[nextLevel] = true;
-
-        address sponsorForLevel = users[user].referrer;
-        if (sponsorForLevel == address(0)) sponsorForLevel = owner;
-        users[user].xMatrix[nextLevel].currentReferrer = sponsorForLevel;
-        _placeGenealogy(user, sponsorForLevel, nextLevel);
-
-        emit Upgrade(users[user].id, users[sponsorForLevel].id, nextLevel);
-
-        _progressUpgrades(user, nextLevel);
-    }
-
-    /**
-     * @dev Board recycle marker. The 3-generation genealogy board is capped at 14,
-     *      so it never overflows; this records the completed cycle. (Structural
-     *      re-entry for additional cycles is intentionally deferred.)
-     */
-    function _recycleBoard(address boardOwner, uint8 level) private {
-        XMatrix storage m = users[boardOwner].xMatrix[level];
-        m.reinvestCount++;
-        emit Reinvest(users[boardOwner].id, users[boardOwner].id, users[boardOwner].id, level);
-    }
-
-    /**
-     * @dev Display-only placement. Attaches `entrant` to the first open child slot
-     *      in `sponsor`'s genealogy subtree using breadth-first (top->bottom,
-     *      left->right) order. This is what the matrix VIEW renders; it never moves
-     *      money and never touches the income/recycle logic above. Idempotent: a
-     *      user is placed at most once per level (recycles do not re-place).
-     */
-    function _placeGenealogy(address entrant, address sponsor, uint8 level) private {
-        if (entrant == address(0) || sponsor == address(0)) return;
-        if (entrant == sponsor) return;
-        if (users[entrant].gParent[level] != address(0)) return; // already placed
-
-        address[] memory queue = new address[](4096);
-        uint256 head = 0;
-        uint256 tail = 0;
-        queue[tail++] = sponsor;
-
-        while (head < tail) {
-            address node = queue[head++];
-            if (users[node].gChild0[level] == address(0)) {
-                users[node].gChild0[level] = entrant;
-                users[entrant].gParent[level] = node;
-                return;
+    function _resolveRecipient(address target, address member, uint8 level)
+        private
+        returns (address recipient, bool isTreasury)
+    {
+        address cur = target;
+        for (uint256 i = 0; i < 3; i++) { // target + up to 2 uplines
+            if (cur == address(0)) break;
+            if (_isEligible(cur)) {
+                if (i > 0) {
+                    emit LapseIncome(users[cur].id, users[member].id, level, _matrixShare(levelTokenCost[level]));
+                }
+                return (cur, false);
             }
-            if (users[node].gChild1[level] == address(0)) {
-                users[node].gChild1[level] = entrant;
-                users[entrant].gParent[level] = node;
-                return;
-            }
-            if (tail + 2 <= queue.length) {
-                queue[tail++] = users[node].gChild0[level];
-                queue[tail++] = users[node].gChild1[level];
-            }
+            emit MissedIncome(users[cur].id, users[member].id, level);
+            cur = users[cur].referrer;
         }
+        return (TREASURY_POOL_ADDRESS, true);
     }
 
-    function _findFreeReferrer(address userAddress, uint8 level) public view returns (address) {
-        uint256 currentReferrerId = users[userAddress].referrerId;
-        while (true) {
-            if (currentReferrerId == 0) {
-                return owner;
-            }
-            address currentAddress = idToAddress[currentReferrerId];
-            if (users[currentAddress].activeLevels[level] && users[currentAddress].xMatrix[level].referrals.length < MATRIX_SIZE) {
-                return currentAddress;
-            }
-            currentReferrerId = users[currentAddress].referrerId;
+    function _isEligible(address user) private view returns (bool) {
+        return user == owner || users[user].directReferrals.length >= 2;
+    }
+
+    function _uplineOf(address boardOwner, uint256 k) private view returns (address) {
+        address cur = boardOwner;
+        for (uint256 i = 0; i < k; i++) {
+            cur = users[cur].referrer;
+            if (cur == address(0)) return address(0);
         }
-        return owner;
+        return cur;
     }
 
-    function _isEligibleForSelfPayment(address userAddress) private view returns (bool) {
-        return userAddress == owner || users[userAddress].directReferrals.length >= 2;
+    function _downlineOf(address boardOwner, uint256 gen, uint8 level) private returns (address) {
+        address[] storage directs = users[boardOwner].directReferrals;
+        if (directs.length == 0) return address(0);
+
+        if (gen == 1) {
+            uint256 start = users[boardOwner].lastDownlineIdx[level] % directs.length;
+            address pick = directs[start];
+            users[boardOwner].lastDownlineIdx[level] = (start + 1) % directs.length;
+            return pick;
+        }
+
+        // gen 2 — first available second-generation direct.
+        for (uint256 i = 0; i < directs.length; i++) {
+            address[] storage sub = users[directs[i]].directReferrals;
+            if (sub.length > 0) return sub[0];
+        }
+        return address(0);
     }
 
     // --- BTC PAYOUTS (90% matrix share) ---
@@ -617,18 +581,8 @@ contract LAEClubMatrix {
             revert("LAEClubMatrix: token transfer failed to receiver");
         }
         users[receiver].totalIncome += distributable;
-        users[receiver].xMatrix[level].totalEarning += distributable;
+        users[receiver].board[level].totalEarning += distributable;
         emit TokenReceived(users[receiver].id, users[from].id, from, level, distributable);
-    }
-
-    function _sendToClubPool(address referrer, address userAddress, uint8 level, uint256 amount) private {
-        uint256 distributable = _matrixShare(amount);
-        bool success = IERC20(PAYMENT_TOKEN).transfer(CLUB_POOL_ADDRESS, distributable);
-        if (!success) {
-            emit TokenTransferFailed(CLUB_POOL_ADDRESS, distributable, "BTC transfer failed to Club Pool");
-            revert("LAEClubMatrix: Club Pool transfer failed");
-        }
-        emit ClubPoolPayment(users[referrer].id, users[userAddress].id, distributable, level);
     }
 
     function _sendToPlatformTreasury(uint256 amount) private {
@@ -642,68 +596,6 @@ contract LAEClubMatrix {
 
     function _matrixShare(uint256 amount) private view returns (uint256) {
         return (amount * matrixDistributionBps) / BPS;
-    }
-
-    // --- SPILL HELPERS ---
-
-    function _findEligibleUplineTarget(address newUser, address referrer, uint256 uplineLevel, uint8 level) private returns (address) {
-        address current = referrer;
-        for (uint256 i = 0; i < uplineLevel; i++) {
-            current = users[current].xMatrix[level].currentReferrer;
-            if (current == address(0)) {
-                return owner;
-            }
-        }
-
-        while (true) {
-            if (current == address(0) || current == owner) {
-                return owner;
-            }
-            if (_isEligibleForSelfPayment(current) && users[current].xMatrix[level].referrals.length < MATRIX_SIZE) {
-                return current;
-            }
-            emit MissedIncome(users[current].id, users[newUser].id, level);
-            current = users[current].xMatrix[level].currentReferrer;
-        }
-        return owner;
-    }
-
-    function _findEligibleDownlineUser(address newUser, address referrer, uint256 downlineLevel, uint8 level) private returns (address) {
-        if (downlineLevel == 1) {
-            XMatrix storage matrix = users[referrer].xMatrix[level];
-            address[] storage directs = users[referrer].directReferrals;
-            if (directs.length == 0) {
-                return owner;
-            }
-
-            uint256 startIdx = matrix.lastSpillUnderReceiverIndex;
-            for (uint256 i = 0; i < directs.length; i++) {
-                uint256 idx = (startIdx + i) % directs.length;
-                address candidate = directs[idx];
-                if (_isEligibleForSelfPayment(candidate) && users[candidate].xMatrix[level].referrals.length < MATRIX_SIZE) {
-                    matrix.lastSpillUnderReceiverIndex = (idx + 1) % directs.length;
-                    return candidate;
-                }
-                emit MissedIncome(users[candidate].id, users[newUser].id, level);
-            }
-            return owner;
-        }
-
-        address[] storage firstLevel = users[referrer].directReferrals;
-        if (firstLevel.length == 0) {
-            return owner;
-        }
-        for (uint256 i = 0; i < firstLevel.length; i++) {
-            address[] storage secondLevel = users[firstLevel[i]].directReferrals;
-            for (uint256 j = 0; j < secondLevel.length; j++) {
-                address candidate = secondLevel[j];
-                if (_isEligibleForSelfPayment(candidate) && users[candidate].xMatrix[level].referrals.length < MATRIX_SIZE) {
-                    return candidate;
-                }
-                emit MissedIncome(users[candidate].id, users[newUser].id, level);
-            }
-        }
-        return owner;
     }
 
     // --- LAE REWARD LAYER (10% liquidity → vested LAE) ---
@@ -949,6 +841,15 @@ contract LAEClubMatrix {
         return users[idToAddress[userId]].activeLevels[slot];
     }
 
+    /**
+     * @notice ABI-compatible board summary.
+     * @return currentReferrer        sponsor of `userAddress`
+     * @return reinvestCount          completed cycles at `level`
+     * @return heldTokenForUpgrade    always 0 (upgrades are free)
+     * @return lastSpillUnderReceiverIndex round-robin downline pointer
+     * @return totalTeamSize          lifetime placements in this board
+     * @return totalEarning           BTC earned at this level
+     */
     function usersXMatrix(address userAddress, uint8 level)
         external
         view
@@ -961,55 +862,54 @@ contract LAEClubMatrix {
             uint256 totalEarning
         )
     {
-        XMatrix storage matrix = users[userAddress].xMatrix[level];
+        User storage u = users[userAddress];
+        Board storage b = u.board[level];
         return (
-            matrix.currentReferrer,
-            matrix.reinvestCount,
-            matrix.heldTokenForUpgrade,
-            matrix.lastSpillUnderReceiverIndex,
-            matrix.totalTeamSize,
-            matrix.totalEarning
+            u.referrer,
+            b.reinvestCount,
+            0,
+            u.lastDownlineIdx[level],
+            b.totalFilled,
+            b.totalEarning
         );
     }
 
     /**
-     * @notice Returns the 14-position genealogy board for `userAddress` at `level`.
-     * @dev Index i (0..13) maps to matrix position i+1, arranged as a 2-4-8 tree:
-     *      positions 1,2 = level 1; 3..6 = level 2; 7..14 = level 3. Empty slots are
-     *      address(0). Each occupant sits under its own sponsor's leg (top->bottom,
-     *      left->right). Occupants here may differ from the internal income array;
-     *      income distribution is independent of this display tree.
+     * @notice Returns the 14-slot current-cycle board for `userAddress` at `level`.
+     * @dev Index i (0..13) maps to matrix position i+1, filled in arrival order
+     *      (slot 1, 2, 3 …). Empty slots are address(0).
      */
     function usersXMatrixReferrals(address userAddress, uint8 level) external view returns (address[] memory) {
-        address[] memory board = new address[](MATRIX_SIZE);
-
-        // Level-order fill. Positions 0,1 are the owner's children; for any later
-        // position p, its parent position is (p-2)/2 and it is the parent's left
-        // child when p is even, right child when p is odd. Parents are always filled
-        // before their children, so a single forward pass is sufficient.
-        board[0] = users[userAddress].gChild0[level];
-        board[1] = users[userAddress].gChild1[level];
-
-        for (uint256 p = 2; p < MATRIX_SIZE; p++) {
-            address parentAddr = board[(p - 2) / 2];
-            if (parentAddr == address(0)) continue;
-            board[p] = (p % 2 == 0)
-                ? users[parentAddr].gChild0[level]
-                : users[parentAddr].gChild1[level];
+        address[] memory out = new address[](MATRIX_SIZE);
+        address[] storage s = users[userAddress].board[level].slots;
+        uint256 n = s.length;
+        for (uint256 i = 0; i < n && i < MATRIX_SIZE; i++) {
+            out[i] = s[i];
         }
-
-        return board;
+        return out;
     }
 
-    /// @notice Genealogy parent / children of a user at a level (display tree).
+    /**
+     * @notice Referral-tree view (kept for ABI compatibility). In this model the
+     *         placement upline equals the referral upline, so `parentId` is the
+     *         sponsor and the two children are the first two direct referrals.
+     */
     function genealogyOf(uint256 userId, uint8 level)
         external
         view
         returns (uint256 parentId, uint256 leftChildId, uint256 rightChildId)
     {
+        level; // unused — referral tree is level-independent
         address userAddress = idToAddress[userId];
-        parentId = addressToId[users[userAddress].gParent[level]];
-        leftChildId = addressToId[users[userAddress].gChild0[level]];
-        rightChildId = addressToId[users[userAddress].gChild1[level]];
+        parentId = users[userAddress].referrerId;
+
+        address[] storage directs = users[userAddress].directReferrals;
+        if (directs.length > 0) leftChildId = addressToId[directs[0]];
+        if (directs.length > 1) rightChildId = addressToId[directs[1]];
+    }
+
+    /// @notice Total direct referrals of a user (helper for off-chain board building).
+    function getBoardLength(uint256 userId, uint8 level) external view returns (uint256) {
+        return users[idToAddress[userId]].board[level].slots.length;
     }
 }

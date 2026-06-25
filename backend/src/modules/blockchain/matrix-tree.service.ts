@@ -112,93 +112,6 @@ async function readGenealogyBoard(
   return { filled, completed, slots };
 }
 
-/** Members in genealogy tree but NOT in the fixed 14-box (cycle 2 candidates). */
-async function findOffBoardMembers(
-  matrixOwnerId: number,
-  level: number
-): Promise<Array<{ userId: number; address: string | null }>> {
-  const m = matrixContract();
-  const wallet = await walletForUserId(matrixOwnerId);
-  if (!wallet) return [];
-
-  const board = await readGenealogyBoard(wallet, level);
-  const onBoard = new Set(board.slots.filter((s) => s.userId).map((s) => s.userId!));
-  const offBoard: Array<{ userId: number; address: string | null }> = [];
-
-  async function visit(nodeId: number): Promise<void> {
-    if (nodeId <= 0) return;
-    try {
-      const gen = await m.genealogyOf(nodeId, level);
-      const leftId = Number(gen.leftChildId ?? gen[1] ?? 0);
-      const rightId = Number(gen.rightChildId ?? gen[2] ?? 0);
-      for (const childId of [leftId, rightId]) {
-        if (childId <= 0) continue;
-        if (!onBoard.has(childId)) {
-          offBoard.push({
-            userId: childId,
-            address: await walletForUserId(childId),
-          });
-        }
-        await visit(childId);
-      }
-    } catch {
-      /* skip */
-    }
-  }
-
-  try {
-    const rootGen = await m.genealogyOf(matrixOwnerId, level);
-    const leftId = Number(rootGen.leftChildId ?? rootGen[1] ?? 0);
-    const rightId = Number(rootGen.rightChildId ?? rootGen[2] ?? 0);
-    if (leftId > 0) await visit(leftId);
-    if (rightId > 0) await visit(rightId);
-  } catch {
-    return offBoard;
-  }
-
-  // Registration order (16th ID = first in cycle 2 display).
-  const rows = await prisma.matrixCoreUser.findMany({
-    where: { userId: { in: offBoard.map((o) => o.userId) } },
-    select: { userId: true, registeredBlock: true },
-    orderBy: { registeredBlock: "asc" },
-  });
-  const order = new Map(rows.map((r, i) => [r.userId, i]));
-  offBoard.sort((a, b) => (order.get(a.userId) ?? a.userId) - (order.get(b.userId) ?? b.userId));
-
-  return offBoard;
-}
-
-/** Map cycle-2 members sequentially into positions 1, 2, 3… */
-function mapSequentialBoard(
-  members: Array<{ userId: number; address: string | null }>
-): { slots: MatrixSlotDTO[]; filled: number } {
-  const filled = Math.min(members.length, MATRIX_SIZE);
-  const completed = filled >= MATRIX_SIZE;
-  const nextOpen = completed ? 0 : filled + 1;
-  const slots: MatrixSlotDTO[] = [];
-
-  for (let p = 1; p <= MATRIX_SIZE; p++) {
-    const m = members[p - 1];
-    if (m) {
-      slots.push({
-        position: p,
-        state: "filled",
-        userId: m.userId,
-        address: m.address,
-      });
-    } else {
-      slots.push({
-        position: p,
-        state: !completed && p === nextOpen ? "open" : "waiting",
-        userId: null,
-        address: null,
-      });
-    }
-  }
-
-  return { slots, filled };
-}
-
 function treePayload(
   userId: number,
   address: string,
@@ -285,7 +198,14 @@ async function treeFromDb(
   };
 }
 
-/** Resolve matrix tree per cycle: cycle 1 = 14-box snapshot; cycle 2+ = new members at pos 1,2,3… */
+/**
+ * Resolve matrix tree per cycle.
+ *
+ * New contract model: each board is a sequential 14-slot list (the owner's whole
+ * downline in arrival order) that resets on recycle. So `usersXMatrixReferrals`
+ * always returns the LIVE current-cycle board. Historical (completed) cycles are
+ * no longer on-chain — they come from the indexed DB positions instead.
+ */
 async function treeFromChain(
   userId: number,
   level: number,
@@ -307,42 +227,33 @@ async function treeFromChain(
     const slot2Opened = Boolean(slot2Active);
     const totalEarned = String(details.totalIncome ?? "0");
 
-    // Completed cycle (e.g. Cycle 1 when now on Cycle 2) → frozen 14-box board.
+    // Completed (historical) cycle → on-chain board has been reset, so rebuild
+    // from indexed DB positions. Fall back to a full 14-box if DB lags.
     if (cycleId < currentCycle) {
-      const board = await readGenealogyBoard(wallet, level);
+      const dbTree = await treeFromDb(userId, level, cycleId);
+      if (dbTree) return dbTree;
+
+      const filledSlots: MatrixSlotDTO[] = Array.from({ length: MATRIX_SIZE }, (_, i) => ({
+        position: i + 1,
+        state: "filled" as SlotState,
+        userId: null,
+        address: null,
+      }));
       return treePayload(
         userId,
         wallet,
         level,
         cycleId,
-        board.filled,
+        MATRIX_SIZE,
         true,
         slot2Opened,
         totalEarned,
         reinvestCount,
-        board.slots
+        filledSlots
       );
     }
 
-    // Active cycle 2+ → members beyond the 14-box, shown at spot 1, 2, 3…
-    if (reinvestCount > 0 && cycleId === currentCycle) {
-      const offBoard = await findOffBoardMembers(userId, level);
-      const { slots, filled } = mapSequentialBoard(offBoard);
-      return treePayload(
-        userId,
-        wallet,
-        level,
-        cycleId,
-        filled,
-        filled >= MATRIX_SIZE,
-        slot2Opened,
-        totalEarned,
-        reinvestCount,
-        slots
-      );
-    }
-
-    // Cycle 1 (no recycle yet) → live genealogy 14-box from chain.
+    // Current cycle → live sequential board straight from chain.
     const board = await readGenealogyBoard(wallet, level);
     return treePayload(
       userId,

@@ -4,30 +4,35 @@
 
 ---
 
-## ⚡ MODEL B — BOARD DRIVES SLOT UNLOCK (only LAEClubMatrix)
+## ⚡ NEW MODEL — UNLIMITED-UPLINE SEQUENTIAL MATRIX (only LAEClubMatrix)
 
-> Two things are now cleanly separated:
+> **1. PLACEMENT (display / team).** Every user owns an independent 14-slot board
+> per level. A new member is appended to the next free slot of its sponsor's board
+> **and of every upline's board, all the way to the top** (arrival order: slot
+> 1, 2, 3 …). So each user's board shows their entire downline as it grew
+> (Owner's board = A,B,D in slots 1,2,3). At 14 the board recycles (Cycle 2 starts).
 >
-> **1. INCOME (money) — single recipient per registration.** A member is placed
-> under its own sponsor's leg (top→bottom / left→right) and the money is decided by
-> the member's **position in its sponsor's board** using the role table:
-> `1,2 = upline · 3,6,8,9,11,12 = self · 4,5,14 = treasury · 7,10 = 1st downline ·
-> 13 = 2nd downline`. The earner receives it as real matrix income (shows on the
-> dashboard, increments on-chain `totalIncome`).
+> **2. INCOME (money) — single 90% payout per registration.** The payout is decided
+> by the new member's **slot in its DIRECT SPONSOR's board** using the role table:
+> `1,2 = sponsor's upline1/upline2 · 3,6,8,9,11,12 = sponsor (self) ·
+> 4,5,14 = treasury · 7,10 = 1st downline · 13 = 2nd downline`. Paying once (not
+> once per upline board) keeps the contract **solvent** while routing the money to
+> the same person the design intends, via the lapse rule below.
 >
-> **2. PROGRESSION (slot unlock / recycle) — follows the DISPLAYED board.** When
-> **your displayed board's position 5 fills** (even by spillover from your upline),
-> **your next slot unlocks for FREE** (`_progressUpgrades` → `_upgradeLevel`,
-> idempotent). When position 14 fills, the board records a recycle. So the slot
-> unlock now matches exactly what the dashboard tree shows — fixing the case where
-> "4th & 5th positions filled but slot 2 stayed locked".
+> **3. ELIGIBILITY + LAPSE.** A recipient needs **≥ 2 direct referrals** (owner is
+> always eligible). If not eligible, the income lapses to the **1st upline**, then
+> the **2nd upline**; if neither qualifies it goes to the **Treasury**. Never past
+> 2 uplines.
 >
-> **LAECoin is unchanged — do NOT redeploy it.** The LAE reward + 10% liquidity
-> split is untouched.
+> **4. PROGRESSION.** When a board's position 5 fills, the owner's next level
+> unlocks **for FREE**; position 14 recycles the board.
 >
-> ⚠️ **Known simplification:** the 3-generation board is capped at 14 slots, so a
-> recycle records the completed cycle but does not yet hand the owner a brand-new
-> board for further cycles. Rare in testing.
+> **REVENUE SPLIT (unchanged):** 90% matrix · 10% liquidity → vested LAE (20 months).
+> **LAECoin is unchanged — do NOT redeploy it.**
+>
+> ⚠️ **Note:** upward propagation is bounded to `MAX_UPLINE = 60` levels deep for
+> gas safety. Higher levels (2–15) unlock for free and fill for display; only the
+> level-1 registration moves money (same as before).
 
 **Steps:**
 
