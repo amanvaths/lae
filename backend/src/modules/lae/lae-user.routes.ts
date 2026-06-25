@@ -23,7 +23,8 @@ export async function laeUserRoutes(app: FastifyInstance): Promise<void> {
     const wallet = walletFromQuery(request.query as Record<string, unknown>);
     if (!wallet) return reply.code(400).send({ error: "wallet query required (0x…)" });
     const q = request.query as { kind?: string; limit?: string };
-    const kind = q.kind === "matrix" || q.kind === "treasury" ? q.kind : undefined;
+    const kind =
+      q.kind === "matrix" || q.kind === "treasury" || q.kind === "lapse" ? q.kind : undefined;
     const limit = Number(q.limit ?? 100);
     const incomes = await getLaeUserIncome(wallet, kind, limit);
     return { incomes, source: "indexer" };

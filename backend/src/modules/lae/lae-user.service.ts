@@ -40,7 +40,7 @@ export async function getLaeUserByWallet(wallet: string) {
 
 export async function getLaeUserIncome(
   wallet: string,
-  kind?: "matrix" | "treasury",
+  kind?: "matrix" | "treasury" | "lapse",
   limit = 100
 ) {
   const userId = await laeUserIdForWallet(wallet);
@@ -49,9 +49,11 @@ export async function getLaeUserIncome(
   const kindFilter =
     kind === "matrix"
       ? { kind: "matrix" }
-      : kind === "treasury"
-        ? { kind: { in: ["club", "treasury"] } }
-        : {};
+      : kind === "lapse"
+        ? { kind: "lapse" }
+        : kind === "treasury"
+          ? { kind: { in: ["club", "treasury"] } }
+          : {};
 
   const rows = await prisma.matrixCoreIncome.findMany({
     where: { toUserId: userId, ...kindFilter },
@@ -65,9 +67,11 @@ export async function getLaeUserIncome(
   const eventNames =
     kind === "treasury"
       ? ["ClubPoolPayment"]
-      : kind === "matrix"
-        ? ["TokenReceived"]
-        : ["TokenReceived", "ClubPoolPayment"];
+      : kind === "lapse"
+        ? ["LapseIncome"]
+        : kind === "matrix"
+          ? ["TokenReceived"]
+          : ["TokenReceived", "ClubPoolPayment", "LapseIncome"];
 
   const uid = String(userId);
   const events = await prisma.chainEvent.findMany({
@@ -87,7 +91,7 @@ export async function getLaeUserIncome(
     events.map((e) => {
       const p = (e.payload ?? {}) as Record<string, string>;
       return {
-        kind: e.eventName === "TokenReceived" ? "matrix" : "club",
+        kind: e.eventName === "TokenReceived" ? "matrix" : e.eventName === "LapseIncome" ? "lapse" : "club",
         fromUserId: p.fromId ? Number(p.fromId) : null,
         toUserId: userId,
         level: p.level ? Number(p.level) : null,
@@ -108,6 +112,7 @@ const MATRIX_EVENT_NAMES = [
   "Reinvest",
   "Upgrade",
   "MissedIncome",
+  "LapseIncome",
   "Spillover",
   "LaeRewardAllocated",
   "LaeRewardClaimed",

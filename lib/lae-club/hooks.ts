@@ -472,18 +472,28 @@ export function useLaeUserEvents() {
 
 export function useLaeIncomeEvents() {
   const events = useLaeUserEvents();
-  const income = (events.data ?? []).filter((e) => e.eventName === "TokenReceived");
+  const lapse = (events.data ?? []).filter((e) => e.eventName === "LapseIncome");
+  const lapseTxKeys = new Set(
+    lapse.map((e) => {
+      const a = e.args as { receiverId?: bigint; fromId?: bigint };
+      return `${e.transactionHash}:${String(a.receiverId ?? "")}:${String(a.fromId ?? "")}`;
+    })
+  );
+  const income = (events.data ?? []).filter((e) => {
+    if (e.eventName !== "TokenReceived") return false;
+    const a = e.args as { receiverId?: bigint; fromId?: bigint };
+    const key = `${e.transactionHash}:${String(a.receiverId ?? "")}:${String(a.fromId ?? "")}`;
+    return !lapseTxKeys.has(key);
+  });
   const treasury = (events.data ?? []).filter((e) => e.eventName === "ClubPoolPayment");
-  const totalMatrix = income.reduce((s, e) => {
-    const amount = (e.args as { amount?: bigint }).amount;
-    return s + (amount ?? 0n);
-  }, 0n);
-  const totalTreasury = treasury.reduce((s, e) => {
-    const amount = (e.args as { amount?: bigint }).amount;
-    return s + (amount ?? 0n);
-  }, 0n);
+  const sumAmount = (rows: typeof income) =>
+    rows.reduce((s, e) => s + ((e.args as { amount?: bigint }).amount ?? 0n), 0n);
+  const totalMatrix = sumAmount(income);
+  const totalLapse = sumAmount(lapse);
+  const totalTreasury = sumAmount(treasury);
   return {
     incomeEvents: income,
+    lapseEvents: lapse,
     royalEvents: treasury,
     allEvents: events.data ?? [],
     spillEvents: [] as MatrixUserEvent[],
@@ -491,6 +501,7 @@ export function useLaeIncomeEvents() {
     reinvestEvents: (events.data ?? []).filter((e) => e.eventName === "Reinvest"),
     upgradeEvents: (events.data ?? []).filter((e) => e.eventName === "Upgrade"),
     totalMatrixIncome: totalMatrix,
+    totalLapseIncome: totalLapse,
     totalRoyalIncome: totalTreasury,
     isLoading: events.isLoading,
     isFetching: events.isFetching,

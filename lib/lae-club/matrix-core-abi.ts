@@ -214,6 +214,16 @@ export const laeClubMatrixAbi = [
   },
   {
     type: "event",
+    name: "LapseIncome",
+    inputs: [
+      { name: "receiverId", type: "uint256", indexed: true },
+      { name: "fromId", type: "uint256", indexed: true },
+      { name: "level", type: "uint8", indexed: false },
+      { name: "amount", type: "uint256", indexed: false },
+    ],
+  },
+  {
+    type: "event",
     name: "LaeRewardAllocated",
     inputs: [
       { name: "user", type: "address", indexed: true },

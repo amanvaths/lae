@@ -32,17 +32,17 @@ function normalizeApiEvent(row: ApiEventRow): MatrixUserEvent {
   } as MatrixUserEvent;
 }
 
-/** Indexed income rows from backend (matrix + club pool). */
+/** Indexed income rows from backend (matrix + lapse + club pool). */
 export async function fetchLaeUserIncomeFromApi(
   wallet: string,
-  kind?: "matrix" | "treasury",
+  kind?: "matrix" | "treasury" | "lapse",
   limit = 200
 ): Promise<MatrixUserEvent[] | null> {
   const base = API_BASE_URL.replace(/\/$/, "");
   if (!base) return null;
 
   const params = new URLSearchParams({ wallet, limit: String(limit) });
-  if (kind) params.set("kind", kind === "treasury" ? "treasury" : "matrix");
+  if (kind) params.set("kind", kind);
 
   try {
     const controller = new AbortController();
@@ -69,11 +69,18 @@ export async function fetchLaeUserIncomeFromApi(
     return (data.incomes ?? []).map((row) => {
       const amountRaw = row.amount.includes(".") ? row.amount.split(".")[0] : row.amount;
       const amount = BigInt(amountRaw || "0");
-      const isMatrix = row.kind === "matrix";
+      const eventName =
+        row.kind === "lapse"
+          ? "LapseIncome"
+          : row.kind === "matrix"
+            ? "TokenReceived"
+            : "ClubPoolPayment";
+      const isMatrix = eventName === "TokenReceived";
+      const isLapse = eventName === "LapseIncome";
       return {
         transactionHash: row.txHash as `0x${string}`,
         logIndex: row.logIndex,
-        eventName: isMatrix ? "TokenReceived" : "ClubPoolPayment",
+        eventName,
         blockNumber: BigInt(row.blockNumber),
         args: isMatrix
           ? {
@@ -82,11 +89,18 @@ export async function fetchLaeUserIncomeFromApi(
               receiverId: row.toUserId ? BigInt(row.toUserId) : undefined,
               level: row.level ?? undefined,
             }
-          : {
-              amount,
-              userId: row.toUserId ? BigInt(row.toUserId) : undefined,
-              level: row.level ?? undefined,
-            },
+          : isLapse
+            ? {
+                amount,
+                fromId: row.fromUserId ? BigInt(row.fromUserId) : undefined,
+                receiverId: row.toUserId ? BigInt(row.toUserId) : undefined,
+                level: row.level ?? undefined,
+              }
+            : {
+                amount,
+                userId: row.toUserId ? BigInt(row.toUserId) : undefined,
+                level: row.level ?? undefined,
+              },
       } as MatrixUserEvent;
     });
   } catch {

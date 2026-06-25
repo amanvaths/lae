@@ -130,7 +130,11 @@ export default function DashboardHome() {
               {fmtEther(user.totalIncome ?? income.totalMatrixIncome ?? 0n)}
             </span>
           }
-          sub={`Royal ${fmtEther(income.totalRoyalIncome)}`}
+          sub={
+            income.totalLapseIncome > 0n
+              ? `Direct ${fmtEther(income.totalMatrixIncome)} · Lapse ${fmtEther(income.totalLapseIncome)}`
+              : `Royal ${fmtEther(income.totalRoyalIncome)}`
+          }
         />
         <StatCard
           label="Direct Team"
