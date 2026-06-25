@@ -187,9 +187,11 @@ export async function syncEntrantOnGenealogyBoards(
     const matrixRow = await m.usersXMatrix(ownerWallet, level);
     const cycleId = Number(matrixRow.reinvestCount ?? 0) + 1;
     const { slots } = await readGenealogyBoard(ownerWallet, level);
+    let foundOnBoard = false;
 
     for (const slot of slots) {
       if (slot.address?.toLowerCase() !== entrantAddr) continue;
+      foundOnBoard = true;
 
       await prisma.matrixCorePosition.upsert({
         where: {
@@ -213,8 +215,21 @@ export async function syncEntrantOnGenealogyBoards(
         update: { occupantId: entrantId },
       });
 
-      const filledCount = await prisma.matrixCorePosition.count({
-        where: { matrixOwnerId: currentId, level, cycleId },
+      const boardFilled = await prisma.matrixCorePosition.count({
+        where: {
+          matrixOwnerId: currentId,
+          level,
+          cycleId,
+          position: { lte: GENEALOGY_MATRIX_SIZE },
+        },
+      });
+      const overflowFilled = await prisma.matrixCorePosition.count({
+        where: {
+          matrixOwnerId: currentId,
+          level,
+          cycleId,
+          position: { gt: GENEALOGY_MATRIX_SIZE },
+        },
       });
 
       await prisma.matrixCoreCycle.upsert({
@@ -225,15 +240,30 @@ export async function syncEntrantOnGenealogyBoards(
           matrixOwnerId: currentId,
           level,
           cycleId,
-          filled: filledCount,
-          completed: filledCount >= GENEALOGY_MATRIX_SIZE,
+          filled: boardFilled + overflowFilled,
+          completed: boardFilled >= GENEALOGY_MATRIX_SIZE,
         },
         update: {
-          filled: filledCount,
-          completed: filledCount >= GENEALOGY_MATRIX_SIZE,
+          filled: boardFilled + overflowFilled,
+          completed: boardFilled >= GENEALOGY_MATRIX_SIZE,
         },
       });
       break;
+    }
+
+    if (
+      !foundOnBoard &&
+      (await isInGenealogySubtree(entrantId, currentId, level))
+    ) {
+      await recordOverflowPlacement(
+        currentId,
+        level,
+        cycleId,
+        entrantId,
+        blockNumber,
+        txHash,
+        logIndex
+      );
     }
 
     try {
@@ -244,4 +274,179 @@ export async function syncEntrantOnGenealogyBoards(
     }
     hops++;
   }
+}
+
+export interface OverflowMemberDTO {
+  userId: number;
+  address: string | null;
+  /** Depth below matrix owner in genealogy tree (4+ = beyond 14-slot view). */
+  depth: number;
+}
+
+/** Members in the genealogy tree but NOT in the fixed 14-position board (depth 4+). */
+export async function findOffBoardGenealogyMembers(
+  matrixOwnerId: number,
+  level: number
+): Promise<OverflowMemberDTO[]> {
+  const m = matrixContract();
+  const overflow: OverflowMemberDTO[] = [];
+  const wallet = await walletForUserId(matrixOwnerId);
+  if (!wallet) return overflow;
+
+  const board = await readGenealogyBoard(wallet, level);
+  const onBoard = new Set(board.slots.filter((s) => s.userId).map((s) => s.userId!));
+
+  async function visit(nodeId: number, depth: number): Promise<void> {
+    if (nodeId <= 0) return;
+    try {
+      const gen = await m.genealogyOf(nodeId, level);
+      const leftId = Number(gen.leftChildId ?? gen[1] ?? 0);
+      const rightId = Number(gen.rightChildId ?? gen[2] ?? 0);
+
+      for (const childId of [leftId, rightId]) {
+        if (childId <= 0) continue;
+        if (!onBoard.has(childId)) {
+          overflow.push({
+            userId: childId,
+            address: await walletForUserId(childId),
+            depth,
+          });
+        }
+        await visit(childId, depth + 1);
+      }
+    } catch {
+      /* skip unreachable node */
+    }
+  }
+
+  try {
+    const rootGen = await m.genealogyOf(matrixOwnerId, level);
+    const leftId = Number(rootGen.leftChildId ?? rootGen[1] ?? 0);
+    const rightId = Number(rootGen.rightChildId ?? rootGen[2] ?? 0);
+    if (leftId > 0) await visit(leftId, 1);
+    if (rightId > 0) await visit(rightId, 1);
+  } catch {
+    return overflow;
+  }
+
+  return overflow;
+}
+
+async function isInGenealogySubtree(
+  entrantId: number,
+  matrixOwnerId: number,
+  level: number
+): Promise<boolean> {
+  if (entrantId === matrixOwnerId) return false;
+  const m = matrixContract();
+  let cur = entrantId;
+  for (let hops = 0; hops < 64 && cur > 0; hops++) {
+    try {
+      const gen = await m.genealogyOf(cur, level);
+      const parentId = Number(gen.parentId ?? gen[0] ?? 0);
+      if (parentId === matrixOwnerId) return true;
+      if (parentId <= 0) break;
+      cur = parentId;
+    } catch {
+      break;
+    }
+  }
+  return false;
+}
+
+/** Overflow members relevant to a specific cycle (post-recycle registrations for cycle 2+). */
+export async function overflowMembersForCycle(
+  matrixOwnerId: number,
+  level: number,
+  cycleId: number,
+  reinvestCount: number,
+  currentCycle: number
+): Promise<OverflowMemberDTO[]> {
+  const fromChain = await findOffBoardGenealogyMembers(matrixOwnerId, level);
+  if (fromChain.length === 0) return [];
+
+  if (cycleId < currentCycle) return [];
+
+  if (reinvestCount === 0 && cycleId === 1) {
+    return fromChain;
+  }
+
+  if (cycleId === currentCycle && reinvestCount > 0) {
+    const recycle = await prisma.matrixCoreRecycle.findFirst({
+      where: { userId: matrixOwnerId, level, completedCycle: cycleId - 1 },
+      select: { blockNumber: true },
+    });
+    const afterBlock = recycle?.blockNumber ?? 0n;
+    const filtered: OverflowMemberDTO[] = [];
+    for (const o of fromChain) {
+      const row = await prisma.matrixCoreUser.findUnique({
+        where: { userId: o.userId },
+        select: { registeredBlock: true },
+      });
+      if (row && row.registeredBlock > afterBlock) filtered.push(o);
+    }
+    return filtered;
+  }
+
+  return [];
+}
+
+async function recordOverflowPlacement(
+  matrixOwnerId: number,
+  level: number,
+  cycleId: number,
+  entrantId: number,
+  blockNumber: number,
+  txHash: string,
+  logIndex: number
+): Promise<void> {
+  const overflowCount = await prisma.matrixCorePosition.count({
+    where: { matrixOwnerId, level, cycleId, position: { gt: GENEALOGY_MATRIX_SIZE } },
+  });
+  const position = GENEALOGY_MATRIX_SIZE + overflowCount + 1;
+
+  await prisma.matrixCorePosition.upsert({
+    where: {
+      matrixOwnerId_level_cycleId_position: {
+        matrixOwnerId,
+        level,
+        cycleId,
+        position,
+      },
+    },
+    create: {
+      matrixOwnerId,
+      level,
+      cycleId,
+      position,
+      occupantId: entrantId,
+      blockNumber: BigInt(blockNumber),
+      txHash,
+      logIndex,
+    },
+    update: { occupantId: entrantId },
+  });
+
+  const boardFilled = await prisma.matrixCorePosition.count({
+    where: { matrixOwnerId, level, cycleId, position: { lte: GENEALOGY_MATRIX_SIZE } },
+  });
+  const overflowFilled = overflowCount + 1;
+  const totalFilled = boardFilled + overflowFilled;
+
+  await prisma.matrixCoreCycle.upsert({
+    where: {
+      matrixOwnerId_level_cycleId: { matrixOwnerId, level, cycleId },
+    },
+    create: {
+      matrixOwnerId,
+      level,
+      cycleId,
+      filled: totalFilled,
+      completed: boardFilled >= GENEALOGY_MATRIX_SIZE,
+    },
+    update: {
+      filled: totalFilled,
+      completed: boardFilled >= GENEALOGY_MATRIX_SIZE,
+    },
+  });
 }

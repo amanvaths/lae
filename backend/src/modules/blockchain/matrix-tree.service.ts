@@ -7,6 +7,8 @@ import {
   chainCycleInfo,
   readGenealogyBoard,
   walletForUserId,
+  overflowMembersForCycle,
+  type OverflowMemberDTO,
 } from "./genealogy-board.service.js";
 
 export const MATRIX_SIZE = 14;
@@ -30,11 +32,14 @@ export interface MatrixTreeDTO {
   cycle: number;
   active: boolean;
   filledSpots: number;
+  boardFilled: number;
+  overflowCount: number;
   completed: boolean;
   slot2Opened: boolean;
   totalEarned: string;
   totalCycles: number;
   slots: MatrixSlotDTO[];
+  overflowMembers: OverflowMemberDTO[];
 }
 
 function matrixContract(): ethers.Contract {
@@ -55,12 +60,19 @@ async function treeFromDb(
   });
 
   const positions = await prisma.matrixCorePosition.findMany({
-    where: { matrixOwnerId: userId, level, cycleId },
+    where: { matrixOwnerId: userId, level, cycleId, position: { lte: MATRIX_SIZE } },
+    orderBy: { position: "asc" },
+  });
+
+  const overflowRows = await prisma.matrixCorePosition.findMany({
+    where: { matrixOwnerId: userId, level, cycleId, position: { gt: MATRIX_SIZE } },
     orderBy: { position: "asc" },
   });
 
   const posMap = new Map(positions.map((p) => [p.position, p]));
-  const filled = positions.length;
+  const boardFilled = positions.length;
+  const overflowCount = overflowRows.length;
+  const filled = boardFilled + overflowCount;
   const completed = cycle?.completed ?? filled >= MATRIX_SIZE;
   const nextOpen = completed ? 0 : filled + 1;
   const slots: MatrixSlotDTO[] = [];
@@ -85,6 +97,15 @@ async function treeFromDb(
     }
   }
 
+  const overflowMembers: OverflowMemberDTO[] = overflowRows.map((row) => ({
+    userId: row.occupantId,
+    address: null,
+    depth: 4,
+  }));
+  for (const om of overflowMembers) {
+    om.address = await walletForUserId(om.userId);
+  }
+
   return {
     userId,
     address: user.walletAddress,
@@ -92,11 +113,14 @@ async function treeFromDb(
     cycle: cycleId,
     active: true,
     filledSpots: filled,
+    boardFilled,
+    overflowCount,
     completed,
     slot2Opened: cycle?.slot2Opened ?? false,
     totalEarned: user.totalEarned.toString(),
     totalCycles: user.totalCycles,
     slots,
+    overflowMembers,
   };
 }
 
@@ -107,6 +131,34 @@ function emptyBoardSlots(): MatrixSlotDTO[] {
     userId: null,
     address: null,
   }));
+}
+
+async function finalizeTree(
+  base: Omit<MatrixTreeDTO, "overflowMembers" | "overflowCount" | "boardFilled"> & {
+    slots: MatrixSlotDTO[];
+  },
+  matrixOwnerId: number,
+  level: number,
+  cycleId: number,
+  reinvestCount: number,
+  currentCycle: number
+): Promise<MatrixTreeDTO> {
+  const boardFilled = base.slots.filter((s) => s.state === "filled").length;
+  const overflowMembers = await overflowMembersForCycle(
+    matrixOwnerId,
+    level,
+    cycleId,
+    reinvestCount,
+    currentCycle
+  );
+  const overflowCount = overflowMembers.length;
+  return {
+    ...base,
+    boardFilled,
+    overflowCount,
+    filledSpots: boardFilled + overflowCount,
+    overflowMembers,
+  };
 }
 
 /** Resolve matrix tree: genealogy board on chain for cycle 1; DB snapshots for history / post-recycle cycles. */
@@ -135,59 +187,91 @@ async function treeFromChain(
     // Completed past cycle → DB snapshot, or live genealogy if snapshot missing.
     if (cycleId < currentCycle) {
       const dbTree = await treeFromDb(userId, level, cycleId);
-      if (dbTree && dbTree.filledSpots > 0) return { ...dbTree, totalEarned, totalCycles: reinvestCount };
+      if (dbTree && dbTree.boardFilled > 0) {
+        return { ...dbTree, totalEarned, totalCycles: reinvestCount, slot2Opened };
+      }
 
       const board = await readGenealogyBoard(wallet, level);
-      return {
+      return finalizeTree(
+        {
+          userId,
+          address: wallet,
+          level,
+          cycle: cycleId,
+          active: true,
+          filledSpots: board.filled,
+          completed: true,
+          slot2Opened,
+          totalEarned,
+          totalCycles: reinvestCount,
+          slots: board.slots,
+        },
         userId,
-        address: wallet,
         level,
-        cycle: cycleId,
-        active: true,
-        filledSpots: board.filled,
-        completed: true,
-        slot2Opened,
-        totalEarned,
-        totalCycles: reinvestCount,
-        slots: board.slots,
-      };
+        cycleId,
+        reinvestCount,
+        currentCycle
+      );
     }
 
     // Current cycle with no recycle yet → live genealogy board from chain.
     if (reinvestCount === 0) {
       const board = await readGenealogyBoard(wallet, level);
-      return {
+      return finalizeTree(
+        {
+          userId,
+          address: wallet,
+          level,
+          cycle: cycleId,
+          active: true,
+          filledSpots: board.filled,
+          completed: board.completed,
+          slot2Opened,
+          totalEarned,
+          totalCycles: reinvestCount,
+          slots: board.slots,
+        },
+        userId,
+        level,
+        cycleId,
+        reinvestCount,
+        currentCycle
+      );
+    }
+
+    // Post-recycle current cycle → fresh board from DB (chain tree still holds cycle-1 members).
+    const dbTree = await treeFromDb(userId, level, cycleId);
+    if (dbTree) {
+      return finalizeTree(
+        { ...dbTree, totalEarned, totalCycles: reinvestCount, slot2Opened },
+        userId,
+        level,
+        cycleId,
+        reinvestCount,
+        currentCycle
+      );
+    }
+
+    return finalizeTree(
+      {
         userId,
         address: wallet,
         level,
         cycle: cycleId,
         active: true,
-        filledSpots: board.filled,
-        completed: board.completed,
+        filledSpots: 0,
+        completed: false,
         slot2Opened,
         totalEarned,
         totalCycles: reinvestCount,
-        slots: board.slots,
-      };
-    }
-
-    // Post-recycle current cycle → fresh board from DB (chain tree still holds cycle-1 members).
-    const dbTree = await treeFromDb(userId, level, cycleId);
-    if (dbTree) return { ...dbTree, totalEarned, totalCycles: reinvestCount, slot2Opened };
-
-    return {
+        slots: emptyBoardSlots(),
+      },
       userId,
-      address: wallet,
       level,
-      cycle: cycleId,
-      active: true,
-      filledSpots: 0,
-      completed: false,
-      slot2Opened,
-      totalEarned,
-      totalCycles: reinvestCount,
-      slots: emptyBoardSlots(),
-    };
+      cycleId,
+      reinvestCount,
+      currentCycle
+    );
   } catch {
     return null;
   }
@@ -284,13 +368,33 @@ export async function getMatrixOverview(
         completed = true;
       } else if (reinvestCount === 0 && cycleInfo) {
         const board = await readGenealogyBoard(cycleInfo.wallet, level);
-        filled = board.filled;
+        const overflow = await overflowMembersForCycle(
+          userId,
+          level,
+          c,
+          reinvestCount,
+          currentCycle
+        );
+        filled = board.filled + overflow.length;
         completed = board.completed;
       } else {
-        filled = await prisma.matrixCorePosition.count({
-          where: { matrixOwnerId: userId, level, cycleId: c },
+        const boardFilled = await prisma.matrixCorePosition.count({
+          where: {
+            matrixOwnerId: userId,
+            level,
+            cycleId: c,
+            position: { lte: MATRIX_SIZE },
+          },
         });
-        completed = filled >= MATRIX_SIZE;
+        const overflow = await overflowMembersForCycle(
+          userId,
+          level,
+          c,
+          reinvestCount,
+          currentCycle
+        );
+        filled = boardFilled + overflow.length;
+        completed = boardFilled >= MATRIX_SIZE;
       }
 
       if (!slot2Opened && c === 1 && level === 1) {

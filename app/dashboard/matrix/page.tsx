@@ -174,6 +174,7 @@ export default function MatrixPage() {
                 reinvestCount={BigInt(selectedCycle - 1)}
                 totalEarning={BigInt(tree.totalEarned || "0")}
                 filledCount={tree.filledSpots}
+                overflowMembers={tree.overflowMembers}
               />
             )}
           </Panel>

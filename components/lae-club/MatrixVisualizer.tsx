@@ -21,6 +21,7 @@ export function MatrixVisualizer({
   reinvestCount,
   totalEarning,
   filledCount,
+  overflowMembers,
   className,
 }: {
   referrals?: readonly Address[];
@@ -30,6 +31,7 @@ export function MatrixVisualizer({
   reinvestCount?: bigint;
   totalEarning?: bigint;
   filledCount?: number;
+  overflowMembers?: Array<{ userId: number; address?: string | null; depth: number }>;
   className?: string;
 }) {
   const slots = slotsProp ?? buildMatrixSlots(referrals ?? [], levelActive);
@@ -51,16 +53,20 @@ export function MatrixVisualizer({
           <span className="text-slate-500">CYCLE {Number(reinvestCount ?? 0n) + 1}</span>
         </div>
         <span className="font-mono font-semibold text-emerald-400">
-          {filled}/{LAE_MATRIX_SIZE} filled
+          {filled}/{LAE_MATRIX_SIZE} board
+          {overflowMembers && overflowMembers.length > 0
+            ? ` + ${overflowMembers.length} overflow`
+            : ""}
         </span>
       </div>
 
       <div className="relative rounded-lg border border-[#D4AF37]/15 bg-[#D4AF37]/[0.04] px-3 py-2 text-[10px] leading-relaxed text-slate-400 sm:text-[11px]">
-        <span className="font-semibold text-[#D4AF37]">Position number (1–14)</span> = aapke matrix
-        tree mein slot ki jagah (upar se neeche, left se right).{" "}
-        <span className="font-semibold text-white">ID #</span> = us position par registered user ki
-        ID. Tree genealogy ke hisaab se bharta hai — kabhi aapka direct na ho, spillover se bhi
-        position bharti hai; isliye position number aur user ID alag ho sakte hain.
+        <span className="font-semibold text-[#D4AF37]">Position (1–14)</span> = 3-level matrix
+        tree (upar→neeche, left→right).{" "}
+        <span className="font-semibold text-white">ID #</span> = registered user. 14 positions
+        full hone ke baad naye members{" "}
+        <span className="font-semibold text-[#D4AF37]">Overflow / Cycle 2</span> section mein
+        dikhte hain (genealogy tree depth 4+ — 14-box view ke bahar).
       </div>
 
       <div className="relative overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -99,6 +105,10 @@ export function MatrixVisualizer({
       </div>
 
       <Legend />
+
+      {overflowMembers && overflowMembers.length > 0 && (
+        <OverflowPanel members={overflowMembers} cycle={Number(reinvestCount ?? 0n) + 1} />
+      )}
 
       {totalEarning !== undefined && totalEarning > 0n && (
         <p className="text-center text-xs font-semibold text-emerald-400">
@@ -201,6 +211,37 @@ function SpotCard({ slot, compact }: { slot: MatrixSlot; compact: boolean }) {
               : "WAITING"}
       </p>
     </motion.div>
+  );
+}
+
+function OverflowPanel({
+  members,
+  cycle,
+}: {
+  members: Array<{ userId: number; address?: string | null; depth: number }>;
+  cycle: number;
+}) {
+  return (
+    <div className="rounded-xl border border-sky-400/25 bg-sky-400/[0.06] p-3">
+      <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-sky-300">
+        Overflow · Cycle {cycle}
+      </p>
+      <p className="mt-1 text-[10px] leading-relaxed text-slate-400">
+        14 positions full — ye members aapke genealogy tree mein depth {members[0]?.depth ?? 4}+ par
+        place hain (14-box ke bahar). Income unki position ke role ke hisaab se jati hai.
+      </p>
+      <ul className="mt-2 flex flex-wrap gap-2">
+        {members.map((m) => (
+          <li
+            key={m.userId}
+            className="rounded-lg border border-sky-400/30 bg-black/40 px-2.5 py-1.5 text-center"
+          >
+            <p className="font-mono text-xs font-bold text-sky-200">ID #{m.userId}</p>
+            <p className="text-[9px] text-slate-500">depth {m.depth}</p>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
