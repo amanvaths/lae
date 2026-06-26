@@ -20,7 +20,12 @@ export function sortEventsNewestFirst(events: MatrixUserEvent[]): MatrixUserEven
 export function dedupeEvents(events: MatrixUserEvent[]): MatrixUserEvent[] {
   const seen = new Set<string>();
   return events.filter((e) => {
-    const key = `${e.transactionHash}:${e.logIndex ?? ""}`;
+    const args = e.args as { receiverId?: bigint; fromId?: bigint; userId?: bigint };
+    const receiver = args.receiverId ?? args.userId;
+    const key =
+      e.logIndex != null
+        ? `${e.transactionHash}:${e.logIndex}`
+        : `${e.transactionHash}:${e.eventName}:${String(receiver ?? "")}:${String(args.fromId ?? "")}`;
     if (seen.has(key)) return false;
     seen.add(key);
     return true;

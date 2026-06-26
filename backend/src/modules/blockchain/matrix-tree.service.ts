@@ -225,7 +225,12 @@ async function treeFromChain(
     const reinvestCount = Number(matrixRow.reinvestCount ?? 0);
     const currentCycle = reinvestCount + 1;
     const slot2Opened = Boolean(slot2Active);
-    const totalEarned = String(details.totalIncome ?? "0");
+    // Per-level earnings from usersXMatrix; fall back to global totalIncome.
+    const levelEarning = matrixRow.totalEarning ?? matrixRow[5];
+    const totalEarned =
+      levelEarning != null && levelEarning !== 0n && String(levelEarning) !== "0"
+        ? String(levelEarning)
+        : String(details.totalIncome ?? "0");
 
     // Completed (historical) cycle → on-chain board has been reset, so rebuild
     // from indexed DB positions. Fall back to a full 14-box if DB lags.

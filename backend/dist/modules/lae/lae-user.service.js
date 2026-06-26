@@ -50,8 +50,29 @@ export async function getLaeUserIncome(wallet, kind, limit = 100) {
         orderBy: { blockNumber: "desc" },
         take: limit,
     });
-    if (rows.length > 0)
-        return serializeForJson(rows);
+    if (rows.length > 0) {
+        let lapseTx = new Set();
+        if (kind === "matrix" || !kind) {
+            const lapseRows = await prisma.matrixCoreIncome.findMany({
+                where: { toUserId: userId, kind: "lapse" },
+                select: { txHash: true, toUserId: true, fromUserId: true },
+            });
+            lapseTx = new Set(lapseRows.map((r) => `${r.txHash}:${r.toUserId}:${r.fromUserId ?? ""}`));
+        }
+        const filtered = rows.filter((r) => r.kind !== "matrix" ||
+            !lapseTx.has(`${r.txHash}:${r.toUserId}:${r.fromUserId ?? ""}`));
+        const seenMatrixTx = new Set();
+        const deduped = filtered.filter((r) => {
+            if (r.kind !== "matrix")
+                return true;
+            const key = `${r.txHash}:${r.toUserId}`;
+            if (seenMatrixTx.has(key))
+                return false;
+            seenMatrixTx.add(key);
+            return true;
+        });
+        return serializeForJson(deduped);
+    }
     // Fallback: derive income rows from indexed chain events when mc_income projection missed
     const eventNames = kind === "treasury"
         ? ["ClubPoolPayment"]

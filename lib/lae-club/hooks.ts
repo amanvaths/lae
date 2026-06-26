@@ -445,10 +445,14 @@ async function loadUserEvents(
   userAddress: Address
 ): Promise<MatrixUserEvent[]> {
   const apiEvents = await fetchLaeUserEventsFromApi(userAddress);
+  if (apiEvents && apiEvents.length > 0) {
+    return sortEventsNewestFirst(dedupeEvents(apiEvents));
+  }
+
+  // Income API is a fallback only — never merge with events (duplicate TokenReceived rows).
   const apiIncome = await fetchLaeUserIncomeFromApi(userAddress);
-  const fromApi = dedupeEvents([...(apiEvents ?? []), ...(apiIncome ?? [])]);
-  if (fromApi.length > 0) {
-    return sortEventsNewestFirst(fromApi);
+  if (apiIncome && apiIncome.length > 0) {
+    return sortEventsNewestFirst(dedupeEvents(apiIncome));
   }
 
   const chainResult = await fetchMatrixUserEvents(client, userId, userAddress, {
@@ -489,17 +493,27 @@ export function useLaeIncomeEvents() {
   const income = (events.data ?? []).filter((e) => {
     if (e.eventName !== "TokenReceived") return false;
     const a = e.args as { receiverId?: bigint; fromId?: bigint };
-    const key = `${e.transactionHash}:${String(a.receiverId ?? "")}:${String(a.fromId ?? "")}`;
-    return !lapseTxKeys.has(key);
+    const pairKey = `${e.transactionHash}:${String(a.receiverId ?? "")}:${String(a.fromId ?? "")}`;
+    if (lapseTxKeys.has(pairKey)) return false;
+    return true;
+  });
+  // One matrix payout per tx per receiver (guard against duplicate indexed rows).
+  const seenMatrix = new Set<string>();
+  const uniqueIncome = income.filter((e) => {
+    const a = e.args as { receiverId?: bigint };
+    const key = `${e.transactionHash}:${String(a.receiverId ?? "")}`;
+    if (seenMatrix.has(key)) return false;
+    seenMatrix.add(key);
+    return true;
   });
   const treasury = (events.data ?? []).filter((e) => e.eventName === "ClubPoolPayment");
-  const sumAmount = (rows: typeof income) =>
+  const sumAmount = (rows: typeof uniqueIncome) =>
     rows.reduce((s, e) => s + ((e.args as { amount?: bigint }).amount ?? 0n), 0n);
-  const totalMatrix = sumAmount(income);
+  const totalMatrix = sumAmount(uniqueIncome);
   const totalLapse = sumAmount(lapse);
   const totalTreasury = sumAmount(treasury);
   return {
-    incomeEvents: income,
+    incomeEvents: uniqueIncome,
     lapseEvents: lapse,
     royalEvents: treasury,
     allEvents: events.data ?? [],
