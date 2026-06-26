@@ -14,12 +14,13 @@
 >
 > **2. INCOME (money) — single 90% payout per registration.** The payout is decided
 > by the new member's **slot in its DIRECT SPONSOR's board** using the role table:
-> `1 = sponsor's 1st upline · 2 = sponsor's 2nd upline (owner wallet if none) ·
-> 3,6,8,9,11,12 = sponsor (self) · 4,14 = treasury ·
+> `1 = board owner's 1st upline · 2 = board owner's 2nd upline (owner wallet if none) ·
+> 3,6,8,9,11,12 = board owner (self) · 4,14 = treasury ·
 > 5 = treasury on cycle 1, board owner himself on recycle (cycle 2+) ·
-> 7,10 = 1st/2nd downline · 13 = 2nd-level downline`. Paying once (not
-> once per upline board) keeps the contract **solvent** while routing the money to
-> the same person the design intends, via the lapse rule below.
+> 7,10 = 1st/2nd downline · 13 = 2nd-level downline`.
+> **Per-board payout:** every board where the member is placed triggers its own
+> 90% payout based on the slot position on THAT board. Contract must hold
+> sufficient accumulated balance.
 >
 > **3. ELIGIBILITY + LAPSE.** A recipient needs **≥ 2 direct referrals** (owner is
 > always eligible). If not eligible, the income lapses to the **1st upline**, then

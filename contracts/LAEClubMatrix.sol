@@ -27,21 +27,20 @@ interface ILAECoin {
  *  board shows their entire downline in the order it grew. At 14 the board
  *  recycles (a new cycle starts at slot 1).
  *
- *  INCOME (money) — SINGLE recipient per registration
- *  --------------------------------------------------
- *  A registration produces exactly ONE 90% matrix payout, decided by the new
- *  member's slot in its DIRECT SPONSOR's board:
- *      1              -> sponsor's 1st upline (owner wallet if none)
- *      2              -> sponsor's 2nd upline (owner wallet if none)
+ *  INCOME (money) — PER-BOARD payout
+ *  ----------------------------------
+ *  Every board where the new member is placed triggers its own 90% payout,
+ *  decided by the member's slot on THAT board:
+ *      1              -> board owner's 1st upline (owner wallet if none)
+ *      2              -> board owner's 2nd upline (owner wallet if none)
  *      4,14           -> treasury
  *      5              -> treasury on cycle 1; board owner himself on recycle (cycle 2+)
- *      3,6,8,9,11,12  -> sponsor (self / "You")
- *      7              -> sponsor's 1st direct (Downline 1)
- *      10             -> sponsor's 2nd direct (Downline 2)
+ *      3,6,8,9,11,12  -> board owner (self / "You")
+ *      7              -> board owner's 1st direct (Downline 1)
+ *      10             -> board owner's 2nd direct (Downline 2)
  *      13             -> first eligible 2nd-level downline (left-to-right)
- *  Paying only once (not once per upline board) keeps the contract solvent
- *  while reproducing the exact recipients of the intended design, because the
- *  eligibility / lapse rules below route the money up to the right person.
+ *  This means a single registration generates N payouts (one per upline board).
+ *  The contract must hold sufficient token balance from accumulated fees.
  *
  *  ELIGIBILITY + LAPSE
  *  -------------------
@@ -409,9 +408,8 @@ contract LAEClubMatrix {
 
     /**
      * @dev Place `member` into the level-`level` board of its sponsor and of every
-     *      upline that owns this level (top to bottom). The FIRST active board
-     *      encountered (the direct sponsor for level 1) decides the single income
-     *      payout. All other boards are filled for display only (no money moves).
+     *      upline that owns this level (top to bottom). EVERY active board
+     *      triggers its own income payout based on that board's slot position.
      *      When a board reaches slot 5 the owner's next level unlocks for free;
      *      slot 14 recycles the board.
      */
@@ -420,17 +418,17 @@ contract LAEClubMatrix {
 
         address cur = users[member].referrer;
         uint256 hops = 0;
-        bool paid = false;
+        bool placedAny = false;
 
         while (cur != address(0) && hops < MAX_UPLINE) {
             if (users[cur].activeLevels[level]) {
                 uint8 slot = _appendBoard(cur, member, level);
                 emit NewUserPlace(users[member].id, users[cur].id, level, users[cur].board[level].reinvestCount + 1, slot);
 
-                if (doPay && !paid) {
+                if (doPay) {
                     _payByRole(member, cur, slot, level);
-                    paid = true;
                 }
+                placedAny = true;
 
                 _afterFill(cur, slot, level, member);
             }
@@ -438,8 +436,7 @@ contract LAEClubMatrix {
             hops++;
         }
 
-        // No active upline to earn from (e.g. very top) — route the share to treasury.
-        if (doPay && !paid) {
+        if (doPay && !placedAny) {
             _sendToPlatformTreasury(levelTokenCost[level]);
         }
     }
@@ -926,6 +923,7 @@ contract LAEClubMatrix {
 
     /**
      * @notice Returns the 14-slot current-cycle board for `userAddress` at `level`.
+     +
      * @dev Index i (0..13) maps to matrix position i+1, filled in arrival order
      *      (slot 1, 2, 3 …). Empty slots are address(0).
      */
