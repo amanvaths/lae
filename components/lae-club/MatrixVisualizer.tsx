@@ -54,10 +54,10 @@ export function MatrixVisualizer({
       </div>
 
       <div className="relative rounded-lg border border-[#D4AF37]/15 bg-[#D4AF37]/[0.04] px-3 py-2 text-[10px] leading-relaxed text-slate-400 sm:text-[11px]">
-        <span className="font-semibold text-[#D4AF37]">Box ka number = slot position</span> (1–14,
-        sequence mein bharta hai) ·{" "}
-        <span className="font-semibold text-white">ID #</span> = us slot mein baithe user ki ID.
-        Dono alag hote hain — jaise ID #7 slot 6 mein ho sakti hai.
+        <span className="font-semibold text-[#D4AF37]">Box number = slot position</span> (1–14,
+        filled in order) ·{" "}
+        <span className="font-semibold text-white">ID #</span> = the user placed in that slot.
+        These differ — e.g. user ID #7 may sit in slot 6.
       </div>
 
       <div className="relative overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">

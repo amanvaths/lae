@@ -255,6 +255,13 @@ export function useLaeAllMatrixLevels() {
   const userIdNum = user.userId ? Number(user.userId) : undefined;
   const overview = useLaeMatrixOverviewApi(userIdNum);
   const levels = overview.overview?.levels ?? [];
+  const overviewActiveCount = levels.filter((l) => l.active).length;
+  // Prefer on-chain activeSlotsCount from getUserDetails — stable vs backend overview
+  // (overview can briefly report 1 when RPC calls fail server-side).
+  const activeCount =
+    user.activeLevels && user.activeLevels > 0
+      ? user.activeLevels
+      : overviewActiveCount;
 
   return {
     levels: levels.map((l) => {
@@ -268,7 +275,7 @@ export function useLaeAllMatrixLevels() {
         currentCycle: l.currentCycle,
       };
     }),
-    activeCount: levels.filter((l) => l.active).length,
+    activeCount,
     currentCycle: levels[0]?.currentCycle ?? 1,
     isLoading: user.isLoading || overview.isLoading,
   };
@@ -672,6 +679,20 @@ export function useLaeAllMatrixLevelsForUser(userId: bigint | undefined) {
   const userIdNum = userId ? Number(userId) : undefined;
   const overview = useLaeMatrixOverviewApi(userIdNum);
   const levels = overview.overview?.levels ?? [];
+  const overviewActiveCount = levels.filter((l) => l.active).length;
+
+  const detailsRead = useReadContract({
+    address: LAE_CONTRACTS.matrix,
+    abi: laeClubMatrixAbi,
+    functionName: "getUserDetails",
+    args: userId && userId > 0n ? [userId] : undefined,
+    query: { enabled: !!userId && userId > 0n, staleTime: 15_000 },
+  });
+  const chainActiveCount = detailsRead.data
+    ? Number((detailsRead.data as UserDetailsRow)[4]) || 0
+    : 0;
+  const activeCount =
+    chainActiveCount > 0 ? chainActiveCount : overviewActiveCount;
 
   return {
     levels: levels.map((l) => {
@@ -683,8 +704,8 @@ export function useLaeAllMatrixLevelsForUser(userId: bigint | undefined) {
         currentCycle: l.currentCycle,
       };
     }),
-    activeCount: levels.filter((l) => l.active).length,
-    isLoading: overview.isLoading,
+    activeCount,
+    isLoading: overview.isLoading || detailsRead.isLoading,
   };
 }
 

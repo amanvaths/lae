@@ -347,10 +347,28 @@ export async function getMatrixOverview(
       try {
         return Boolean(await m.isUserSlotActive(userId, level));
       } catch {
-        return level === 1;
+        return false;
       }
     })
   );
+
+  const flagCount = activeFlags.filter(Boolean).length;
+  if (flagCount === 0 || flagCount < levelCount) {
+    try {
+      const details = await m.getUserDetails(userId);
+      const chainActiveCount = Number(details.activeSlotsCount ?? details[4]) || 0;
+      if (chainActiveCount > flagCount) {
+        for (let i = 0; i < levelCount; i++) {
+          const level = levelStart + i;
+          if (level <= chainActiveCount) {
+            activeFlags[i] = true;
+          }
+        }
+      }
+    } catch {
+      // keep per-level flags from successful reads
+    }
+  }
 
   const reinvestByLevel = await Promise.all(
     Array.from({ length: levelCount }, async (_, i) => {

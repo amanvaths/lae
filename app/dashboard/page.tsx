@@ -83,6 +83,10 @@ export default function DashboardHome() {
   }
 
   const royalRank = 0;
+  const activeLevelsDisplay =
+    user.isLoading || levels.isLoading
+      ? "…"
+      : String(user.activeLevels ?? levels.activeCount);
 
   return (
     <motion.div variants={stagger} initial="hidden" animate="show">
@@ -107,7 +111,7 @@ export default function DashboardHome() {
               </>
             ) : null}
             <Pill tone="gold" className="ml-2">
-              {levels.isLoading ? "…" : `${levels.activeCount} active levels`}
+              {activeLevelsDisplay} active levels
             </Pill>
           </p>
         </div>
@@ -147,7 +151,7 @@ export default function DashboardHome() {
           label="Active Levels"
           accent="brand"
           icon={Layers}
-          value={levels.isLoading ? "…" : levels.activeCount}
+          value={activeLevelsDisplay}
           sub="of 15 matrix levels"
         />
         <StatCard
