@@ -5,7 +5,7 @@ import { HowItWorks } from "@/components/sections/HowItWorks";
 import { SmartMatrix } from "@/components/sections/SmartMatrix";
 import { BusinessModel } from "@/components/sections/BusinessModel";
 import { RewardTimeline } from "@/components/sections/RewardTimeline";
-import { RoyalProgram } from "@/components/sections/RoyalProgram";
+import { GrowthJourney } from "@/components/sections/GrowthJourney";
 import { P2PSection } from "@/components/sections/P2PSection";
 import { TokenInfo } from "@/components/sections/TokenInfo";
 import { Team } from "@/components/sections/Team";
@@ -31,7 +31,7 @@ export default function HomePage() {
       <BusinessModel />
       <RewardTimeline />
       <SectionDivider />
-      <RoyalProgram />
+      <GrowthJourney />
       <P2PSection />
       <SectionDivider />
       <TokenInfo />
