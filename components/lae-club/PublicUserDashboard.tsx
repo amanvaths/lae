@@ -71,7 +71,7 @@ export function PublicUserDashboard({ userId }: { userId: string }) {
   const events = useLaeUserEventsForUser(user.userId ?? parsedId ?? undefined, user.walletAddress);
   const vesting = useLaeVestingDirectRequirement(user.registeredAt);
 
-  const viewId = user.userId ?? parsedId;
+  const viewId = user.userId ?? parsedId ?? undefined;
   const incomeSplit = splitIncomeEvents(events.data ?? [], viewId);
   const totalMatrix = incomeSplit.totalMatrixIncome;
   const totalTreasury = incomeSplit.totalRoyalIncome;
