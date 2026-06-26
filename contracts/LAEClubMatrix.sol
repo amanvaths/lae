@@ -30,12 +30,14 @@ interface ILAECoin {
  *  INCOME (money) — SINGLE recipient per registration
  *  --------------------------------------------------
  *  A registration produces exactly ONE 90% matrix payout, decided by the new
- *  member's slot in its DIRECT SPONSOR's board using the role table:
- *      1,2            -> sponsor's 1st / 2nd upline
- *      3,6,8,9,11,12  -> sponsor (self)
- *      4,5,14         -> treasury
- *      7,10           -> sponsor's 1st downline
- *      13             -> sponsor's 2nd downline
+ *  member's slot in its DIRECT SPONSOR's board:
+ *      1              -> sponsor's 1st upline (normal)
+ *      2,4,14         -> treasury
+ *      5              -> treasury on cycle 1; sponsor's upline on recycle (cycle 2+)
+ *      3,6,8,9,11,12  -> sponsor (self / "You")
+ *      7              -> sponsor's 1st direct (Downline 1)
+ *      10             -> sponsor's 2nd direct (Downline 2)
+ *      13             -> first eligible 2nd-level downline (left-to-right)
  *  Paying only once (not once per upline board) keeps the contract solvent
  *  while reproducing the exact recipients of the intended design, because the
  *  eligibility / lapse rules below route the money up to the right person.
@@ -489,26 +491,57 @@ contract LAEClubMatrix {
 
     function _payByRole(address member, address boardOwner, uint8 slot, uint8 level) private {
         uint256 amount = levelTokenCost[level];
+        bool recycled = users[boardOwner].board[level].reinvestCount > 0;
 
-        // Treasury slots.
-        if (slot == 4 || slot == 5 || slot == 14) {
+        // Treasury-only slots.
+        if (slot == 2 || slot == 4 || slot == 14) {
             _sendToPlatformTreasury(amount);
             return;
         }
 
+        // Position 5: cycle 1 → treasury; after recycle → board owner's upline.
+        if (slot == 5) {
+            if (!recycled) {
+                _sendToPlatformTreasury(amount);
+                return;
+            }
+            address upline = users[boardOwner].referrer;
+            if (upline == address(0)) {
+                _sendToPlatformTreasury(amount);
+                return;
+            }
+            (address recipient, bool isTreasury) = _resolveRecipient(upline, member, level);
+            if (isTreasury) {
+                _sendToPlatformTreasury(amount);
+            } else {
+                _sendTokenDividends(recipient, member, level, amount);
+            }
+            return;
+        }
+
         address target;
-        if (slot == 1 || slot == 2) {
-            target = _uplineOf(boardOwner, slot == 1 ? 1 : 2);
-            if (target == address(0)) target = boardOwner; // lapse to board owner (e.g. owner has no upline)
-        } else if (slot == 7 || slot == 10) {
-            target = _downlineOf(boardOwner, 1, level);
+        if (slot == 1) {
+            target = _uplineOf(boardOwner, 1);
+            if (target == address(0)) target = boardOwner;
+        } else if (slot == 7) {
+            target = _directDownline(boardOwner, 0);
+            if (target == address(0)) target = boardOwner;
+        } else if (slot == 10) {
+            target = _directDownline(boardOwner, 1);
             if (target == address(0)) target = boardOwner;
         } else if (slot == 13) {
-            target = _downlineOf(boardOwner, 2, level);
-            if (target == address(0)) target = boardOwner;
-        } else {
-            // 3,6,8,9,11,12 -> self
+            target = _targetForPosition13(boardOwner);
+            if (target == address(0)) {
+                _sendToPlatformTreasury(amount);
+                return;
+            }
+        } else if (
+            slot == 3 || slot == 6 || slot == 8 || slot == 9 || slot == 11 || slot == 12
+        ) {
             target = boardOwner;
+        } else {
+            _sendToPlatformTreasury(amount);
+            return;
         }
 
         (address recipient, bool isTreasury) = _resolveRecipient(target, member, level);
@@ -556,23 +589,31 @@ contract LAEClubMatrix {
         return cur;
     }
 
-    function _downlineOf(address boardOwner, uint256 gen, uint8 level) private returns (address) {
+    function _directDownline(address boardOwner, uint256 index) private view returns (address) {
         address[] storage directs = users[boardOwner].directReferrals;
-        if (directs.length == 0) return address(0);
+        if (index >= directs.length) return address(0);
+        return directs[index];
+    }
 
-        if (gen == 1) {
-            uint256 start = users[boardOwner].lastDownlineIdx[level] % directs.length;
-            address pick = directs[start];
-            users[boardOwner].lastDownlineIdx[level] = (start + 1) % directs.length;
-            return pick;
-        }
-
-        // gen 2 — first available second-generation direct.
+    /**
+     * @dev Position 13: first eligible 2nd-level downline left-to-right; if none
+     *      qualify, the first 2nd-level member in order is used so lapse can apply.
+     */
+    function _targetForPosition13(address boardOwner) private view returns (address) {
+        address[] storage directs = users[boardOwner].directReferrals;
+        address firstAny = address(0);
         for (uint256 i = 0; i < directs.length; i++) {
-            address[] storage sub = users[directs[i]].directReferrals;
-            if (sub.length > 0) return sub[0];
+            address[] storage children = users[directs[i]].directReferrals;
+            for (uint256 j = 0; j < children.length; j++) {
+                if (firstAny == address(0)) {
+                    firstAny = children[j];
+                }
+                if (_isEligible(children[j])) {
+                    return children[j];
+                }
+            }
         }
-        return address(0);
+        return firstAny;
     }
 
     // --- BTC PAYOUTS (90% matrix share) ---
