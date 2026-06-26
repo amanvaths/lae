@@ -27,6 +27,7 @@ import {
 import { useMatrixCoreTreeApi } from "@/lib/lae-club/matrix-api";
 import { buildSlotsFromApi } from "@/lib/lae-club/matrix-slots";
 import { LAE_MATRIX_SIZE, LAE_COIN_TOKENOMICS } from "@/lib/lae-club/constants";
+import { splitIncomeEvents } from "@/lib/lae-club/event-utils";
 import { fmtEther } from "@/lib/contracts/format";
 import { truncateAddress } from "@/lib/format";
 import { withBasePath } from "@/lib/paths";
@@ -70,16 +71,10 @@ export function PublicUserDashboard({ userId }: { userId: string }) {
   const events = useLaeUserEventsForUser(user.userId ?? parsedId ?? undefined, user.walletAddress);
   const vesting = useLaeVestingDirectRequirement(user.registeredAt);
 
-  const incomeEvents = (events.data ?? []).filter((e) => e.eventName === "TokenReceived");
-  const treasuryEvents = (events.data ?? []).filter((e) => e.eventName === "ClubPoolPayment");
-  const totalMatrix = incomeEvents.reduce((s, e) => {
-    const amount = (e.args as { amount?: bigint }).amount;
-    return s + (amount ?? 0n);
-  }, 0n);
-  const totalTreasury = treasuryEvents.reduce((s, e) => {
-    const amount = (e.args as { amount?: bigint }).amount;
-    return s + (amount ?? 0n);
-  }, 0n);
+  const viewId = user.userId ?? parsedId;
+  const incomeSplit = splitIncomeEvents(events.data ?? [], viewId);
+  const totalMatrix = incomeSplit.totalMatrixIncome;
+  const totalTreasury = incomeSplit.totalRoyalIncome;
   const recycleCount = (events.data ?? []).filter((e) => e.eventName === "Reinvest").length;
   const currentCycle = user.currentCycle ?? (levels.levels.length || 1);
 
@@ -198,7 +193,13 @@ export function PublicUserDashboard({ userId }: { userId: string }) {
           <p className="mb-4 text-sm text-slate-400">
             Matrix {fmtEther(totalMatrix)} · Treasury {fmtEther(totalTreasury)}
           </p>
-          {(events.data ?? []).slice(0, 20).map((e, i) => (
+          {[
+            ...incomeSplit.incomeEvents,
+            ...incomeSplit.lapseEvents,
+            ...incomeSplit.treasuryEvents,
+          ]
+            .slice(0, 20)
+            .map((e, i) => (
             <div key={`${e.transactionHash}-${i}`} className="flex justify-between py-2 text-sm">
               <Pill tone="gold">{e.eventName}</Pill>
               <a href={txUrl(e.transactionHash)} target="_blank" rel="noreferrer" className="text-[#D4AF37]/70">

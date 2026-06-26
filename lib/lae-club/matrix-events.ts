@@ -21,7 +21,6 @@ function userEventQueries(userId: bigint): EventQuery[] {
     { eventName: "NewUserPlace", args: { referrer: id } },
     { eventName: "NewUserPlace", args: { user: id } },
     { eventName: "TokenReceived", args: { receiverId: id } },
-    { eventName: "TokenReceived", args: { fromId: id } },
     { eventName: "ClubPoolPayment", args: { userId: id } },
     { eventName: "Reinvest", args: { userId: id } },
     { eventName: "Upgrade", args: { userId: id } },

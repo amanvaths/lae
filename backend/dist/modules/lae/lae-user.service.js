@@ -129,9 +129,7 @@ function userEventFilters(userId) {
         { payload: { path: ["referrerId"], equals: uid } },
         { payload: { path: ["referrer"], equals: uid } },
         { payload: { path: ["receiverId"], equals: uid } },
-        { payload: { path: ["fromId"], equals: uid } },
         { payload: { path: ["toUserId"], equals: uid } },
-        { payload: { path: ["fromUserId"], equals: uid } },
         { payload: { path: ["refId"], equals: uid } },
     ];
 }

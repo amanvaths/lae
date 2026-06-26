@@ -1,7 +1,7 @@
 import { ethers } from "ethers";
 
-const ADDR = "0x67426393C57768489e592A8415E6fD762cc5218c";
-const DEPLOY_BLOCK = 115652142;
+const ADDR = "0xfAD1A895b873b9C93a63BBF30BC8743d50444568";
+const DEPLOY_BLOCK = 115660670;
 const RPCS = process.env.BSC_RPC_URL
   ? [process.env.BSC_RPC_URL]
   : [

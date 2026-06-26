@@ -31,3 +31,64 @@ export function dedupeEvents(events: MatrixUserEvent[]): MatrixUserEvent[] {
     return true;
   });
 }
+
+/** Income credited TO `userId` — excludes TokenReceived where user was only the payer (fromId). */
+export function splitIncomeEvents(events: MatrixUserEvent[], userId: bigint | undefined) {
+  if (!userId || userId <= 0n) {
+    return {
+      incomeEvents: [] as MatrixUserEvent[],
+      lapseEvents: [] as MatrixUserEvent[],
+      treasuryEvents: [] as MatrixUserEvent[],
+      totalMatrixIncome: 0n,
+      totalLapseIncome: 0n,
+      totalRoyalIncome: 0n,
+    };
+  }
+
+  const lapse = events.filter((e) => {
+    if (e.eventName !== "LapseIncome") return false;
+    const a = e.args as { receiverId?: bigint };
+    return a.receiverId === userId;
+  });
+
+  const lapseTxKeys = new Set(
+    lapse.map((e) => {
+      const a = e.args as { receiverId?: bigint; fromId?: bigint };
+      return `${e.transactionHash}:${String(a.receiverId ?? "")}:${String(a.fromId ?? "")}`;
+    })
+  );
+
+  const income = events.filter((e) => {
+    if (e.eventName !== "TokenReceived") return false;
+    const a = e.args as { receiverId?: bigint; fromId?: bigint };
+    if (a.receiverId !== userId) return false;
+    const pairKey = `${e.transactionHash}:${String(a.receiverId ?? "")}:${String(a.fromId ?? "")}`;
+    return !lapseTxKeys.has(pairKey);
+  });
+
+  const seenMatrix = new Set<string>();
+  const uniqueIncome = income.filter((e) => {
+    const key = `${e.transactionHash}:${userId}`;
+    if (seenMatrix.has(key)) return false;
+    seenMatrix.add(key);
+    return true;
+  });
+
+  const treasury = events.filter((e) => {
+    if (e.eventName !== "ClubPoolPayment") return false;
+    const a = e.args as { userId?: bigint };
+    return a.userId === userId;
+  });
+
+  const sumAmount = (rows: MatrixUserEvent[]) =>
+    rows.reduce((s, e) => s + ((e.args as { amount?: bigint }).amount ?? 0n), 0n);
+
+  return {
+    incomeEvents: uniqueIncome,
+    lapseEvents: lapse,
+    treasuryEvents: treasury,
+    totalMatrixIncome: sumAmount(uniqueIncome),
+    totalLapseIncome: sumAmount(lapse),
+    totalRoyalIncome: sumAmount(treasury),
+  };
+}

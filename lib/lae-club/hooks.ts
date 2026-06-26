@@ -17,7 +17,7 @@ import { LAE_MATRIX_SIZE, LAE_LAST_LEVEL, MATRIX_SUPPORTS_LAE_REWARDS } from "./
 import { siteOrigin, withBasePath } from "@/lib/paths";
 import { incomeStringToWei } from "@/lib/contracts/format";
 import { fetchMatrixUserEvents, type MatrixUserEvent } from "./matrix-events";
-import { dedupeEvents, sortEventsNewestFirst } from "./event-utils";
+import { dedupeEvents, sortEventsNewestFirst, splitIncomeEvents } from "./event-utils";
 import { fetchLaeUserEventsFromApi, fetchLaeUserIncomeFromApi } from "./user-api";
 import { LAE_USER_QUERY_KEY } from "./query-keys";
 import {
@@ -482,48 +482,21 @@ export function useLaeUserEvents() {
 }
 
 export function useLaeIncomeEvents() {
+  const user = useLaeUser();
   const events = useLaeUserEvents();
-  const lapse = (events.data ?? []).filter((e) => e.eventName === "LapseIncome");
-  const lapseTxKeys = new Set(
-    lapse.map((e) => {
-      const a = e.args as { receiverId?: bigint; fromId?: bigint };
-      return `${e.transactionHash}:${String(a.receiverId ?? "")}:${String(a.fromId ?? "")}`;
-    })
-  );
-  const income = (events.data ?? []).filter((e) => {
-    if (e.eventName !== "TokenReceived") return false;
-    const a = e.args as { receiverId?: bigint; fromId?: bigint };
-    const pairKey = `${e.transactionHash}:${String(a.receiverId ?? "")}:${String(a.fromId ?? "")}`;
-    if (lapseTxKeys.has(pairKey)) return false;
-    return true;
-  });
-  // One matrix payout per tx per receiver (guard against duplicate indexed rows).
-  const seenMatrix = new Set<string>();
-  const uniqueIncome = income.filter((e) => {
-    const a = e.args as { receiverId?: bigint };
-    const key = `${e.transactionHash}:${String(a.receiverId ?? "")}`;
-    if (seenMatrix.has(key)) return false;
-    seenMatrix.add(key);
-    return true;
-  });
-  const treasury = (events.data ?? []).filter((e) => e.eventName === "ClubPoolPayment");
-  const sumAmount = (rows: typeof uniqueIncome) =>
-    rows.reduce((s, e) => s + ((e.args as { amount?: bigint }).amount ?? 0n), 0n);
-  const totalMatrix = sumAmount(uniqueIncome);
-  const totalLapse = sumAmount(lapse);
-  const totalTreasury = sumAmount(treasury);
+  const split = splitIncomeEvents(events.data ?? [], user.userId);
   return {
-    incomeEvents: uniqueIncome,
-    lapseEvents: lapse,
-    royalEvents: treasury,
+    incomeEvents: split.incomeEvents,
+    lapseEvents: split.lapseEvents,
+    royalEvents: split.treasuryEvents,
     allEvents: events.data ?? [],
     spillEvents: [] as MatrixUserEvent[],
     placementEvents: (events.data ?? []).filter((e) => e.eventName === "NewUserPlace"),
     reinvestEvents: (events.data ?? []).filter((e) => e.eventName === "Reinvest"),
     upgradeEvents: (events.data ?? []).filter((e) => e.eventName === "Upgrade"),
-    totalMatrixIncome: totalMatrix,
-    totalLapseIncome: totalLapse,
-    totalRoyalIncome: totalTreasury,
+    totalMatrixIncome: split.totalMatrixIncome,
+    totalLapseIncome: split.totalLapseIncome,
+    totalRoyalIncome: split.totalRoyalIncome,
     isLoading: events.isLoading,
     isFetching: events.isFetching,
     isError: false,
