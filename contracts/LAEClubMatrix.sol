@@ -27,10 +27,14 @@ interface ILAECoin {
  *  board shows their entire downline in the order it grew. At 14 the board
  *  recycles (a new cycle starts at slot 1).
  *
- *  INCOME (money) — PER-BOARD payout
- *  ----------------------------------
- *  Every board where the new member is placed triggers its own 90% payout,
- *  decided by the member's slot on THAT board:
+ *  INCOME (money) — SINGLE payout per registration
+ *  ------------------------------------------------
+ *  Placement happens on ALL upline boards (for team display), but income
+ *  is distributed ONCE per registration from the FIRST UPLINE board
+ *  (sponsor's parent's board). If the sponsor has no upline with this
+ *  level active, income falls back to the sponsor's own board.
+ *  The payout is 90% of the level fee, decided by the member's slot on
+ *  the chosen board:
  *      1              -> board owner's 1st upline (owner wallet if none)
  *      2              -> board owner's 2nd upline (owner wallet if none)
  *      4,14           -> treasury
@@ -39,8 +43,7 @@ interface ILAECoin {
  *      7              -> board owner's 1st direct (Downline 1)
  *      10             -> board owner's 2nd direct (Downline 2)
  *      13             -> first eligible 2nd-level downline (left-to-right)
- *  This means a single registration generates N payouts (one per upline board).
- *  The contract must hold sufficient token balance from accumulated fees.
+ *  One registration = one payout. Contract stays solvent.
  *
  *  ELIGIBILITY + LAPSE
  *  -------------------
@@ -408,27 +411,37 @@ contract LAEClubMatrix {
 
     /**
      * @dev Place `member` into the level-`level` board of its sponsor and of every
-     *      upline that owns this level (top to bottom). EVERY active board
-     *      triggers its own income payout based on that board's slot position.
-     *      When a board reaches slot 5 the owner's next level unlocks for free;
-     *      slot 14 recycles the board.
+     *      upline that owns this level (top to bottom). Placement is on ALL boards
+     *      (display / team). Income is paid ONCE from the FIRST UPLINE board (the
+     *      second board in the chain — sponsor's parent). If only one board exists
+     *      (sponsor has no upline with this level active), income comes from the
+     *      sponsor's board as fallback. Slot 5 unlocks next level; slot 14 recycles.
      */
     function _placeMember(address member, uint8 level, bool doPay) private {
         if (level == 0 || level > LAST_LEVEL) return;
 
         address cur = users[member].referrer;
         uint256 hops = 0;
-        bool placedAny = false;
+        bool paid = false;
+        address firstBoardOwner = address(0);
+        uint8 firstSlot = 0;
 
         while (cur != address(0) && hops < MAX_UPLINE) {
             if (users[cur].activeLevels[level]) {
                 uint8 slot = _appendBoard(cur, member, level);
                 emit NewUserPlace(users[member].id, users[cur].id, level, users[cur].board[level].reinvestCount + 1, slot);
 
-                if (doPay) {
-                    _payByRole(member, cur, slot, level);
+                if (doPay && !paid) {
+                    if (firstBoardOwner == address(0)) {
+                        // Direct sponsor's board — save for fallback, no income yet
+                        firstBoardOwner = cur;
+                        firstSlot = slot;
+                    } else {
+                        // First upline board above sponsor — pay from HERE
+                        _payByRole(member, cur, slot, level);
+                        paid = true;
+                    }
                 }
-                placedAny = true;
 
                 _afterFill(cur, slot, level, member);
             }
@@ -436,7 +449,13 @@ contract LAEClubMatrix {
             hops++;
         }
 
-        if (doPay && !placedAny) {
+        // Only one board existed (sponsor has no upline) — pay from sponsor's board
+        if (doPay && !paid && firstBoardOwner != address(0)) {
+            _payByRole(member, firstBoardOwner, firstSlot, level);
+            paid = true;
+        }
+
+        if (doPay && !paid) {
             _sendToPlatformTreasury(levelTokenCost[level]);
         }
     }

@@ -40,9 +40,11 @@ export async function getLaeUserIncome(wallet, kind, limit = 100) {
         return [];
     const kindFilter = kind === "matrix"
         ? { kind: "matrix" }
-        : kind === "treasury"
-            ? { kind: { in: ["club", "treasury"] } }
-            : {};
+        : kind === "lapse"
+            ? { kind: "lapse" }
+            : kind === "treasury"
+                ? { kind: { in: ["club", "treasury"] } }
+                : {};
     const rows = await prisma.matrixCoreIncome.findMany({
         where: { toUserId: userId, ...kindFilter },
         orderBy: { blockNumber: "desc" },
@@ -53,9 +55,11 @@ export async function getLaeUserIncome(wallet, kind, limit = 100) {
     // Fallback: derive income rows from indexed chain events when mc_income projection missed
     const eventNames = kind === "treasury"
         ? ["ClubPoolPayment"]
-        : kind === "matrix"
-            ? ["TokenReceived"]
-            : ["TokenReceived", "ClubPoolPayment"];
+        : kind === "lapse"
+            ? ["LapseIncome"]
+            : kind === "matrix"
+                ? ["TokenReceived"]
+                : ["TokenReceived", "ClubPoolPayment", "LapseIncome"];
     const uid = String(userId);
     const events = await prisma.chainEvent.findMany({
         where: {
@@ -72,7 +76,7 @@ export async function getLaeUserIncome(wallet, kind, limit = 100) {
     return serializeForJson(events.map((e) => {
         const p = (e.payload ?? {});
         return {
-            kind: e.eventName === "TokenReceived" ? "matrix" : "club",
+            kind: e.eventName === "TokenReceived" ? "matrix" : e.eventName === "LapseIncome" ? "lapse" : "club",
             fromUserId: p.fromId ? Number(p.fromId) : null,
             toUserId: userId,
             level: p.level ? Number(p.level) : null,
@@ -91,6 +95,7 @@ const MATRIX_EVENT_NAMES = [
     "Reinvest",
     "Upgrade",
     "MissedIncome",
+    "LapseIncome",
     "Spillover",
     "LaeRewardAllocated",
     "LaeRewardClaimed",

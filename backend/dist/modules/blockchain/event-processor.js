@@ -152,6 +152,23 @@ export async function processIndexedLog(log) {
             });
             break;
         }
+        case "LapseIncome": {
+            await prisma.matrixCoreIncome.upsert({
+                where: { txHash_logIndex: { txHash, logIndex } },
+                create: {
+                    kind: "lapse",
+                    fromUserId: num(args.fromId),
+                    toUserId: num(args.receiverId),
+                    level: num(args.level) || null,
+                    amount: dec(args.amount),
+                    blockNumber: BigInt(blockNumber),
+                    txHash,
+                    logIndex,
+                },
+                update: {},
+            });
+            break;
+        }
         case "Upgrade": {
             const userId = num(args.userId);
             const slotId = num(args.level);

@@ -12,15 +12,16 @@
 > 1, 2, 3 …). So each user's board shows their entire downline as it grew
 > (Owner's board = A,B,D in slots 1,2,3). At 14 the board recycles (Cycle 2 starts).
 >
-> **2. INCOME (money) — single 90% payout per registration.** The payout is decided
-> by the new member's **slot in its DIRECT SPONSOR's board** using the role table:
+> **2. INCOME (money) — SINGLE 90% payout per registration.** Placement happens
+> on ALL upline boards (for team display), but income is distributed ONCE from
+> the **FIRST UPLINE board** (sponsor's parent's board). If the sponsor has no
+> upline with this level active, income falls back to the sponsor's own board.
+> The slot on the chosen board decides the recipient:
 > `1 = board owner's 1st upline · 2 = board owner's 2nd upline (owner wallet if none) ·
 > 3,6,8,9,11,12 = board owner (self) · 4,14 = treasury ·
 > 5 = treasury on cycle 1, board owner himself on recycle (cycle 2+) ·
 > 7,10 = 1st/2nd downline · 13 = 2nd-level downline`.
-> **Per-board payout:** every board where the member is placed triggers its own
-> 90% payout based on the slot position on THAT board. Contract must hold
-> sufficient accumulated balance.
+> One registration = one payout. Contract stays solvent.
 >
 > **3. ELIGIBILITY + LAPSE.** A recipient needs **≥ 2 direct referrals** (owner is
 > always eligible). If not eligible, the income lapses to the **1st upline**, then

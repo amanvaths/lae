@@ -27,7 +27,7 @@ export declare function getLaeUserByWallet(wallet: string): Promise<{
         toUserId: number | null;
     }[];
 } | null>;
-export declare function getLaeUserIncome(wallet: string, kind?: "matrix" | "treasury", limit?: number): Promise<{
+export declare function getLaeUserIncome(wallet: string, kind?: "matrix" | "treasury" | "lapse", limit?: number): Promise<{
     level: number | null;
     id: string;
     createdAt: Date;
