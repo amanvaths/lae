@@ -31,9 +31,10 @@ interface ILAECoin {
  *  --------------------------------------------------
  *  A registration produces exactly ONE 90% matrix payout, decided by the new
  *  member's slot in its DIRECT SPONSOR's board:
- *      1              -> sponsor's 1st upline (normal)
- *      2,4,14         -> treasury
- *      5              -> treasury on cycle 1; sponsor's upline on recycle (cycle 2+)
+ *      1              -> sponsor's 1st upline (owner wallet if none)
+ *      2              -> sponsor's 2nd upline (owner wallet if none)
+ *      4,14           -> treasury
+ *      5              -> treasury on cycle 1; board owner himself on recycle (cycle 2+)
  *      3,6,8,9,11,12  -> sponsor (self / "You")
  *      7              -> sponsor's 1st direct (Downline 1)
  *      10             -> sponsor's 2nd direct (Downline 2)
@@ -493,36 +494,32 @@ contract LAEClubMatrix {
         uint256 amount = levelTokenCost[level];
         bool recycled = users[boardOwner].board[level].reinvestCount > 0;
 
-        // Treasury-only slots.
-        if (slot == 2 || slot == 4 || slot == 14) {
+        // Direct-to-treasury slots (no eligibility check).
+        if (slot == 4 || slot == 14) {
             _sendToPlatformTreasury(amount);
             return;
         }
 
-        // Position 5: cycle 1 → treasury; after recycle → board owner's upline.
+        // Position 5: cycle 1 -> treasury (also opens the next level); after a
+        // recycle (cycle 2+) the board owner himself earns it.
         if (slot == 5) {
             if (!recycled) {
                 _sendToPlatformTreasury(amount);
                 return;
             }
-            address upline = users[boardOwner].referrer;
-            if (upline == address(0)) {
-                _sendToPlatformTreasury(amount);
-                return;
-            }
-            (address recipient, bool isTreasury) = _resolveRecipient(upline, member, level);
-            if (isTreasury) {
-                _sendToPlatformTreasury(amount);
-            } else {
-                _sendTokenDividends(recipient, member, level, amount);
-            }
+            _payResolved(boardOwner, member, level, amount);
             return;
         }
 
         address target;
         if (slot == 1) {
+            // board owner's 1st upline
             target = _uplineOf(boardOwner, 1);
-            if (target == address(0)) target = boardOwner;
+            if (target == address(0)) target = owner;
+        } else if (slot == 2) {
+            // board owner's 2nd upline; owner wallet when it does not exist
+            target = _uplineOf(boardOwner, 2);
+            if (target == address(0)) target = owner;
         } else if (slot == 7) {
             target = _directDownline(boardOwner, 0);
             if (target == address(0)) target = boardOwner;
@@ -544,6 +541,14 @@ contract LAEClubMatrix {
             return;
         }
 
+        _payResolved(target, member, level, amount);
+    }
+
+    /**
+     * @dev Apply eligibility + lapse to `target`, then pay the 90% BTC share to
+     *      the resolved recipient (or treasury when nobody in the chain qualifies).
+     */
+    function _payResolved(address target, address member, uint8 level, uint256 amount) private {
         (address recipient, bool isTreasury) = _resolveRecipient(target, member, level);
         if (isTreasury) {
             _sendToPlatformTreasury(amount);
