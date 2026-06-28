@@ -9,3 +9,8 @@
 next-env.d.ts
 .vercel
 *.tsbuildinfo
+
+# matrix-test harness (install deps locally)
+matrix-test/node_modules/
+matrix-test/artifacts/
+matrix-test/cache/

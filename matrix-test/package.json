@@ -1,0 +1,20 @@
+{
+  "name": "lae-matrix-test",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Hardhat exact-match + JS reference verification for LAEClubMatrix income",
+  "scripts": {
+    "scenario": "node scenario.js",
+    "sweep": "node run-sweep.js",
+    "pretest": "node prepare-contracts.js",
+    "exact": "node prepare-contracts.js && hardhat test",
+    "verify": "node prepare-contracts.js && hardhat test test/income-verification.test.js"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-ethers": "^3.0.8",
+    "@openzeppelin/contracts": "^5.1.0",
+    "chai": "^4.5.0",
+    "ethers": "^6.13.4",
+    "hardhat": "^2.22.17"
+  }
+}

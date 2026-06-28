@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "backend/**"
+      - "contracts/**"
       - ".github/workflows/deploy-backend-vps.yml"
   workflow_dispatch:
 
