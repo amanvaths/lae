@@ -14,3 +14,9 @@ next-env.d.ts
 matrix-test/node_modules/
 matrix-test/artifacts/
 matrix-test/cache/
+matrix-test/typechain-types/
+
+# Hardhat / Solidity build output (any folder)
+artifacts/
+cache/
+typechain-types/
