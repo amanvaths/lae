@@ -4,7 +4,7 @@ export const CHAIN_ID = Number(process.env.NEXT_PUBLIC_CHAIN_ID ?? "97");
 export const MATRIX_CORE_DEPLOY_BLOCK = BigInt(
   process.env.NEXT_PUBLIC_MATRIX_CORE_DEPLOY_BLOCK ??
     process.env.NEXT_PUBLIC_LAE_MATRIX_DEPLOY_BLOCK ??
-    "115660670"
+    "116155086"
 );
 
 export const LAE_MATRIX_DEPLOY_BLOCK = MATRIX_CORE_DEPLOY_BLOCK;

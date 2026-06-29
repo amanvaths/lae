@@ -15,7 +15,7 @@
  */
 import { ethers } from "ethers";
 
-const ADDR = "0xfAD1A895b873b9C93a63BBF30BC8743d50444568";
+const ADDR = "0x3FF40a725dAE1057BC8B8F593CbdFE550b83e36D";
 const RPC = process.env.BSC_RPC_URL ?? "https://bsc-testnet.bnbchain.org";
 const FUNDER = process.env.FUNDER_PRIVATE_KEY;
 // We create a FRESH sponsor (empty matrix) under SEED_REFERRER, then register

@@ -25,16 +25,16 @@ interface ILAECoin {
  *  every upline's board, all the way to the top (top->bottom / left->right is
  *  expressed here as simple arrival order: slot 1, 2, 3 …). So each user's
  *  board shows their entire downline in the order it grew. At 14 the board
- *  recycles (a new cycle starts at slot 1).
+ *  recycles — Cycle 2 starts EMPTY. The member who filled slot 14 is NOT
+ *  carried into Cycle 2; only future registrations fill the new cycle.
  *
  *  INCOME (money) — SINGLE payout per registration
  *  ------------------------------------------------
  *  Placement happens on ALL upline boards (genealogy display), but income is
- *  paid ONCE per registration from the "frontier" board: the HIGHEST upline
- *  whose board is still in its first cycle (reinvestCount == 0). Roles are
- *  relative to THAT board owner. When the owner's board recycles, the frontier
- *  descends to #2, then #3, #4… so each downline board earns individually.
- *  Fallback: if every upline has recycled, pay from the direct sponsor's board.
+ *  paid ONCE per registration from ONE board: the closest upline in the chain
+ *  whose reinvestCount is MINIMUM (earliest active cycle). Ties at cycle 1
+ *  (reinvestCount == 0) go to the highest upline; ties at cycle 2+ keep the
+ *  closest upline so each board earns from its own recycled cycle in parallel.
  *  The payout is 90% of the level fee, decided by the member's slot on the
  *  chosen board:
  *      1              -> board owner's 1st upline (owner wallet if none)
@@ -377,8 +377,8 @@ contract LAEClubMatrix {
         emit Registration(currentUserId, referrerId, userAddress);
 
         _bumpTeamSize(referrerAddress);
-        // Genealogy placement on every upline board; income paid once from the
-        // frontier board (highest upline still in cycle 1).
+        // Sequential placement into every upline's level-1 board; pays income once
+        // (decided by the new member's slot in its direct sponsor's board).
         _placeMember(userAddress, 1, true);
     }
 
@@ -416,14 +416,10 @@ contract LAEClubMatrix {
      *      upline that owns this level (top to bottom). Placement is on ALL boards
      *      (genealogy / team display) — unchanged from the working model.
      *
-     *      INCOME is paid ONCE per registration from the "frontier" board: the
-     *      HIGHEST upline whose board is still in its first cycle (reinvestCount
-     *      == 0) at fill time. Roles are relative to THAT board owner. Once the
-     *      owner's board recycles, the frontier descends to #2, then #3, #4… so
-     *      downline boards earn individually instead of income leaking to owner.
-     *
-     *      Fallback: if every upline board has recycled, pay from the direct
-     *      sponsor's board. Slot 5 unlocks next level; slot 14 recycles.
+     *      INCOME is paid ONCE from the upline board with minimum reinvestCount.
+     *      Ties at cycle 1 go to the highest upline; ties at cycle 2+ to the
+     *      closest upline. Payment always uses the slot on THAT board.
+     *      Slot 5 unlocks next level; slot 14 recycles.
      */
     function _placeMember(address member, uint8 level, bool doPay) private {
         if (level == 0 || level > LAST_LEVEL) return;
@@ -431,25 +427,25 @@ contract LAEClubMatrix {
         address cur = users[member].referrer;
         uint256 hops = 0;
 
-        address frontierOwner = address(0);
-        uint8 frontierSlot = 0;
-        address sponsorBoardOwner = address(0);
-        uint8 sponsorSlot = 0;
+        address paymentBoardOwner = address(0);
+        uint8 paymentSlot = 0;
+        uint256 minReinvest = type(uint256).max;
 
         while (cur != address(0) && hops < MAX_UPLINE) {
             if (users[cur].activeLevels[level]) {
-                bool firstCycle = users[cur].board[level].reinvestCount == 0;
+                uint256 rc = users[cur].board[level].reinvestCount;
                 uint8 slot = _appendBoard(cur, member, level);
                 emit NewUserPlace(users[member].id, users[cur].id, level, users[cur].board[level].reinvestCount + 1, slot);
 
                 if (doPay) {
-                    if (sponsorBoardOwner == address(0)) {
-                        sponsorBoardOwner = cur;
-                        sponsorSlot = slot;
-                    }
-                    if (firstCycle) {
-                        frontierOwner = cur;
-                        frontierSlot = slot;
+                    if (rc < minReinvest) {
+                        minReinvest = rc;
+                        paymentBoardOwner = cur;
+                        paymentSlot = slot;
+                    } else if (rc == minReinvest && rc == 0) {
+                        // Cycle 1 layer: highest upline still filling cycle 1 wins ties
+                        paymentBoardOwner = cur;
+                        paymentSlot = slot;
                     }
                 }
 
@@ -461,10 +457,8 @@ contract LAEClubMatrix {
 
         if (!doPay) return;
 
-        if (frontierOwner != address(0)) {
-            _payByRole(member, frontierOwner, frontierSlot, level);
-        } else if (sponsorBoardOwner != address(0)) {
-            _payByRole(member, sponsorBoardOwner, sponsorSlot, level);
+        if (paymentBoardOwner != address(0)) {
+            _payByRole(member, paymentBoardOwner, paymentSlot, level);
         } else {
             _sendToPlatformTreasury(levelTokenCost[level]);
         }
@@ -483,8 +477,8 @@ contract LAEClubMatrix {
 
     /**
      * @dev Progression hooks: slot 5 unlocks the owner's next level (free); slot 14
-     *      completes the cycle, recycles the board, and places the 14th member at
-     *      position 1 of the new cycle (same ID carries into Cycle 2).
+     *      recycles the board empty. Cycle 2 slot 1 is filled only by the next
+     *      registration that propagates to this board (not the slot-14 member).
      */
     function _afterFill(address boardOwner, uint8 slot, uint8 level, address member) private {
         if (slot == 5) {
@@ -495,9 +489,6 @@ contract LAEClubMatrix {
             delete b.slots;
             b.reinvestCount += 1;
             emit Reinvest(users[boardOwner].id, users[boardOwner].id, users[boardOwner].id, level);
-            b.slots.push(member);
-            b.totalFilled += 1;
-            emit NewUserPlace(users[member].id, users[boardOwner].id, level, b.reinvestCount + 1, 1);
         }
     }
 

@@ -1,12 +1,12 @@
 {
   "chainId": 97,
   "network": "bsc-testnet",
-  "deployedAt": "2026-06-26",
   "contracts": {
-    "LAEClubMatrix": "0xfAD1A895b873b9C93a63BBF30BC8743d50444568",
+    "LAEClubMatrix": "0x3FF40a725dAE1057BC8B8F593CbdFE550b83e36D",
     "LAECoin": "0xD6698E6a8Ee4712cC2E36C150f1C34e59884C45A",
     "TestPaymentToken": "0xb2bE66BE07E1AD04074B32B8b13DcdFaB6B57575"
   },
-  "deployBlock": 115660670,
+  "deployBlock": 116155086,
+  "deployedAt": "2026-06-29",
   "owner": "0xef9594fC5145404BfC7B5640296C3864319e3d86"
 }

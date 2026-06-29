@@ -59,14 +59,21 @@ function labelRecipient(id, treasury) {
   return id === null ? "none" : `#${id}`;
 }
 
-function frontierBoardOwner(ref, memberId) {
+function paymentBoardOwner(ref, memberId) {
   let cur = ref.users.get(memberId).referrerId;
-  let frontier = 0;
+  let best = 0;
+  let minRc = Infinity;
   while (cur !== 0) {
-    if (ref.users.get(cur).reinvestCount === 0) frontier = cur;
+    const rc = ref.users.get(cur).reinvestCount;
+    if (rc < minRc) {
+      minRc = rc;
+      best = cur;
+    } else if (rc === minRc && rc === 0) {
+      best = cur;
+    }
     cur = ref.users.get(cur).referrerId;
   }
-  return frontier;
+  return best;
 }
 
 describe("LAEClubMatrix income verification (contract untouched)", function () {

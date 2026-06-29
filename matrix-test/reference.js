@@ -4,8 +4,9 @@
  * FRONTIER income (the user's working model, income bug fixed).
  *
  * Placement: every new member on ALL upline boards (genealogy arrival order).
- * Income: ONCE per registration from the HIGHEST upline board still in cycle 1.
- * Roles relative to that board owner (genealogy direct downlines for pos 7/10).
+ * paid ONCE per registration from the upline board with minimum reinvestCount.
+ * Ties at cycle 1 (rc==0) go to the highest upline; ties at cycle 2+ keep the
+ * closest upline so each board earns from its own recycled cycle in parallel.
  */
 
 const MATRIX_SIZE = 14;
@@ -27,6 +28,7 @@ class Reference {
     this.totalLapsedIncome = 0n;
     this.registrations = 0;
     this.payouts = [];
+    this.placements = [];
     this.violations = [];
     this._newUser(1, 0);
   }
@@ -172,23 +174,34 @@ class Reference {
       const b = this.users.get(boardOwnerId);
       b.slots = [];
       b.reinvestCount += 1;
-      b.slots.push(memberId);
-      b.totalFilled += 1;
     }
   }
 
   _placeMember(memberId, doPay) {
     let cur = this.users.get(memberId).referrerId;
     let hops = 0;
-    let frontierOwner = 0, frontierSlot = 0;
-    let sponsorBoardOwner = 0, sponsorSlot = 0;
+    let paymentBoardOwner = 0;
+    let paymentSlot = 0;
+    let minReinvest = Infinity;
 
     while (cur !== 0 && hops < 60) {
-      const firstCycle = this.users.get(cur).reinvestCount === 0;
+      const rc = this.users.get(cur).reinvestCount;
       const slot = this._appendBoard(cur, memberId);
+      this.placements.push({
+        fromId: memberId,
+        boardOwnerId: cur,
+        slot,
+        cycle: rc + 1,
+      });
       if (doPay) {
-        if (sponsorBoardOwner === 0) { sponsorBoardOwner = cur; sponsorSlot = slot; }
-        if (firstCycle) { frontierOwner = cur; frontierSlot = slot; }
+        if (rc < minReinvest) {
+          minReinvest = rc;
+          paymentBoardOwner = cur;
+          paymentSlot = slot;
+        } else if (rc === minReinvest && rc === 0) {
+          paymentBoardOwner = cur;
+          paymentSlot = slot;
+        }
       }
       this._afterFill(cur, slot, memberId);
       cur = this.users.get(cur).referrerId;
@@ -196,8 +209,7 @@ class Reference {
     }
 
     if (!doPay) return;
-    if (frontierOwner !== 0) this._payByRole(memberId, frontierOwner, frontierSlot);
-    else if (sponsorBoardOwner !== 0) this._payByRole(memberId, sponsorBoardOwner, sponsorSlot);
+    if (paymentBoardOwner !== 0) this._payByRole(memberId, paymentBoardOwner, paymentSlot);
     else this._sendTreasury(AMOUNT, memberId, 0, 0, "treasury-noboard");
   }
 
