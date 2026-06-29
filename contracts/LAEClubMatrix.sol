@@ -22,11 +22,11 @@ interface ILAECoin {
  *  -----------------------------------
  *  Every user owns an independent 14-slot board per level. When a new member
  *  joins, it is appended to the next free slot of its sponsor's board AND of
- *  every upline's board, all the way to the top (top->bottom / left->right is
- *  expressed here as simple arrival order: slot 1, 2, 3 …). So each user's
- *  board shows their entire downline in the order it grew. At 14 the board
- *  recycles — Cycle 2 starts EMPTY. The member who filled slot 14 is NOT
- *  carried into Cycle 2; only future registrations fill the new cycle.
+ *  every upline's board that is still on **cycle 1**. Once an upline recycles,
+ *  their cycle 2+ board only receives (a) the upline's **direct referrals**, or
+ *  (b) a downline who **completed their own board** (slot 14 recycle) — carried
+ *  upward into each upline's current cycle. At 14 the board recycles — the next
+ *  cycle starts empty except for those two rules.
  *
  *  INCOME (money) — SINGLE payout per registration
  *  ------------------------------------------------
@@ -412,14 +412,46 @@ contract LAEClubMatrix {
     }
 
     /**
+     * @dev Cycle 1 boards receive every downline registration. Cycle 2+ boards
+     *      only receive the board owner's direct referrals (new registrations).
+     */
+    function _shouldPlaceOnBoard(address boardOwner, address member, uint8 level) private view returns (bool) {
+        if (users[boardOwner].board[level].reinvestCount == 0) return true;
+        return users[member].referrer == boardOwner;
+    }
+
+    /**
+     * @dev When `recycledMember` completes their own board (slot 14), place them
+     *      on every upline board that is already on cycle 2+ (no payment).
+     */
+    function _placeRecycledMemberOnUplines(address recycledMember, uint8 level) private {
+        address cur = users[recycledMember].referrer;
+        uint256 hops = 0;
+
+        while (cur != address(0) && hops < MAX_UPLINE) {
+            if (users[cur].activeLevels[level] && users[cur].board[level].reinvestCount > 0) {
+                uint8 slot = _appendBoard(cur, recycledMember, level);
+                emit NewUserPlace(
+                    users[recycledMember].id,
+                    users[cur].id,
+                    level,
+                    users[cur].board[level].reinvestCount + 1,
+                    slot
+                );
+                _afterFill(cur, slot, level, recycledMember);
+            }
+            cur = users[cur].referrer;
+            hops++;
+        }
+    }
+
+    /**
      * @dev Place `member` into the level-`level` board of its sponsor and of every
-     *      upline that owns this level (top to bottom). Placement is on ALL boards
-     *      (genealogy / team display) — unchanged from the working model.
+     *      eligible upline (cycle 1 = all uplines; cycle 2+ = directs only).
      *
      *      INCOME is paid ONCE from the upline board with minimum reinvestCount.
      *      Ties at cycle 1 go to the highest upline; ties at cycle 2+ to the
      *      closest upline. Payment always uses the slot on THAT board.
-     *      Slot 5 unlocks next level; slot 14 recycles.
      */
     function _placeMember(address member, uint8 level, bool doPay) private {
         if (level == 0 || level > LAST_LEVEL) return;
@@ -432,7 +464,7 @@ contract LAEClubMatrix {
         uint256 minReinvest = type(uint256).max;
 
         while (cur != address(0) && hops < MAX_UPLINE) {
-            if (users[cur].activeLevels[level]) {
+            if (users[cur].activeLevels[level] && _shouldPlaceOnBoard(cur, member, level)) {
                 uint256 rc = users[cur].board[level].reinvestCount;
                 uint8 slot = _appendBoard(cur, member, level);
                 emit NewUserPlace(users[member].id, users[cur].id, level, users[cur].board[level].reinvestCount + 1, slot);
@@ -443,7 +475,6 @@ contract LAEClubMatrix {
                         paymentBoardOwner = cur;
                         paymentSlot = slot;
                     } else if (rc == minReinvest && rc == 0) {
-                        // Cycle 1 layer: highest upline still filling cycle 1 wins ties
                         paymentBoardOwner = cur;
                         paymentSlot = slot;
                     }
@@ -489,6 +520,7 @@ contract LAEClubMatrix {
             delete b.slots;
             b.reinvestCount += 1;
             emit Reinvest(users[boardOwner].id, users[boardOwner].id, users[boardOwner].id, level);
+            _placeRecycledMemberOnUplines(boardOwner, level);
         }
     }
 

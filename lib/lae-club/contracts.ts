@@ -6,7 +6,7 @@ export const LAE_CONTRACTS = {
   /** LAEClubMatrix — 15 slots × 14 positions */
   matrix: (process.env.NEXT_PUBLIC_LAE_MATRIX_CONTRACT ??
     process.env.NEXT_PUBLIC_MATRIX_CORE_CONTRACT ??
-    "0x3FF40a725dAE1057BC8B8F593CbdFE550b83e36D") as `0x${string}`,
+    "0xA508b464Adad347Ae211d2058C01cD2D9d11d50d") as `0x${string}`,
   payment: (process.env.NEXT_PUBLIC_PAYMENT_TOKEN ??
     "0xb2bE66BE07E1AD04074B32B8b13DcdFaB6B57575") as `0x${string}`,
   laeCoin: (process.env.NEXT_PUBLIC_LAE_COIN_CONTRACT ??

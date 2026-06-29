@@ -34,13 +34,25 @@ function ancestors(ref, id) {
   return set;
 }
 
+function shouldPlaceOnBoard(ref, boardOwnerId, memberId) {
+  if (ref.users.get(boardOwnerId).reinvestCount === 0) return true;
+  return ref.users.get(memberId).referrerId === boardOwnerId;
+}
+
 function validatePlacements(ref) {
-  // Per-board sequential slot tracking per cycle
-  const boardState = new Map(); // boardOwnerId -> { cycle, nextSlot, count }
+  const boardState = new Map();
 
   for (const p of ref.placements) {
-    const anc = ancestors(ref, p.fromId);
-    if (!anc.has(p.boardOwnerId)) {
+    let cur = ref.users.get(p.fromId).referrerId;
+    let isUpline = false;
+    while (cur !== 0) {
+      if (cur === p.boardOwnerId) {
+        isUpline = true;
+        break;
+      }
+      cur = ref.users.get(cur).referrerId;
+    }
+    if (!isUpline) {
       return failPlacement(p, "Board owner is not an upline of entrant");
     }
 

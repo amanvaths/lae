@@ -169,11 +169,38 @@ class Reference {
     return b.slots.length;
   }
 
+  _shouldPlaceOnBoard(boardOwnerId, memberId) {
+    if (this.users.get(boardOwnerId).reinvestCount === 0) return true;
+    return this.users.get(memberId).referrerId === boardOwnerId;
+  }
+
+  _placeRecycledMemberOnUplines(recycledMemberId) {
+    let cur = this.users.get(recycledMemberId).referrerId;
+    let hops = 0;
+    while (cur !== 0 && hops < 60) {
+      if (this.users.get(cur).reinvestCount > 0) {
+        const rc = this.users.get(cur).reinvestCount;
+        const slot = this._appendBoard(cur, recycledMemberId);
+        this.placements.push({
+          fromId: recycledMemberId,
+          boardOwnerId: cur,
+          slot,
+          cycle: rc + 1,
+          recycleCarry: true,
+        });
+        this._afterFill(cur, slot, recycledMemberId);
+      }
+      cur = this.users.get(cur).referrerId;
+      hops++;
+    }
+  }
+
   _afterFill(boardOwnerId, slot, memberId) {
     if (slot === MATRIX_SIZE) {
       const b = this.users.get(boardOwnerId);
       b.slots = [];
       b.reinvestCount += 1;
+      this._placeRecycledMemberOnUplines(boardOwnerId);
     }
   }
 
@@ -185,6 +212,11 @@ class Reference {
     let minReinvest = Infinity;
 
     while (cur !== 0 && hops < 60) {
+      if (!this._shouldPlaceOnBoard(cur, memberId)) {
+        cur = this.users.get(cur).referrerId;
+        hops++;
+        continue;
+      }
       const rc = this.users.get(cur).reinvestCount;
       const slot = this._appendBoard(cur, memberId);
       this.placements.push({
@@ -192,6 +224,7 @@ class Reference {
         boardOwnerId: cur,
         slot,
         cycle: rc + 1,
+        boardRcAtPlace: rc,
       });
       if (doPay) {
         if (rc < minReinvest) {
