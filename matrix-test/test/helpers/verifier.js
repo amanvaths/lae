@@ -52,9 +52,9 @@ function validateReferenceRun(ref) {
 
     // treasury only on allowed positions (or lapse / empty pos13)
     if (p.treasury) {
+      const upline1 = boardOwner !== 0 ? ref._uplineOf(boardOwner, 1) : 0;
       const okTreasury =
-        slot === 4 || slot === 14 ||
-        (slot === 5 && !p.recycledAtPay) ||
+        ((slot === 4 || slot === 14 || (slot === 5 && !p.recycledAtPay)) && upline1 === 0) ||
         (slot === 13 && p.kind === "treasury-slot13") ||
         p.kind === "lapse-treasury" || p.kind === "treasury-noboard" || p.kind === "treasury-other";
       if (!okTreasury) {
@@ -100,8 +100,14 @@ function validateReferenceRun(ref) {
 }
 
 function roleTarget(ref, boardOwnerId, slot, recycledAtPay) {
-  if (slot === 4 || slot === 14) return 0;
-  if (slot === 5 && !recycledAtPay) return 0;
+  if (slot === 4 || slot === 14) {
+    const u = ref._uplineOf(boardOwnerId, 1);
+    return u !== 0 ? u : 0;
+  }
+  if (slot === 5 && !recycledAtPay) {
+    const u = ref._uplineOf(boardOwnerId, 1);
+    return u !== 0 ? u : 0;
+  }
   if (slot === 1) {
     const u = ref._uplineOf(boardOwnerId, 1);
     return u !== 0 ? u : ref.ownerId;

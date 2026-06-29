@@ -10,16 +10,19 @@
 > per level. A new member is appended to the next free slot of its sponsor's board
 > **and of every upline's board, all the way to the top** (arrival order: slot
 > 1, 2, 3 …). So each user's board shows their entire downline as it grew
-> (Owner's board = A,B,D in slots 1,2,3). At 14 the board recycles (Cycle 2 starts).
+> (Owner's board = A,B,D in slots 1,2,3). At 14 the board recycles — Cycle 2
+> starts **empty**. The slot-14 member is NOT placed in Cycle 2; only the next
+> registration (or owner's new direct) fills Cycle 2 slot 1.
 >
 > **2. INCOME (money) — SINGLE 90% payout per registration.** Placement happens
-> on ALL upline boards (for team display), but income is distributed ONCE from
-> the **FIRST UPLINE board** (sponsor's parent's board). If the sponsor has no
-> upline with this level active, income falls back to the sponsor's own board.
-> The slot on the chosen board decides the recipient:
-> `1 = board owner's 1st upline · 2 = board owner's 2nd upline (owner wallet if none) ·
-> 3,6,8,9,11,12 = board owner (self) · 4,14 = treasury ·
-> 5 = treasury on cycle 1, board owner himself on recycle (cycle 2+) ·
+> on ALL upline boards (for team display), but income is distributed ONCE.
+> If the member lands on a **cycle-2+ board as a direct referral** of that board
+> owner, payment uses that board and slot. Otherwise the upline board with
+> **minimum reinvestCount** is used (cycle-1 ties → highest upline). The slot
+> on the chosen board decides the recipient:
+> `1 = board owner's 1st upline (owner wallet if none) · 2 = 2nd upline (owner if none) ·
+> 3,6,8,9,11,12 = board owner (self) · 4,14 = board owner's 1st upline (treasury only for root owner) ·
+> 5 = 1st upline on cycle 1 (treasury for owner), board owner on cycle 2+ ·
 > 7,10 = 1st/2nd downline · 13 = 2nd-level downline`.
 > One registration = one payout. Contract stays solvent.
 >

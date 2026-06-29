@@ -123,17 +123,27 @@ class Reference {
     else this._sendDividends(r.recipientId, amount, fromId, boardOwnerId, slot, kind, r.viaLapse, recycledAtPay, directSnap, targetId);
   }
 
+  _payTreasurySlotToUpline1(fromId, boardOwnerId, slot, kind, amount, recycledAtPay) {
+    const upline1 = this._uplineOf(boardOwnerId, 1);
+    if (upline1 === 0) {
+      this._sendTreasury(amount, fromId, boardOwnerId, slot, kind, recycledAtPay, new Map(), 0);
+      return;
+    }
+    const snap = this._snapshotForTarget(upline1);
+    this._payResolved(upline1, fromId, boardOwnerId, slot, kind, amount, recycledAtPay, snap);
+  }
+
   _payByRole(fromId, boardOwnerId, slot) {
     const amount = AMOUNT;
     const recycledAtPay = this.users.get(boardOwnerId).reinvestCount > 0;
 
     if (slot === 4 || slot === 14) {
-      this._sendTreasury(amount, fromId, boardOwnerId, slot, "treasury-slot", recycledAtPay, new Map(), 0);
+      this._payTreasurySlotToUpline1(fromId, boardOwnerId, slot, "treasury-slot", amount, recycledAtPay);
       return;
     }
     if (slot === 5) {
       if (!recycledAtPay) {
-        this._sendTreasury(amount, fromId, boardOwnerId, slot, "treasury-slot5c1", recycledAtPay, new Map(), 0);
+        this._payTreasurySlotToUpline1(fromId, boardOwnerId, slot, "treasury-slot5c1", amount, recycledAtPay);
         return;
       }
       const snap = this._snapshotForTarget(boardOwnerId);
@@ -210,6 +220,8 @@ class Reference {
     let paymentBoardOwner = 0;
     let paymentSlot = 0;
     let minReinvest = Infinity;
+    let directCycleBoardOwner = 0;
+    let directCycleSlot = 0;
 
     while (cur !== 0 && hops < 60) {
       if (!this._shouldPlaceOnBoard(cur, memberId)) {
@@ -227,6 +239,10 @@ class Reference {
         boardRcAtPlace: rc,
       });
       if (doPay) {
+        if (rc > 0 && this.users.get(memberId).referrerId === cur && directCycleBoardOwner === 0) {
+          directCycleBoardOwner = cur;
+          directCycleSlot = slot;
+        }
         if (rc < minReinvest) {
           minReinvest = rc;
           paymentBoardOwner = cur;
@@ -242,7 +258,8 @@ class Reference {
     }
 
     if (!doPay) return;
-    if (paymentBoardOwner !== 0) this._payByRole(memberId, paymentBoardOwner, paymentSlot);
+    if (directCycleBoardOwner !== 0) this._payByRole(memberId, directCycleBoardOwner, directCycleSlot);
+    else if (paymentBoardOwner !== 0) this._payByRole(memberId, paymentBoardOwner, paymentSlot);
     else this._sendTreasury(AMOUNT, memberId, 0, 0, "treasury-noboard");
   }
 
