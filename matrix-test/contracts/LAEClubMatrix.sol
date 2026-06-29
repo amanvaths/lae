@@ -445,59 +445,82 @@ contract LAEClubMatrix {
         }
     }
 
+    struct PaymentTargets {
+        address frontierOwner;
+        uint8 frontierSlot;
+        uint256 minReinvest;
+        address directOwner;
+        uint8 directSlot;
+    }
+
+    function _emitNewUserPlace(
+        address member,
+        address boardOwner,
+        uint8 level,
+        uint256 cycle,
+        uint8 slot
+    ) private {
+        emit NewUserPlace(users[member].id, users[boardOwner].id, level, cycle, slot);
+    }
+
+    function _processBoardPlacement(
+        address member,
+        address boardOwner,
+        uint8 level,
+        bool doPay,
+        PaymentTargets memory targets
+    ) private returns (PaymentTargets memory) {
+        uint256 rc = users[boardOwner].board[level].reinvestCount;
+        uint8 slot = _appendBoard(boardOwner, member, level);
+        _emitNewUserPlace(member, boardOwner, level, rc + 1, slot);
+
+        if (doPay) {
+            if (rc > 0 && users[member].referrer == boardOwner && targets.directOwner == address(0)) {
+                targets.directOwner = boardOwner;
+                targets.directSlot = slot;
+            }
+            if (rc < targets.minReinvest) {
+                targets.minReinvest = rc;
+                targets.frontierOwner = boardOwner;
+                targets.frontierSlot = slot;
+            } else if (rc == targets.minReinvest && rc == 0) {
+                targets.frontierOwner = boardOwner;
+                targets.frontierSlot = slot;
+            }
+        }
+
+        _afterFill(boardOwner, slot, level, member);
+        return targets;
+    }
+
     /**
      * @dev Place `member` into the level-`level` board of its sponsor and of every
      *      eligible upline (cycle 1 = all uplines; cycle 2+ = directs only).
      *
-     *      INCOME is paid ONCE from the upline board with minimum reinvestCount.
-     *      Ties at cycle 1 go to the highest upline; ties at cycle 2+ to the
-     *      closest upline. Payment always uses the slot on THAT board.
+     *      INCOME is paid ONCE from the upline board with minimum reinvestCount,
+     *      unless the member lands on a cycle-2+ board as a direct referral — then
+     *      that board is used. Ties at cycle 1 go to the highest upline.
      */
     function _placeMember(address member, uint8 level, bool doPay) private {
         if (level == 0 || level > LAST_LEVEL) return;
 
+        PaymentTargets memory targets;
+        targets.minReinvest = type(uint256).max;
+
         address cur = users[member].referrer;
-        uint256 hops = 0;
-
-        address paymentBoardOwner = address(0);
-        uint8 paymentSlot = 0;
-        uint256 minReinvest = type(uint256).max;
-        address directCycleBoardOwner = address(0);
-        uint8 directCycleSlot = 0;
-
-        while (cur != address(0) && hops < MAX_UPLINE) {
+        for (uint256 hops = 0; cur != address(0) && hops < MAX_UPLINE; hops++) {
             if (users[cur].activeLevels[level] && _shouldPlaceOnBoard(cur, member, level)) {
-                uint256 rc = users[cur].board[level].reinvestCount;
-                uint8 slot = _appendBoard(cur, member, level);
-                emit NewUserPlace(users[member].id, users[cur].id, level, users[cur].board[level].reinvestCount + 1, slot);
-
-                if (doPay) {
-                    if (rc > 0 && users[member].referrer == cur && directCycleBoardOwner == address(0)) {
-                        directCycleBoardOwner = cur;
-                        directCycleSlot = slot;
-                    }
-                    if (rc < minReinvest) {
-                        minReinvest = rc;
-                        paymentBoardOwner = cur;
-                        paymentSlot = slot;
-                    } else if (rc == minReinvest && rc == 0) {
-                        paymentBoardOwner = cur;
-                        paymentSlot = slot;
-                    }
-                }
-
-                _afterFill(cur, slot, level, member);
+                targets = _processBoardPlacement(member, cur, level, doPay, targets);
             }
             cur = users[cur].referrer;
-            hops++;
         }
 
         if (!doPay) return;
 
-        if (directCycleBoardOwner != address(0)) {
-            _payByRole(member, directCycleBoardOwner, directCycleSlot, level);
-        } else if (paymentBoardOwner != address(0)) {
-            _payByRole(member, paymentBoardOwner, paymentSlot, level);
+        if (targets.directOwner != address(0)) {
+            _payByRole(member, targets.directOwner, targets.directSlot, level);
+        } else if (targets.frontierOwner != address(0)) {
+            _payByRole(member, targets.frontierOwner, targets.frontierSlot, level);
         } else {
             _sendToPlatformTreasury(levelTokenCost[level]);
         }
