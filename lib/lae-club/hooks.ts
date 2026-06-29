@@ -24,6 +24,7 @@ import {
   useLaeMatrixOverviewApi,
   useLaeMatrixTreeApi,
 } from "./matrix-api";
+import { useDashboardViewUserId } from "./dashboard-view-context";
 
 type UserDetailsRow = readonly [
   Address,
@@ -62,8 +63,8 @@ function mapMatrixUser({ registered, userId, details }: LaeUserSnapshot) {
   };
 }
 
-/** LAEClubMatrix identity — addressToId + getUserDetails. */
-export function useLaeUser() {
+/** LAEClubMatrix identity — addressToId + getUserDetails (connected wallet). */
+function useLaeUserFromWallet() {
   const { address } = useAccount();
   const client = usePublicClient();
 
@@ -115,6 +116,25 @@ export function useLaeUser() {
     isLoading: q.isLoading,
     isError: q.isError,
     refetch: () => void q.refetch(),
+  };
+}
+
+/** Dashboard subject — connected wallet or ?viewUserId= read-only viewer. */
+export function useLaeUser() {
+  const viewUserId = useDashboardViewUserId();
+  const walletUser = useLaeUserFromWallet();
+  const viewUser = useLaeUserById(viewUserId ?? undefined);
+
+  if (viewUserId != null && viewUserId > 0) {
+    return {
+      ...viewUser,
+      isViewMode: true as const,
+    };
+  }
+
+  return {
+    ...walletUser,
+    isViewMode: false as const,
   };
 }
 

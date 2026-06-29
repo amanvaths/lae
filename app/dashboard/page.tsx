@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
@@ -30,6 +31,8 @@ import { fmtEther, incomeStringToWei } from "@/lib/contracts/format";
 import { truncateAddress, formatUnixDate } from "@/lib/format";
 import { withBasePath } from "@/lib/paths";
 import { txUrl } from "@/lib/lae-club/contracts";
+import { cn } from "@/lib/utils";
+import { LAE_MATRIX_SIZE } from "@/lib/lae-club/constants";
 
 const stagger = {
   hidden: {},
@@ -47,11 +50,28 @@ export default function DashboardHome() {
   const userEvents = useLaeUserEvents();
   const recycles = useLaeRecycleCount();
   const userIdNum = user.userId ? Number(user.userId) : undefined;
-  const matrixL1Api = useMatrixCoreTreeApi(userIdNum, 1, 1);
+  const currentCycle = levels.currentCycle ?? 1;
+  const [matrixCycle, setMatrixCycle] = useState(currentCycle);
+
+  useEffect(() => {
+    setMatrixCycle(currentCycle);
+  }, [currentCycle]);
+
+  const matrixL1Api = useMatrixCoreTreeApi(userIdNum, 1, matrixCycle, {
+    enabled: !!userIdNum,
+  });
   const recentEvents = sortEventsNewestFirst(userEvents.data ?? []).slice(0, 8);
 
   if (user.isLoading) {
     return <QueryLoading label="Loading on-chain dashboard…" />;
+  }
+
+  if ("notFound" in user && user.notFound) {
+    return (
+      <Panel title="User not found">
+        <p className="text-sm text-slate-400">This user ID is not registered on the matrix contract.</p>
+      </Panel>
+    );
   }
 
   if (!user.registered) {
@@ -166,8 +186,37 @@ export default function DashboardHome() {
       {/* ── Matrix Visualizer ── */}
       <motion.div variants={fadeUp}>
         <Panel
-          title="Level 1 · Silver & Gold Matrix"
+          title={`Level 1 · Silver & Gold Matrix · Cycle ${matrixCycle}`}
           className="mt-5 border-[#D4AF37]/15"
+          action={
+            currentCycle > 1 ? (
+              <div className="flex flex-wrap gap-1.5">
+                {Array.from({ length: currentCycle }, (_, i) => i + 1).map((c) => {
+                  const oc = levels.levels.find((l) => l.level === 1);
+                  const filled =
+                    c === matrixCycle && matrixL1Api.tree
+                      ? matrixL1Api.tree.filledSpots
+                      : undefined;
+                  return (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setMatrixCycle(c)}
+                      className={cn(
+                        "rounded-full border px-2.5 py-1 text-[10px] font-medium transition-colors",
+                        matrixCycle === c
+                          ? "border-[#D4AF37]/50 bg-[#D4AF37]/15 text-[#D4AF37]"
+                          : "border-white/10 text-slate-500 hover:text-slate-300"
+                      )}
+                    >
+                      C{c}
+                      {filled != null ? ` · ${filled}/${LAE_MATRIX_SIZE}` : c === currentCycle ? " · live" : ""}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : undefined
+          }
         >
           {matrixL1Api.isLoading && !matrixL1Api.tree ? (
             <QueryLoading label="Loading matrix…" />
@@ -179,8 +228,8 @@ export default function DashboardHome() {
                   : undefined
               }
               levelActive={matrixL1Api.tree?.active ?? true}
-              level={1}
-              reinvestCount={BigInt(Math.max(0, (matrixL1Api.tree?.cycle ?? 1) - 1))}
+              level={matrixCycle}
+              reinvestCount={BigInt(Math.max(0, matrixCycle - 1))}
               totalEarning={
                 matrixL1Api.tree
                   ? incomeStringToWei(matrixL1Api.tree.totalEarned)

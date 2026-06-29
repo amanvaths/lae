@@ -26,7 +26,7 @@ export function ViewUserIdPanel({ initialId = "" }: { initialId?: string }) {
       return;
     }
     setPending(true);
-    router.push(withBasePath(`/view?id=${id.toString()}`));
+    router.push(withBasePath(`/dashboard?viewUserId=${id.toString()}`));
   }
 
   return (

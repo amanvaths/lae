@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { LayoutGrid } from "lucide-react";
-import { useAccount, useReadContract, useReadContracts } from "wagmi";
+import { useReadContract, useReadContracts } from "wagmi";
 import { Panel, PageHeading } from "@/components/dashboard/ui";
 import { QueryLoading } from "@/components/dashboard/QueryState";
 import { MatrixVisualizer } from "@/components/lae-club/MatrixVisualizer";
@@ -11,8 +11,7 @@ import { MatrixStatusPanel } from "@/components/lae-club/MatrixStatusPanel";
 import { MatrixLevelCard } from "@/components/lae-club/MatrixLevelCard";
 import { LAE_MATRIX_SIZE, LAE_LAST_LEVEL } from "@/lib/lae-club/constants";
 import { buildSlotsFromApi } from "@/lib/lae-club/matrix-slots";
-import { useMatrixCoreUser } from "@/lib/lae-club/matrix-core-hooks";
-import { useLaeLevelPrices } from "@/lib/lae-club/hooks";
+import { useLaeLevelPrices, useLaeUser } from "@/lib/lae-club/hooks";
 import { incomeStringToWei } from "@/lib/contracts/format";
 import { LAE_CONTRACTS } from "@/lib/lae-club/contracts";
 import { laeClubMatrixAbi } from "@/lib/lae-club/matrix-core-abi";
@@ -31,9 +30,9 @@ const LEGEND = [
 ] as const;
 
 export default function MatrixPage() {
-  const user = useMatrixCoreUser();
-  const { address } = useAccount();
+  const user = useLaeUser();
   const userIdNum = user.userId ? Number(user.userId) : undefined;
+  const userWallet = user.userAddress;
   const overviewApi = useLaeMatrixOverviewApi(userIdNum);
   const levelPrices = useLaeLevelPrices();
   const [selectedLevel, setSelectedLevel] = useState(1);
@@ -53,8 +52,8 @@ export default function MatrixPage() {
     address: LAE_CONTRACTS.matrix,
     abi: laeClubMatrixAbi,
     functionName: "usersXMatrix",
-    args: address ? [address, selectedLevel] : undefined,
-    query: { enabled: !!address, staleTime: 10_000 },
+    args: userWallet ? [userWallet, selectedLevel] : undefined,
+    query: { enabled: !!userWallet, staleTime: 10_000 },
   });
 
   const treeApi = useLaeMatrixTreeApi(userIdNum, selectedLevel, selectedCycle, {
@@ -71,7 +70,7 @@ export default function MatrixPage() {
 
   useEffect(() => {
     setSelectedCycle(currentCycle);
-  }, [selectedLevel]);
+  }, [selectedLevel, currentCycle]);
 
   const priceForLevel = (lvl: number) =>
     levelPrices.prices?.find((p) => p.level === lvl)?.priceFormatted ??

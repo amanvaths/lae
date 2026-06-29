@@ -175,7 +175,7 @@ export function LoginPageContent() {
               <Row label="Direct Team" value={result.directCount.toString()} />
               <Row label="Total Income" value={`${fmtEther(result.totalIncome)} BUSD`} gold />
               <Link
-                href={withBasePath(`/view?id=${result.userId.toString()}`)}
+                href={withBasePath(`/dashboard?viewUserId=${result.userId.toString()}`)}
                 className="auth-btn-ghost mt-3 w-full !py-2.5 text-xs"
               >
                 <Wallet className="h-3.5 w-3.5" /> Open Full Dashboard
