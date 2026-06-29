@@ -68,10 +68,10 @@ export function HeroClub() {
           animate="visible"
           className="font-display text-4xl font-bold leading-[1.08] tracking-tight text-white sm:text-5xl md:text-6xl lg:text-7xl"
         >
-          Build Your Network.{" "}
-          <span className="text-gradient-gold">Grow Your Club.</span>
+          Build Your Network{" "}
+          <span className="text-gradient-gold">Grow Your Club</span>
           <br />
-          Earn Through Matrix Participation.
+          Earn Through Matrix Participation
         </motion.h1>
 
         <motion.p

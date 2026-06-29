@@ -1,23 +1,18 @@
 "use client";
 
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Layers } from "lucide-react";
+import { motion } from "framer-motion";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { Reveal } from "@/components/ui/Reveal";
 import { NetworkTree } from "@/components/charts/NetworkTree";
 import { LAE_SMART_MATRIX } from "@/lib/lae-content";
-import { getSlotTree, SLOT_TREE_META } from "@/lib/slot-trees";
-import { cn } from "@/lib/utils";
+import { getSlotTree } from "@/lib/slot-trees";
 
 export function SmartMatrix() {
-  const [selected, setSelected] = useState(1);
-  const meta = SLOT_TREE_META[selected];
-  const tree = getSlotTree(selected);
+  const tree = getSlotTree(1);
 
   return (
     <section id="network" className="relative scroll-mt-28 py-20 sm:py-28">
-      <div className="container-edge grid items-start gap-10 lg:grid-cols-2 lg:gap-14">
+      <div className="container-edge space-y-10">
         <Reveal>
           <SectionHeading
             align="left"
@@ -31,6 +26,7 @@ export function SmartMatrix() {
             description={LAE_SMART_MATRIX.body}
           />
 
+          {/*
           <p className="mt-6 text-xs text-slate-500">
             Tap a slot to view its matrix tree
           </p>
@@ -66,68 +62,39 @@ export function SmartMatrix() {
               );
             })}
           </div>
+          */}
         </Reveal>
 
         <Reveal delay={1}>
-          <div className="glass relative mx-auto flex min-h-[420px] w-full max-w-md flex-col overflow-hidden lg:max-w-none">
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+            className="glass relative mx-auto w-full max-w-5xl overflow-hidden"
+          >
             <div className="pointer-events-none absolute inset-0 bg-grid-lines bg-[size:28px_28px] opacity-30 [mask-image:radial-gradient(70%_70%_at_50%_50%,black,transparent)]" />
 
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={selected}
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-                className="relative flex flex-1 flex-col p-4 sm:p-6"
-              >
-                <div className="mb-4 flex items-center justify-between gap-3 border-b border-white/5 pb-4">
-                  <div className="flex items-center gap-3">
-                    <span className="grid h-10 w-10 place-items-center border border-brand-500/30 bg-brand-500/10 text-brand-400">
-                      <Layers className="h-5 w-5" />
-                    </span>
-                    <div>
-                      <p className="font-display text-lg font-bold text-white">
-                        Slot {selected} tree
-                      </p>
-                      <p className="text-xs text-slate-500">{meta.status}</p>
-                    </div>
-                  </div>
-                  <div className="text-right text-xs text-slate-500">
-                    <p>
-                      <span className="text-brand-400">{meta.members}</span>/14 members
-                    </p>
-                    <p>
-                      <span className="text-emerald-400">{meta.cycles}</span> cycles
-                    </p>
-                  </div>
-                </div>
+            <div className="relative flex flex-col px-4 py-6 sm:px-8 sm:py-8">
+              <div className="min-h-0 w-full overflow-x-auto">
+                <NetworkTree data={tree} height={420} treeId="slot-1" />
+              </div>
 
-                <div className="min-h-0 flex-1 overflow-x-auto">
-                  <NetworkTree
-                    data={tree}
-                    height={380}
-                    treeId={`slot-${selected}`}
-                  />
+              <div className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-3 border-t border-white/5 pt-5 text-[0.65rem] sm:text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="inline-block h-3 w-4 rounded border border-[#C0C0C0]/50 bg-gradient-to-b from-[#E8E8E8]/30 to-[#A0A0A0]/15" />
+                  <span className="text-slate-400">
+                    <strong className="text-slate-200">Silver</strong> — Your Income
+                  </span>
                 </div>
-
-                <div className="mt-3 flex flex-wrap items-center justify-center gap-4 text-[0.6rem]">
-                  <div className="flex items-center gap-1">
-                    <span className="inline-block h-3 w-4 rounded border border-[#C0C0C0]/50 bg-gradient-to-b from-[#E8E8E8]/30 to-[#A0A0A0]/15" />
-                    <span className="text-slate-400">
-                      <strong className="text-slate-200">Silver</strong> — Your Income
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <span className="inline-block h-3 w-4 rounded border border-[#D4A017]/60 bg-gradient-to-b from-[#FFD700]/25 to-[#8B6914]/15" />
-                    <span className="text-slate-400">
-                      <strong className="text-amber-200">Gold</strong> — Flow & System
-                    </span>
-                  </div>
+                <div className="flex items-center gap-2">
+                  <span className="inline-block h-3 w-4 rounded border border-[#D4A017]/60 bg-gradient-to-b from-[#FFD700]/25 to-[#8B6914]/15" />
+                  <span className="text-slate-400">
+                    <strong className="text-amber-200">Gold</strong> — Flow & System
+                  </span>
                 </div>
-              </motion.div>
-            </AnimatePresence>
-          </div>
+              </div>
+            </div>
+          </motion.div>
         </Reveal>
       </div>
     </section>
