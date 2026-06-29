@@ -5,10 +5,17 @@ import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
+import { ViewUserBanner } from "./ViewUserBanner";
 import { NetworkBanner } from "@/components/web3/NetworkBanner";
+import {
+  useDashboardViewUserId,
+  useIsDashboardViewMode,
+} from "@/lib/lae-club/dashboard-view-context";
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
+  const viewUserId = useDashboardViewUserId();
+  const isViewMode = useIsDashboardViewMode();
 
   return (
     <div className="min-h-screen bg-[#050505]">
@@ -61,6 +68,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           </div>
           <div className="mx-auto max-w-7xl animate-fade-in">
             <NetworkBanner />
+            {isViewMode && viewUserId != null ? <ViewUserBanner userId={viewUserId} /> : null}
             {children}
           </div>
         </main>

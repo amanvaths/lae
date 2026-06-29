@@ -2,15 +2,22 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useAccount } from "wagmi";
 import { useWalletSession } from "@/providers/WalletSessionProvider";
-import { LogOut, ChevronRight } from "lucide-react";
+import { LogOut, ChevronRight, Eye } from "lucide-react";
 import { BrandLogo } from "@/components/ui/BrandLogo";
 import { navGroups } from "./nav";
 import { cn } from "@/lib/utils";
 import { withBasePath } from "@/lib/paths";
 import { truncateAddress } from "@/lib/format";
 import { motion } from "framer-motion";
+import {
+  clearDashboardViewUserId,
+  useDashboardViewUserId,
+  useIsDashboardViewMode,
+  withDashboardHref,
+} from "@/lib/lae-club/dashboard-view-context";
 
 function NavLink({
   href,
@@ -55,16 +62,30 @@ function NavLink({
 
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { address } = useAccount();
   const { isReady, disconnectWallet } = useWalletSession();
+  const viewUserId = useDashboardViewUserId();
+  const isViewMode = useIsDashboardViewMode();
+  const dashboardRoot = withBasePath("/dashboard");
 
   const isActive = (href: string) =>
-    href === "/dashboard"
+    href === dashboardRoot || href === `${dashboardRoot}/`
       ? pathname === href || pathname === `${href}/`
       : pathname.startsWith(href);
 
-  const display = isReady && address ? truncateAddress(address, 6, 4) : "Not connected";
-  const initial = isReady && address ? address.slice(2, 3).toUpperCase() : "?";
+  const display = isViewMode
+    ? `User #${viewUserId}`
+    : isReady && address
+      ? truncateAddress(address, 6, 4)
+      : "Not connected";
+  const initial = isViewMode ? "V" : isReady && address ? address.slice(2, 3).toUpperCase() : "?";
+
+  function exitView() {
+    clearDashboardViewUserId();
+    router.push(withBasePath("/login"));
+    onNavigate?.();
+  }
 
   return (
     <div className="flex h-full flex-col bg-gradient-to-b from-[#0a0a0a] to-[#050505]">
@@ -99,7 +120,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
               {group.items.map((it) => (
                 <NavLink
                   key={it.href}
-                  href={withBasePath(it.href)}
+                  href={withDashboardHref(it.href, viewUserId)}
                   label={it.label}
                   icon={it.icon}
                   active={isActive(it.href)}
@@ -126,22 +147,42 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           <div className="min-w-0 flex-1 leading-tight">
             <p className="truncate font-mono text-sm font-semibold text-white">{display}</p>
             <p className="mt-0.5 inline-flex items-center gap-1 text-xs text-slate-500">
-              <span className="relative inline-flex h-1.5 w-1.5">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400/60" />
-                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
-              </span>
-              BSC Testnet
+              {isViewMode ? (
+                <>
+                  <Eye className="h-3 w-3 text-[#D4AF37]/70" />
+                  Read-only view
+                </>
+              ) : (
+                <>
+                  <span className="relative inline-flex h-1.5 w-1.5">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400/60" />
+                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                  </span>
+                  BSC Testnet
+                </>
+              )}
             </p>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={disconnectWallet}
-          className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 px-3 py-2.5 text-sm text-slate-400 transition-all duration-300 hover:border-red-500/30 hover:bg-red-500/5 hover:text-red-300"
-        >
-          <LogOut className="h-4 w-4" />
-          Disconnect Wallet
-        </button>
+        {isViewMode ? (
+          <button
+            type="button"
+            onClick={exitView}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 px-3 py-2.5 text-sm text-slate-400 transition-all duration-300 hover:border-red-500/30 hover:bg-red-500/5 hover:text-red-300"
+          >
+            <LogOut className="h-4 w-4" />
+            Exit view
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={disconnectWallet}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 px-3 py-2.5 text-sm text-slate-400 transition-all duration-300 hover:border-red-500/30 hover:bg-red-500/5 hover:text-red-300"
+          >
+            <LogOut className="h-4 w-4" />
+            Disconnect Wallet
+          </button>
+        )}
       </div>
     </div>
   );

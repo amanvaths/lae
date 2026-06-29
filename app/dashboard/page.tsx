@@ -30,6 +30,10 @@ import { sortEventsNewestFirst } from "@/lib/lae-club/event-utils";
 import { fmtEther, incomeStringToWei } from "@/lib/contracts/format";
 import { truncateAddress, formatUnixDate } from "@/lib/format";
 import { withBasePath } from "@/lib/paths";
+import {
+  useDashboardViewUserId,
+  withDashboardHref,
+} from "@/lib/lae-club/dashboard-view-context";
 import { txUrl } from "@/lib/lae-club/contracts";
 import { cn } from "@/lib/utils";
 import { LAE_MATRIX_SIZE } from "@/lib/lae-club/constants";
@@ -45,6 +49,7 @@ const fadeUp = {
 
 export default function DashboardHome() {
   const user = useLaeUser();
+  const viewUserId = useDashboardViewUserId();
   const levels = useLaeAllMatrixLevels();
   const income = useLaeIncomeEvents();
   const userEvents = useLaeUserEvents();
@@ -136,7 +141,7 @@ export default function DashboardHome() {
           </p>
         </div>
         <Link
-          href={withBasePath("/dashboard/share")}
+          href={withDashboardHref("/dashboard/share", viewUserId)}
           className="inline-flex items-center justify-center gap-2 rounded-xl border-2 border-[#D4AF37]/60 bg-[#D4AF37]/10 px-5 py-2.5 text-sm font-semibold uppercase tracking-wide text-[#D4AF37] shadow-[0_0_24px_rgba(212,175,55,0.12)] transition-all hover:border-[#D4AF37] hover:bg-[#D4AF37]/20 hover:text-[#ffe082]"
         >
           <Share2 className="h-4 w-4" /> Share referral
@@ -247,7 +252,7 @@ export default function DashboardHome() {
           title="Recent on-chain activity"
           action={
             <Link
-              href={withBasePath("/dashboard/transactions")}
+              href={withDashboardHref("/dashboard/transactions", viewUserId)}
               className="text-sm font-medium text-[#D4AF37] hover:text-[#ffe082] transition-colors"
             >
               All events →
@@ -305,7 +310,7 @@ export default function DashboardHome() {
         ].map((a) => (
           <Link
             key={a.href}
-            href={withBasePath(a.href)}
+            href={withDashboardHref(a.href, viewUserId)}
             className="group glass relative overflow-hidden flex items-center gap-3 p-3.5 transition-all duration-500 hover:border-[#D4AF37]/30 hover:shadow-glow-gold sm:p-4"
           >
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#D4AF37]/0 to-[#D4AF37]/0 transition-all duration-500 group-hover:from-[#D4AF37]/5 group-hover:to-transparent" />

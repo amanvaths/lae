@@ -15,9 +15,9 @@ export default function DashboardLayout({
 }) {
   return (
     <DashboardErrorBoundary>
-      <DashboardShell>
-        <DashboardGate>{children}</DashboardGate>
-      </DashboardShell>
+      <DashboardGate>
+        <DashboardShell>{children}</DashboardShell>
+      </DashboardGate>
     </DashboardErrorBoundary>
   );
 }
