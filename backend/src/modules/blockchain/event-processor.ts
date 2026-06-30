@@ -46,6 +46,27 @@ function expectedSlot14Share(level: number): bigint {
 }
 
 async function loadPlacementsForTx(txHash: string, fromUserId: number): Promise<PlacementRow[]> {
+  const eventRows: PlacementRow[] = [];
+  const events = await prisma.chainEvent.findMany({
+    where: {
+      txHash,
+      eventName: { in: ["NewUserPlace", "SubMatrixPlace", "RecycleMatrixPlace"] },
+    },
+    orderBy: { logIndex: "asc" },
+  });
+  for (const e of events) {
+    const p = (e.payload ?? {}) as Record<string, unknown>;
+    if (num(p.user) !== fromUserId) continue;
+    eventRows.push({
+      matrixOwnerId: num(p.referrer ?? p.matrixOwner),
+      level: num(p.level) || 1,
+      cycleId: num(p.cycle),
+      position: num(p.spot),
+      logIndex: e.logIndex,
+    });
+  }
+  if (eventRows.length) return eventRows;
+
   const positions = await prisma.matrixCorePosition.findMany({
     where: { txHash, occupantId: fromUserId },
     orderBy: { logIndex: "asc" },
@@ -60,12 +81,12 @@ async function loadPlacementsForTx(txHash: string, fromUserId: number): Promise<
     }));
   }
 
-  const events = await prisma.chainEvent.findMany({
+  const legacy = await prisma.chainEvent.findMany({
     where: { txHash, eventName: "NewUserPlace" },
     orderBy: { logIndex: "asc" },
   });
   const rows: PlacementRow[] = [];
-  for (const e of events) {
+  for (const e of legacy) {
     const p = (e.payload ?? {}) as Record<string, unknown>;
     if (num(p.user) !== fromUserId) continue;
     rows.push({
@@ -248,6 +269,24 @@ export async function processIndexedLog(log: ParsedLog): Promise<void> {
         },
         update: { occupantId },
       });
+
+      await backfillIncomeBoardContext(txHash, occupantId, {
+        matrixOwnerId,
+        level,
+        cycleId,
+        position,
+        logIndex,
+      });
+      break;
+    }
+
+    case "SubMatrixPlace":
+    case "RecycleMatrixPlace": {
+      const matrixOwnerId = num(args.matrixOwner);
+      const occupantId = num(args.user);
+      const level = num(args.level) || 1;
+      const cycleId = num(args.cycle);
+      const position = num(args.spot);
 
       await backfillIncomeBoardContext(txHash, occupantId, {
         matrixOwnerId,

@@ -2,13 +2,13 @@
   "chainId": 97,
   "network": "bsc-testnet",
   "contracts": {
-    "LAEClubMatrix": "0x72F86683DEEfB68B728488f88A82FD55D31f0C6E",
+    "LAEClubMatrix": "0x57455f4487285d7a826Be6aD88e1C7B5bbF5A229",
     "LAECoin": "0xD6698E6a8Ee4712cC2E36C150f1C34e59884C45A",
     "TestPaymentToken": "0xb2bE66BE07E1AD04074B32B8b13DcdFaB6B57575"
   },
-  "deployBlock": 116363747,
+  "deployBlock": 116382526,
   "deployedAt": "2026-06-30",
-  "codeVersion": "b1345e7",
   "owner": "0xef9594fC5145404BfC7B5640296C3864319e3d86",
-  "seededUsers": 200
+  "seededUsers": 222,
+  "seedNote": "Phase 2 contract; binary tree 2 directs each; run resume-seed-testnet.mjs after faucet for #223-250"
 }

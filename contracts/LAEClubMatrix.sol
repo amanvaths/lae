@@ -67,7 +67,8 @@ contract LAEClubMatrix {
     // --- Constants ---
     uint8 public constant LAST_LEVEL = 15;       // 15 slots / levels
     uint8 public constant MATRIX_SIZE = 14;      // 14 positions per board
-    uint8 public constant RECYCLE_MATRIX_SIZE = 6; // 6-position recycle / upgrade sub-matrix
+    uint8 public constant RECYCLE_MATRIX_SIZE = 6; // recycle / upgrade / third sub-matrix width
+    uint8 public constant SUB_MATRIX_SIZE = 6;
     uint256 public constant BPS = 10_000;
     uint8 public constant VESTING_MONTHS = 20;   // 20-month LAE release protocol
     uint256 public constant MONTH_DURATION = 30 days;
@@ -90,6 +91,23 @@ contract LAEClubMatrix {
         address[] slots;
     }
 
+    /// @dev Per-user 6-slot Upgrade (2X) or Third matrix tied to a main board level.
+    struct SubBoard {
+        address[] slots;
+        uint256 reinvestCount;
+        bool upgradeOpened;
+        bool active;
+        uint256 heldTokenForUpgrade;
+        uint256 matrixId;
+    }
+
+    /// @dev Matrix kinds for payment trace / indexer (0=main uses Board, not this enum in storage).
+    enum MatrixKind {
+        RECYCLE,
+        UPGRADE,
+        THIRD
+    }
+
     struct User {
         uint256 id;
         address referrer;                   // sponsor (the placement upline = referral upline)
@@ -100,6 +118,8 @@ contract LAEClubMatrix {
         uint256 totalIncome;                // total BTC earned across all levels
         mapping(uint8 => bool) activeLevels;
         mapping(uint8 => Board) board;      // per-level 14-slot board
+        mapping(uint8 => SubBoard) upgradeBoard; // 6-slot Upgrade (2X) per main level
+        mapping(uint8 => SubBoard) thirdBoard;   // 6-slot Third matrix per main level
         mapping(uint8 => uint256) lastDownlineIdx; // round-robin pointer for downline payouts
     }
 
@@ -144,6 +164,7 @@ contract LAEClubMatrix {
 
     RecycleQueueNode[] private recycleMatrixQueue;
     uint256 public recycleMatrixHead;
+    uint256 public lastMatrixId;
 
     bool private entered;
 
@@ -184,6 +205,30 @@ contract LAEClubMatrix {
         uint8 level,
         uint256 cycle,
         uint8 spot
+    );
+    event SubMatrixPlace(
+        uint256 indexed user,
+        uint256 indexed matrixOwner,
+        uint8 matrixType,
+        uint8 level,
+        uint256 cycle,
+        uint8 spot
+    );
+    event UpgradeBoardOpened(uint256 indexed userId, uint8 level, uint256 matrixId);
+    event ThirdBoardOpened(uint256 indexed userId, uint8 level, uint256 matrixId);
+    event PaymentTrace(
+        uint256 indexed matrixId,
+        uint8 matrixType,
+        uint8 level,
+        uint256 cycle,
+        uint8 slot,
+        uint256 boardOwnerId,
+        uint256 fromUserId,
+        uint256 receiverId,
+        uint256 amount,
+        bool holdApplied,
+        bool upgradeOpened,
+        bool recycledBoard
     );
 
     modifier onlyOwner() {
@@ -583,13 +628,18 @@ contract LAEClubMatrix {
     }
 
     /**
-     * @dev Registration genealogy across all active levels; L1 + per-level L2+ settlements.
+     * @dev Registration genealogy across all active levels; L1 + per-level L2+ settlements;
+     *      also fills Upgrade and Third 6-slot boards when active.
      */
     function _placeMemberAllLevels(address member, bool doPay, uint8 feeLevel) private {
         for (uint8 level = 1; level <= LAST_LEVEL; level++) {
             PaymentTargets memory targets;
             targets.minReinvest = type(uint256).max;
             targets = _walkLevelPlacements(member, level, doPay, targets, feeLevel);
+            if (doPay) {
+                _walkSubMatrixPlacements(member, level, MatrixKind.UPGRADE, doPay);
+                _walkSubMatrixPlacements(member, level, MatrixKind.THIRD, doPay);
+            }
             if (!doPay || level == 1) continue;
             _settleHigherLevelPayment(member, targets, level, feeLevel);
         }
@@ -625,10 +675,9 @@ contract LAEClubMatrix {
      *      recycles the board empty. Cycle 2 slot 1 is filled only by the next
      *      registration that propagates to this board (not the slot-14 member).
      */
-    function _afterFill(address boardOwner, uint8 slot, uint8 level, address member) private {
+    function _afterFill(address boardOwner, uint8 slot, uint8 level, address /*member*/) private {
         if (slot == 5) {
             users[boardOwner].board[level].upgradeOpened = true;
-            _unlockNextLevel(boardOwner, level + 1);
         }
         if (slot == MATRIX_SIZE) {
             Board storage b = users[boardOwner].board[level];
@@ -682,29 +731,245 @@ contract LAEClubMatrix {
     ) private {
         uint256 amount = levelTokenCost[1];
         if (slot == 1) {
-            _payResolved(owner, member, level, amount);
+            _payWithTrace(0, uint8(MatrixKind.RECYCLE), level, 0, slot, matrixOwner, member, owner, amount, false, false, false);
         } else if (slot == 2) {
             address target = _uplineOf(matrixOwner, 2);
             if (target == address(0)) target = owner;
-            _payResolved(target, member, level, amount);
+            _payWithTrace(0, uint8(MatrixKind.RECYCLE), level, 0, slot, matrixOwner, member, target, amount, false, false, false);
         } else if (slot == 3 || slot == 5 || slot == 6) {
-            _payResolved(matrixOwner, member, level, amount);
+            _payWithTrace(0, uint8(MatrixKind.RECYCLE), level, 0, slot, matrixOwner, member, matrixOwner, amount, false, false, false);
         } else if (slot == 4) {
-            _sendToPlatformTreasury(amount);
+            _treasuryWithTrace(0, uint8(MatrixKind.RECYCLE), level, 0, slot, matrixOwner, member, amount, false, false, false);
+        }
+    }
+
+    // --- UPGRADE & THIRD 6-SLOT BOARDS ---
+
+    function _shouldPlaceOnSubBoard(address boardOwner, address member, SubBoard storage sb) private view returns (bool) {
+        if (!sb.active) return false;
+        if (sb.reinvestCount == 0) return true;
+        return users[member].referrer == boardOwner;
+    }
+
+    function _openUpgradeBoard(address user, uint8 level) private {
+        SubBoard storage sb = users[user].upgradeBoard[level];
+        if (sb.active) return;
+        sb.active = true;
+        lastMatrixId += 1;
+        sb.matrixId = lastMatrixId;
+        emit UpgradeBoardOpened(users[user].id, level, sb.matrixId);
+    }
+
+    function _openThirdBoard(address user, uint8 level) private {
+        SubBoard storage sb = users[user].thirdBoard[level];
+        if (sb.active) return;
+        sb.active = true;
+        lastMatrixId += 1;
+        sb.matrixId = lastMatrixId;
+        emit ThirdBoardOpened(users[user].id, level, sb.matrixId);
+    }
+
+    function _appendSubBoard(address boardOwner, address member, uint8 level, MatrixKind kind) private returns (uint8 slot) {
+        SubBoard storage sb = kind == MatrixKind.UPGRADE
+            ? users[boardOwner].upgradeBoard[level]
+            : users[boardOwner].thirdBoard[level];
+        sb.slots.push(member);
+        slot = uint8(sb.slots.length);
+    }
+
+    function _walkSubMatrixPlacements(address member, uint8 level, MatrixKind kind, bool doPay) private {
+        address cur = users[member].referrer;
+        for (uint256 hops = 0; cur != address(0) && hops < MAX_UPLINE; hops++) {
+            SubBoard storage sb = kind == MatrixKind.UPGRADE
+                ? users[cur].upgradeBoard[level]
+                : users[cur].thirdBoard[level];
+            if (_shouldPlaceOnSubBoard(cur, member, sb)) {
+                uint256 cycle = sb.reinvestCount + 1;
+                uint8 slot = _appendSubBoard(cur, member, level, kind);
+                emit SubMatrixPlace(
+                    users[member].id,
+                    users[cur].id,
+                    uint8(kind),
+                    level,
+                    cycle,
+                    slot
+                );
+                if (doPay) {
+                    if (kind == MatrixKind.UPGRADE) {
+                        _payUpgradeSlot(member, cur, slot, level);
+                    } else {
+                        _payThirdSlot(member, cur, slot, level);
+                    }
+                }
+                _afterSubFill(cur, slot, level, member, kind);
+            }
+            cur = users[cur].referrer;
+        }
+    }
+
+    function _afterSubFill(address boardOwner, uint8 slot, uint8 level, address /*member*/, MatrixKind kind) private {
+        SubBoard storage sb = kind == MatrixKind.UPGRADE
+            ? users[boardOwner].upgradeBoard[level]
+            : users[boardOwner].thirdBoard[level];
+
+        if (kind == MatrixKind.UPGRADE && slot == 5) {
+            sb.upgradeOpened = true;
+        }
+
+        if (slot == SUB_MATRIX_SIZE) {
+            delete sb.slots;
+            sb.reinvestCount += 1;
         }
     }
 
     /**
-     * @dev Free level unlock. Marks `nextLevel` active for `user` and places `user`
-     *      into its uplines' boards at that level (display/progression only — no
-     *      token movement, exactly as the prior contract treated upgrades).
+     * @dev Upgrade (2X) board — section 9: S1/S2→admin, S3/S6→user, S4/S5 hold→third (cycle 1 only).
      */
-    function _unlockNextLevel(address user, uint8 nextLevel) private {
-        if (nextLevel > LAST_LEVEL) return;
-        if (users[user].activeLevels[nextLevel]) return;
-        users[user].activeLevels[nextLevel] = true;
-        emit Upgrade(users[user].id, users[users[user].referrer].id, nextLevel);
-        _placeMemberAtLevel(user, nextLevel, false, 1);
+    function _payUpgradeSlot(address member, address boardOwner, uint8 slot, uint8 level) private {
+        SubBoard storage sb = users[boardOwner].upgradeBoard[level];
+        uint256 amount = levelTokenCost[1];
+        bool recycled = sb.reinvestCount > 0;
+        uint256 cycle = sb.reinvestCount + 1;
+        uint256 matrixId = sb.matrixId;
+
+        if (slot == 4 && !recycled && !sb.upgradeOpened) {
+            uint256 holdShare = _matrixShare(amount);
+            sb.heldTokenForUpgrade += holdShare;
+            emit UpgradeHold(users[boardOwner].id, users[member].id, level, holdShare);
+            _emitPaymentTrace(matrixId, uint8(MatrixKind.UPGRADE), level, cycle, slot, users[boardOwner].id, users[member].id, 0, holdShare, true, sb.upgradeOpened, recycled);
+            return;
+        }
+        if (slot == 5 && !recycled && !sb.upgradeOpened) {
+            uint256 holdShare = _matrixShare(amount);
+            sb.heldTokenForUpgrade += holdShare;
+            emit UpgradeHold(users[boardOwner].id, users[member].id, level, holdShare);
+            _openThirdBoard(boardOwner, level);
+            sb.upgradeOpened = true;
+            _emitPaymentTrace(matrixId, uint8(MatrixKind.UPGRADE), level, cycle, slot, users[boardOwner].id, users[member].id, 0, holdShare, true, true, recycled);
+            return;
+        }
+
+        if (slot == 1 || slot == 2) {
+            _payWithTrace(matrixId, uint8(MatrixKind.UPGRADE), level, cycle, slot, boardOwner, member, owner, amount, false, sb.upgradeOpened, recycled);
+        } else if (slot == 3 || slot == 6) {
+            _payWithTrace(matrixId, uint8(MatrixKind.UPGRADE), level, cycle, slot, boardOwner, member, boardOwner, amount, false, sb.upgradeOpened, recycled);
+        } else if (slot == 4 || slot == 5) {
+            _payWithTrace(matrixId, uint8(MatrixKind.UPGRADE), level, cycle, slot, boardOwner, member, boardOwner, amount, false, sb.upgradeOpened, recycled);
+        }
+    }
+
+    /**
+     * @dev Third matrix — section 10: S1→admin, S2→upline, S3/5/6→user, S4→treasury (all cycles).
+     */
+    function _payThirdSlot(address member, address boardOwner, uint8 slot, uint8 level) private {
+        SubBoard storage sb = users[boardOwner].thirdBoard[level];
+        uint256 amount = levelTokenCost[1];
+        uint256 cycle = sb.reinvestCount + 1;
+        uint256 matrixId = sb.matrixId;
+        bool recycled = sb.reinvestCount > 0;
+
+        if (slot == 1) {
+            _payWithTrace(matrixId, uint8(MatrixKind.THIRD), level, cycle, slot, boardOwner, member, owner, amount, false, sb.upgradeOpened, recycled);
+        } else if (slot == 2) {
+            address target = _uplineOf(boardOwner, 1);
+            if (target == address(0)) target = owner;
+            _payWithTrace(matrixId, uint8(MatrixKind.THIRD), level, cycle, slot, boardOwner, member, target, amount, false, sb.upgradeOpened, recycled);
+        } else if (slot == 3 || slot == 5 || slot == 6) {
+            _payWithTrace(matrixId, uint8(MatrixKind.THIRD), level, cycle, slot, boardOwner, member, boardOwner, amount, false, sb.upgradeOpened, recycled);
+        } else if (slot == 4) {
+            _treasuryWithTrace(matrixId, uint8(MatrixKind.THIRD), level, cycle, slot, boardOwner, member, amount, false, sb.upgradeOpened, recycled);
+        }
+    }
+
+    function _emitPaymentTrace(
+        uint256 matrixId,
+        uint8 matrixType,
+        uint8 level,
+        uint256 cycle,
+        uint8 slot,
+        uint256 boardOwnerId,
+        uint256 fromUserId,
+        uint256 receiverId,
+        uint256 amount,
+        bool holdApplied,
+        bool upgradeOpenedFlag,
+        bool recycledBoard
+    ) private {
+        emit PaymentTrace(
+            matrixId,
+            matrixType,
+            level,
+            cycle,
+            slot,
+            boardOwnerId,
+            fromUserId,
+            receiverId,
+            amount,
+            holdApplied,
+            upgradeOpenedFlag,
+            recycledBoard
+        );
+    }
+
+    function _payWithTrace(
+        uint256 matrixId,
+        uint8 matrixType,
+        uint8 level,
+        uint256 cycle,
+        uint8 slot,
+        address boardOwner,
+        address member,
+        address target,
+        uint256 amount,
+        bool holdApplied,
+        bool upgradeOpenedFlag,
+        bool recycledBoard
+    ) private {
+        _emitPaymentTrace(
+            matrixId,
+            matrixType,
+            level,
+            cycle,
+            slot,
+            users[boardOwner].id,
+            users[member].id,
+            users[target].id,
+            _matrixShare(amount),
+            holdApplied,
+            upgradeOpenedFlag,
+            recycledBoard
+        );
+        _payResolved(target, member, level, amount);
+    }
+
+    function _treasuryWithTrace(
+        uint256 matrixId,
+        uint8 matrixType,
+        uint8 level,
+        uint256 cycle,
+        uint8 slot,
+        address boardOwner,
+        address member,
+        uint256 amount,
+        bool holdApplied,
+        bool upgradeOpenedFlag,
+        bool recycledBoard
+    ) private {
+        _emitPaymentTrace(
+            matrixId,
+            matrixType,
+            level,
+            cycle,
+            slot,
+            users[boardOwner].id,
+            users[member].id,
+            0,
+            _matrixShare(amount),
+            holdApplied,
+            upgradeOpenedFlag,
+            recycledBoard
+        );
+        _sendToPlatformTreasury(amount);
     }
 
     // --- INCOME (single 90% payout, role table + eligibility/lapse) ---
@@ -802,29 +1067,26 @@ contract LAEClubMatrix {
         uint8 boardLevel,
         uint8 feeLevel
     ) private {
-        if (boardLevel >= LAST_LEVEL) {
-            _sendToPlatformTreasury(levelTokenCost[feeLevel]);
-            return;
-        }
-        uint8 nextLevel = boardLevel + 1;
-        uint256 holdShare = _matrixShare(levelTokenCost[boardLevel]);
+        uint256 holdShare = _matrixShare(levelTokenCost[feeLevel]);
         Board storage b = users[boardOwner].board[boardLevel];
         b.heldTokenForUpgrade += holdShare;
         emit UpgradeHold(users[boardOwner].id, users[member].id, boardLevel, holdShare);
-
-        uint256 releaseNominal = levelTokenCost[nextLevel];
-        uint256 releaseShare = _matrixShare(releaseNominal);
-        if (b.heldTokenForUpgrade < releaseShare) {
-            return;
-        }
-        b.heldTokenForUpgrade -= releaseShare;
-
-        address upline1 = _uplineOf(boardOwner, 1);
-        if (upline1 == address(0)) {
-            _sendToPlatformTreasury(releaseNominal);
-            return;
-        }
-        _payResolved(upline1, member, nextLevel, releaseNominal);
+        b.upgradeOpened = true;
+        _openUpgradeBoard(boardOwner, boardLevel);
+        _emitPaymentTrace(
+            0,
+            0,
+            boardLevel,
+            b.reinvestCount + 1,
+            5,
+            users[boardOwner].id,
+            users[member].id,
+            0,
+            holdShare,
+            true,
+            true,
+            b.reinvestCount > 0
+        );
     }
 
     /**
