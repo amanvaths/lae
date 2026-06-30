@@ -616,8 +616,8 @@ contract LAEClubMatrix {
         uint8 boardLevel,
         uint8 feeLevel
     ) private {
-        // Pay at the board's level price (L1=0.001, L2=0.002, …); registration fee is always L1.
-        uint256 amount = levelTokenCost[boardLevel];
+        // Default: one L1 registration fee share; treasury slots use board-level price.
+        uint256 amount = levelTokenCost[feeLevel];
         bool recycled = users[boardOwner].board[boardLevel].reinvestCount > 0;
 
         // Cycle 1 slots 4 & 5 on L1 boards: hold shares then release 2x L2 to upline on slot 5.
@@ -625,7 +625,7 @@ contract LAEClubMatrix {
             if (boardLevel == 1) {
                 _holdHalfForNextLevel(boardOwner, member, boardLevel, feeLevel);
             } else {
-                _payTreasurySlotToUpline1(boardOwner, member, boardLevel, amount);
+                _payTreasurySlotToUpline1(boardOwner, member, boardLevel, levelTokenCost[boardLevel]);
             }
             return;
         }
@@ -633,26 +633,26 @@ contract LAEClubMatrix {
             if (boardLevel == 1) {
                 _holdHalfAndFundUplineNextLevel(boardOwner, member, boardLevel, feeLevel);
             } else {
-                _payTreasurySlotToUpline1(boardOwner, member, boardLevel, amount);
+                _payTreasurySlotToUpline1(boardOwner, member, boardLevel, levelTokenCost[boardLevel]);
             }
             return;
         }
 
-        // Slot 4 after recycle → club/treasury at this level's full price.
+        // Slot 4 after recycle → club/treasury at this board level's price.
         if (slot == 4 && recycled) {
-            _sendToPlatformTreasury(amount);
+            _sendToPlatformTreasury(levelTokenCost[boardLevel]);
             return;
         }
 
-        // Slot 14 recycles the board → fund upline next cycle at this level's full price.
+        // Slot 14 recycles → fund upline's next cycle at this board level's full price.
         if (slot == 14) {
-            _payTreasurySlotToUpline1(boardOwner, member, boardLevel, amount);
+            _payTreasurySlotToUpline1(boardOwner, member, boardLevel, levelTokenCost[boardLevel]);
             return;
         }
 
-        // Position 5 cycle 2+: board owner at this level's full price.
+        // Position 5 cycle 2+: board owner at this board level's price.
         if (slot == 5) {
-            _payResolved(boardOwner, member, boardLevel, amount);
+            _payResolved(boardOwner, member, boardLevel, levelTokenCost[boardLevel]);
             return;
         }
 

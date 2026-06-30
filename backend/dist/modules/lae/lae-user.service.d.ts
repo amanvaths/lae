@@ -22,9 +22,11 @@ export declare function getLaeUserByWallet(wallet: string): Promise<{
         position: number | null;
         logIndex: number;
         matrixOwnerId: number | null;
-        kind: string;
+        cycleId: number | null;
         fromUserId: number | null;
+        kind: string;
         toUserId: number | null;
+        boardLevel: number | null;
     }[];
 } | null>;
 export declare function getLaeUserIncome(wallet: string, kind?: "matrix" | "treasury" | "lapse", limit?: number): Promise<{
@@ -37,9 +39,11 @@ export declare function getLaeUserIncome(wallet: string, kind?: "matrix" | "trea
     position: number | null;
     logIndex: number;
     matrixOwnerId: number | null;
-    kind: string;
+    cycleId: number | null;
     fromUserId: number | null;
+    kind: string;
     toUserId: number | null;
+    boardLevel: number | null;
 }[] | {
     kind: string;
     fromUserId: number | null;

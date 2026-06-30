@@ -181,14 +181,14 @@ class Reference {
   }
 
   _payByRole(fromId, boardOwnerId, slot, boardLevel = 1, feeLevel = 1) {
-    const amount = levelCost(boardLevel);
+    const amount = levelCost(feeLevel);
     const recycledAtPay = this._board(boardOwnerId, boardLevel).reinvestCount > 0;
 
     if (slot === 4 && !recycledAtPay) {
       if (boardLevel === 1) {
         this._holdHalfForNextLevel(fromId, boardOwnerId, slot, boardLevel);
       } else {
-        this._payTreasurySlotToUpline1(fromId, boardOwnerId, slot, "treasury-slot4", amount, recycledAtPay, boardLevel);
+        this._payTreasurySlotToUpline1(fromId, boardOwnerId, slot, "treasury-slot4", levelCost(boardLevel), recycledAtPay, boardLevel);
       }
       return;
     }
@@ -196,21 +196,21 @@ class Reference {
       if (boardLevel === 1) {
         this._holdHalfAndFundUplineNextLevel(fromId, boardOwnerId, slot, boardLevel);
       } else {
-        this._payTreasurySlotToUpline1(fromId, boardOwnerId, slot, "treasury-slot5c1", amount, recycledAtPay, boardLevel);
+        this._payTreasurySlotToUpline1(fromId, boardOwnerId, slot, "treasury-slot5c1", levelCost(boardLevel), recycledAtPay, boardLevel);
       }
       return;
     }
     if (slot === 4 && recycledAtPay) {
-      this._sendTreasury(amount, fromId, boardOwnerId, slot, "treasury-slot4c2", recycledAtPay, new Map(), 0, boardLevel);
+      this._sendTreasury(levelCost(boardLevel), fromId, boardOwnerId, slot, "treasury-slot4c2", recycledAtPay, new Map(), 0, boardLevel);
       return;
     }
     if (slot === 14) {
-      this._payTreasurySlotToUpline1(fromId, boardOwnerId, slot, "treasury-slot14", amount, recycledAtPay, boardLevel);
+      this._payTreasurySlotToUpline1(fromId, boardOwnerId, slot, "treasury-slot14", levelCost(boardLevel), recycledAtPay, boardLevel);
       return;
     }
     if (slot === 5) {
       const snap = this._snapshotForTarget(boardOwnerId);
-      this._payResolved(boardOwnerId, fromId, boardOwnerId, slot, "self-slot5c2", amount, recycledAtPay, snap, boardLevel);
+      this._payResolved(boardOwnerId, fromId, boardOwnerId, slot, "self-slot5c2", levelCost(boardLevel), recycledAtPay, snap, boardLevel);
       return;
     }
 

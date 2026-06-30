@@ -53,9 +53,11 @@ export declare function listLaeIncome(limit?: number, kind?: string): Promise<{
     position: number | null;
     logIndex: number;
     matrixOwnerId: number | null;
-    kind: string;
+    cycleId: number | null;
     fromUserId: number | null;
+    kind: string;
     toUserId: number | null;
+    boardLevel: number | null;
 }[]>;
 export declare function listLaePlacements(limit?: number): Promise<{
     level: number;

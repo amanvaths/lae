@@ -115,6 +115,7 @@ async function ensureTokenFunding(wallet, matrixAddr, regCount) {
   const tokenAbi = [
     "function faucet(uint256) external",
     "function approve(address,uint256) external returns (bool)",
+    "function transfer(address,uint256) external returns (bool)",
     "function balanceOf(address) view returns (uint256)",
     "function allowance(address,address) view returns (uint256)",
   ];
@@ -122,18 +123,24 @@ async function ensureTokenFunding(wallet, matrixAddr, regCount) {
   const matrix = new ethers.Contract(matrixAddr, matrixAbi, wallet);
   const price = await matrix.levelTokenCost(1);
   const need = price * BigInt(regCount + 5);
+  const contractFloat = price * BigInt(Math.max(regCount, 1)) * 16n;
   const token = new ethers.Contract(PAYMENT_TOKEN, tokenAbi, wallet);
   const bal = await token.balanceOf(wallet.address);
   console.log("\n[2/4] Payment token — need", ethers.formatEther(need), "have", ethers.formatEther(bal));
-  if (bal < need) {
+  if (bal < need + contractFloat) {
     console.log("      Faucet top-up...");
     const chunk = ethers.parseEther("1000");
-    let left = need - bal;
+    let left = need + contractFloat - bal;
     while (left > 0n) {
       const mint = left > chunk ? chunk : left;
       await (await token.faucet(mint)).wait();
       left -= mint;
     }
+  }
+  const matrixBal = await token.balanceOf(matrixAddr);
+  if (matrixBal < contractFloat) {
+    console.log("      Pre-fund matrix contract with", ethers.formatEther(contractFloat), "for level payouts…");
+    await (await token.transfer(matrixAddr, contractFloat)).wait();
   }
   const allowance = await token.allowance(wallet.address, matrixAddr);
   if (allowance < need) {
