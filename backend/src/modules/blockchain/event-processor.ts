@@ -20,17 +20,35 @@ function dec(v: unknown): string {
   return String(v ?? "0");
 }
 
-/** Pick the board placement that triggered the single registration payout. */
+/** Board placement from a registration tx (includes log order for payment matching). */
 type PlacementRow = {
   matrixOwnerId: number;
   level: number;
   cycleId: number;
   position: number;
+  logIndex: number;
 };
+
+const L1_MATRIX_SHARE = 900_000_000_000_000n; // 90% of level-1 entry (0.0009)
+const LEVEL1_COST = 1_000_000_000_000_000n;
+
+function parseAmountWei(amount: unknown): bigint {
+  if (typeof amount === "bigint") return amount;
+  const s = dec(amount);
+  return BigInt(s.includes(".") ? s.split(".")[0] : s || "0");
+}
+
+/** 90% matrix share of full slot-14 recycle nominal at `level`. */
+function expectedSlot14Share(level: number): bigint {
+  if (level <= 0) return 0n;
+  const cost = LEVEL1_COST * (2n ** BigInt(level - 1));
+  return (cost * 9000n) / 10000n;
+}
 
 async function loadPlacementsForTx(txHash: string, fromUserId: number): Promise<PlacementRow[]> {
   const positions = await prisma.matrixCorePosition.findMany({
     where: { txHash, occupantId: fromUserId },
+    orderBy: { logIndex: "asc" },
   });
   if (positions.length) {
     return positions.map((p) => ({
@@ -38,6 +56,7 @@ async function loadPlacementsForTx(txHash: string, fromUserId: number): Promise<
       level: p.level,
       cycleId: p.cycleId,
       position: p.position,
+      logIndex: p.logIndex,
     }));
   }
 
@@ -54,49 +73,76 @@ async function loadPlacementsForTx(txHash: string, fromUserId: number): Promise<
       level: num(p.level) || 1,
       cycleId: num(p.cycle),
       position: num(p.spot),
+      logIndex: e.logIndex,
     });
   }
   return rows;
 }
 
-async function resolvePayingPlacement(txHash: string, fromUserId: number) {
-  const placements = await loadPlacementsForTx(txHash, fromUserId);
+/**
+ * Match a TokenReceived row to the NewUserPlace that triggered it.
+ * Uses on-chain board level (TokenReceived.level), payment amount, and log order —
+ * never the first slot-14 in the tx (that caused L1 boards to show L15 amounts).
+ */
+function resolvePayingPlacement(
+  placements: PlacementRow[],
+  eventBoardLevel: number | null,
+  amountWei: bigint,
+  incomeLogIndex: number
+): PlacementRow | null {
   if (!placements.length) return null;
 
-  const slot14 = placements.find((p) => p.position === 14);
-  if (slot14) return slot14;
-
-  const user = await prisma.matrixCoreUser.findUnique({
-    where: { userId: fromUserId },
-    select: { sponsorId: true },
-  });
-  if (user?.sponsorId) {
-    const direct = placements.find(
-      (p) => p.cycleId > 1 && p.matrixOwnerId === user.sponsorId
-    );
-    if (direct) return direct;
+  let pool = placements;
+  if (eventBoardLevel && eventBoardLevel > 0) {
+    const atLevel = placements.filter((p) => p.level === eventBoardLevel);
+    if (atLevel.length) pool = atLevel;
   }
 
-  const l1 = placements.filter((p) => p.level === 1);
-  if (l1.length) {
-    return l1.reduce((best, p) => (p.cycleId < best.cycleId ? p : best));
+  const prior = pool.filter((p) => p.logIndex < incomeLogIndex);
+  if (prior.length) {
+    return prior.reduce((best, p) => (p.logIndex > best.logIndex ? p : best));
   }
 
-  return placements[0];
+  if (pool.length === 1) return pool[0];
+
+  if (eventBoardLevel && eventBoardLevel > 0 && amountWei === expectedSlot14Share(eventBoardLevel)) {
+    const slot14 = pool.filter((p) => p.position === 14);
+    if (slot14.length === 1) return slot14[0];
+    if (slot14.length > 1) {
+      return slot14.reduce((best, p) => (p.logIndex > best.logIndex ? p : best));
+    }
+  }
+
+  if (amountWei <= L1_MATRIX_SHARE) {
+    const non14 = pool.filter((p) => p.position !== 14);
+    if (non14.length === 1) return non14[0];
+  }
+
+  if (amountWei > L1_MATRIX_SHARE) {
+    const slot14 = pool.filter((p) => p.position === 14);
+    if (slot14.length === 1) return slot14[0];
+  }
+
+  return pool.reduce((best, p) => (p.logIndex > best.logIndex ? p : best));
 }
 
-async function backfillIncomeBoardContext(txHash: string, fromUserId: number) {
-  const placement = await resolvePayingPlacement(txHash, fromUserId);
-  if (!placement) return;
+async function backfillIncomeBoardContext(
+  txHash: string,
+  fromUserId: number,
+  placement: PlacementRow
+) {
+  const eventLevel = placement.level;
   await prisma.matrixCoreIncome.updateMany({
     where: {
       txHash,
       fromUserId,
-      OR: [{ matrixOwnerId: null }, { position: null }],
+      logIndex: { gt: placement.logIndex },
+      level: eventLevel,
+      matrixOwnerId: null,
     },
     data: {
       matrixOwnerId: placement.matrixOwnerId,
-      boardLevel: placement.level,
+      boardLevel: eventLevel,
       cycleId: placement.cycleId,
       position: placement.position,
     },
@@ -203,13 +249,27 @@ export async function processIndexedLog(log: ParsedLog): Promise<void> {
         update: { occupantId },
       });
 
-      await backfillIncomeBoardContext(txHash, occupantId);
+      await backfillIncomeBoardContext(txHash, occupantId, {
+        matrixOwnerId,
+        level,
+        cycleId,
+        position,
+        logIndex,
+      });
       break;
     }
 
     case "TokenReceived": {
       const fromUserId = num(args.fromId);
-      const placement = await resolvePayingPlacement(txHash, fromUserId);
+      const eventBoardLevel = num(args.level) || null;
+      const amountWei = parseAmountWei(args.amount);
+      const placements = await loadPlacementsForTx(txHash, fromUserId);
+      const placement = resolvePayingPlacement(
+        placements,
+        eventBoardLevel,
+        amountWei,
+        logIndex
+      );
       await prisma.matrixCoreIncome.upsert({
         where: { txHash_logIndex: { txHash, logIndex } },
         create: {
@@ -217,8 +277,8 @@ export async function processIndexedLog(log: ParsedLog): Promise<void> {
           fromUserId,
           toUserId: num(args.receiverId),
           matrixOwnerId: placement?.matrixOwnerId ?? null,
-          boardLevel: placement?.level ?? null,
-          level: num(args.level) || null,
+          boardLevel: eventBoardLevel ?? placement?.level ?? null,
+          level: eventBoardLevel,
           cycleId: placement?.cycleId ?? null,
           position: placement?.position ?? null,
           amount: dec(args.amount),
@@ -228,7 +288,8 @@ export async function processIndexedLog(log: ParsedLog): Promise<void> {
         },
         update: {
           matrixOwnerId: placement?.matrixOwnerId ?? null,
-          boardLevel: placement?.level ?? null,
+          boardLevel: eventBoardLevel ?? placement?.level ?? null,
+          level: eventBoardLevel,
           cycleId: placement?.cycleId ?? null,
           position: placement?.position ?? null,
         },
@@ -274,7 +335,15 @@ export async function processIndexedLog(log: ParsedLog): Promise<void> {
 
     case "LapseIncome": {
       const fromUserId = num(args.fromId);
-      const placement = await resolvePayingPlacement(txHash, fromUserId);
+      const eventBoardLevel = num(args.level) || null;
+      const amountWei = parseAmountWei(args.amount);
+      const placements = await loadPlacementsForTx(txHash, fromUserId);
+      const placement = resolvePayingPlacement(
+        placements,
+        eventBoardLevel,
+        amountWei,
+        logIndex
+      );
       await prisma.matrixCoreIncome.upsert({
         where: { txHash_logIndex: { txHash, logIndex } },
         create: {
@@ -282,8 +351,8 @@ export async function processIndexedLog(log: ParsedLog): Promise<void> {
           fromUserId,
           toUserId: num(args.receiverId),
           matrixOwnerId: placement?.matrixOwnerId ?? null,
-          boardLevel: placement?.level ?? null,
-          level: num(args.level) || null,
+          boardLevel: eventBoardLevel ?? placement?.level ?? null,
+          level: eventBoardLevel,
           cycleId: placement?.cycleId ?? null,
           position: placement?.position ?? null,
           amount: dec(args.amount),
@@ -293,7 +362,8 @@ export async function processIndexedLog(log: ParsedLog): Promise<void> {
         },
         update: {
           matrixOwnerId: placement?.matrixOwnerId ?? null,
-          boardLevel: placement?.level ?? null,
+          boardLevel: eventBoardLevel ?? placement?.level ?? null,
+          level: eventBoardLevel,
           cycleId: placement?.cycleId ?? null,
           position: placement?.position ?? null,
         },
