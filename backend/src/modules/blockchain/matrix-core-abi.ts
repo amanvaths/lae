@@ -4,6 +4,7 @@ export const LAE_MATRIX_EVENTS = [
   "event TokenReceived(uint256 indexed receiverId, uint256 indexed fromId, address indexed from, uint8 level, uint256 amount)",
   "event ClubPoolPayment(uint256 indexed refId, uint256 indexed userId, uint256 amount, uint8 level)",
   "event NewUserPlace(uint256 indexed user, uint256 indexed referrer, uint8 level, uint256 cycle, uint8 spot)",
+  "event RecycleMatrixPlace(uint256 indexed user, uint256 indexed matrixOwner, uint8 level, uint256 cycle, uint8 spot)",
   "event Spillover(uint256 indexed referrerId, uint256 indexed receiverId, uint8 level, uint256 cycle, uint8 virtualSpot)",
   "event Reinvest(uint256 indexed userId, uint256 indexed newReferrerId, uint256 indexed callerId, uint8 level)",
   "event Upgrade(uint256 indexed userId, uint256 indexed newReferrerId, uint8 level)",

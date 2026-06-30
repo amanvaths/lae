@@ -62,6 +62,7 @@ contract LAEClubMatrix {
     // --- Constants ---
     uint8 public constant LAST_LEVEL = 15;       // 15 slots / levels
     uint8 public constant MATRIX_SIZE = 14;      // 14 positions per board
+    uint8 public constant RECYCLE_MATRIX_SIZE = 6; // 6-position recycle / upgrade sub-matrix
     uint256 public constant BPS = 10_000;
     uint8 public constant VESTING_MONTHS = 20;   // 20-month LAE release protocol
     uint256 public constant MONTH_DURATION = 30 days;
@@ -74,6 +75,14 @@ contract LAEClubMatrix {
         uint256 totalFilled;    // lifetime placements (all cycles)
         uint256 totalEarning;   // BTC earned by this board's owner at this level
         uint256 heldTokenForUpgrade; // cycle-1 slot 4+5 halves held toward next-level (2x) funding
+        bool upgradeOpened;     // slot 5 cycle-1 opened upgrade — never hold slots 4/5 again
+    }
+
+    /// @dev Global FIFO recycle matrix (6 slots, top→bottom / left→right like main entry).
+    struct RecycleQueueNode {
+        address matrixOwner;
+        uint256 cycleId;
+        address[] slots;
     }
 
     struct User {
@@ -128,6 +137,9 @@ contract LAEClubMatrix {
 
     mapping(address => LaeRewardSchedule[]) private laeSchedules;
 
+    RecycleQueueNode[] private recycleMatrixQueue;
+    uint256 public recycleMatrixHead;
+
     bool private entered;
 
     // --- Events ---
@@ -161,6 +173,13 @@ contract LAEClubMatrix {
     );
     event LaeRewardClaimed(address indexed user, uint256 amount);
     event UpgradeHold(uint256 indexed boardOwnerId, uint256 indexed fromUserId, uint8 boardLevel, uint256 amount);
+    event RecycleMatrixPlace(
+        uint256 indexed user,
+        uint256 indexed matrixOwner,
+        uint8 level,
+        uint256 cycle,
+        uint8 spot
+    );
 
     modifier onlyOwner() {
         require(msg.sender == owner, "LAEClubMatrix: only owner");
@@ -212,6 +231,10 @@ contract LAEClubMatrix {
             monthlyReleaseBps[month] = 500;
             directRequirementByMonth[month] = uint256(month) + 2;
         }
+
+        RecycleQueueNode storage rootRecycle = recycleMatrixQueue.push();
+        rootRecycle.matrixOwner = ownerAddress;
+        rootRecycle.cycleId = 1;
     }
 
     // --- PUBLIC ENTRY POINTS ---
@@ -428,14 +451,10 @@ contract LAEClubMatrix {
 
         while (cur != address(0) && hops < MAX_UPLINE) {
             if (users[cur].activeLevels[level] && users[cur].board[level].reinvestCount > 0) {
+                uint256 rc = users[cur].board[level].reinvestCount;
                 uint8 slot = _appendBoard(cur, recycledMember, level);
-                emit NewUserPlace(
-                    users[recycledMember].id,
-                    users[cur].id,
-                    level,
-                    users[cur].board[level].reinvestCount + 1,
-                    slot
-                );
+                _emitNewUserPlace(recycledMember, cur, level, rc + 1, slot);
+                _payByRole(recycledMember, cur, slot, level, 1);
                 _afterFill(cur, slot, level, recycledMember);
             }
             cur = users[cur].referrer;
@@ -603,6 +622,7 @@ contract LAEClubMatrix {
      */
     function _afterFill(address boardOwner, uint8 slot, uint8 level, address member) private {
         if (slot == 5) {
+            users[boardOwner].board[level].upgradeOpened = true;
             _unlockNextLevel(boardOwner, level + 1);
         }
         if (slot == MATRIX_SIZE) {
@@ -610,7 +630,62 @@ contract LAEClubMatrix {
             delete b.slots;
             b.reinvestCount += 1;
             emit Reinvest(users[boardOwner].id, users[boardOwner].id, users[boardOwner].id, level);
+            _processRecycleMatrixEntry(boardOwner, level);
             _placeRecycledMemberOnUplines(boardOwner, level);
+        }
+    }
+
+    /**
+     * @dev Recycled user fills the global 6-slot recycle matrix head (FIFO), then
+     *      receives their own recycle node appended to the queue — same entry model
+     *      as main-matrix registration (top→bottom, left→right).
+     */
+    function _processRecycleMatrixEntry(address entrant, uint8 level) private {
+        require(recycleMatrixHead < recycleMatrixQueue.length, "LAEClubMatrix: recycle queue");
+        RecycleQueueNode storage head = recycleMatrixQueue[recycleMatrixHead];
+        head.slots.push(entrant);
+        uint8 slot = uint8(head.slots.length);
+        emit RecycleMatrixPlace(
+            users[entrant].id,
+            users[head.matrixOwner].id,
+            level,
+            head.cycleId,
+            slot
+        );
+        _payRecycleMatrixSlot(entrant, head.matrixOwner, slot, level);
+
+        if (slot == RECYCLE_MATRIX_SIZE) {
+            recycleMatrixHead += 1;
+        }
+        _appendRecycleMatrixNode(entrant, level);
+    }
+
+    function _appendRecycleMatrixNode(address user, uint8 level) private {
+        RecycleQueueNode storage node = recycleMatrixQueue.push();
+        node.matrixOwner = user;
+        node.cycleId = users[user].board[level].reinvestCount;
+    }
+
+    /**
+     * @dev Recycle-matrix income (009 board): slot 1→admin, 2→2nd upline, 3/5/6→owner, 4→treasury.
+     */
+    function _payRecycleMatrixSlot(
+        address member,
+        address matrixOwner,
+        uint8 slot,
+        uint8 level
+    ) private {
+        uint256 amount = levelTokenCost[1];
+        if (slot == 1) {
+            _payResolved(owner, member, level, amount);
+        } else if (slot == 2) {
+            address target = _uplineOf(matrixOwner, 2);
+            if (target == address(0)) target = owner;
+            _payResolved(target, member, level, amount);
+        } else if (slot == 3 || slot == 5 || slot == 6) {
+            _payResolved(matrixOwner, member, level, amount);
+        } else if (slot == 4) {
+            _sendToPlatformTreasury(amount);
         }
     }
 
@@ -636,33 +711,34 @@ contract LAEClubMatrix {
         uint8 boardLevel,
         uint8 feeLevel
     ) private {
-        // Normal matrix slots: one L1 registration share (0.0009).
+        // Normal matrix slots: one L1 registration share (0.0009) — never board-level multiples.
         uint256 amount = levelTokenCost[feeLevel];
         bool recycled = users[boardOwner].board[boardLevel].reinvestCount > 0;
+        bool upgradeOpened = users[boardOwner].board[boardLevel].upgradeOpened;
 
-        // Cycle-1 slots 4 & 5 (every board level): hold then release next-level upgrade to upline.
-        if (slot == 4 && !recycled) {
+        // Cycle-1 slots 4 & 5 only before upgrade opens; never hold again after upgradeOpened.
+        if (slot == 4 && !recycled && !upgradeOpened) {
             _holdHalfForNextLevel(boardOwner, member, boardLevel, feeLevel);
             return;
         }
-        if (slot == 5 && !recycled) {
+        if (slot == 5 && !recycled && !upgradeOpened) {
             _holdHalfAndFundUplineNextLevel(boardOwner, member, boardLevel, feeLevel);
             return;
         }
 
-        // Slot 4 after recycle → treasury at board level.
-        if (slot == 4 && recycled) {
-            _sendToPlatformTreasury(levelTokenCost[boardLevel]);
+        // Slot 4 after upgrade / recycle → treasury at 009 share.
+        if (slot == 4 && (recycled || upgradeOpened)) {
+            _sendToPlatformTreasury(amount);
             return;
         }
 
-        // Slot 14 → fund upline's next cycle at this board level (L1, L2, L3… same rule).
+        // Slot 14 → upline next-cycle fund at 009 share (not level-doubled nominal).
         if (slot == 14) {
-            _payTreasurySlotToUpline1(boardOwner, member, boardLevel, levelTokenCost[boardLevel]);
+            _payTreasurySlotToUpline1(boardOwner, member, boardLevel, amount);
             return;
         }
 
-        // Slot 5 cycle 2+: normal board-owner income (L1 share), not upgrade.
+        // Slot 5 cycle 2+ / post-upgrade: board-owner income at 009 share.
         if (slot == 5) {
             _payResolved(boardOwner, member, boardLevel, amount);
             return;

@@ -6,6 +6,7 @@
 
 const LAST_LEVEL = 15;
 const MATRIX_SIZE = 14;
+const RECYCLE_MATRIX_SIZE = 6;
 const BPS = 10000n;
 const MATRIX_BPS = 9000n;
 const AMOUNT = 1000000000000000n;
@@ -30,13 +31,15 @@ class Reference {
     this.payouts = [];
     this.placements = [];
     this.violations = [];
+    this.recycleMatrixQueue = [{ matrixOwner: 1, cycleId: 1, slots: [] }];
+    this.recycleMatrixHead = 0;
     this._newUser(1, 0);
   }
 
   _err(m) { this.violations.push(m); }
 
   _emptyBoard() {
-    return { slots: [], reinvestCount: 0, totalFilled: 0, heldTokenForUpgrade: 0n };
+    return { slots: [], reinvestCount: 0, totalFilled: 0, heldTokenForUpgrade: 0n, upgradeOpened: false };
   }
 
   _totalHeld() {
@@ -183,21 +186,22 @@ class Reference {
   _payByRole(fromId, boardOwnerId, slot, boardLevel = 1, feeLevel = 1) {
     const amount = levelCost(feeLevel);
     const recycledAtPay = this._board(boardOwnerId, boardLevel).reinvestCount > 0;
+    const upgradeOpened = this._board(boardOwnerId, boardLevel).upgradeOpened;
 
-    if (slot === 4 && !recycledAtPay) {
+    if (slot === 4 && !recycledAtPay && !upgradeOpened) {
       this._holdHalfForNextLevel(fromId, boardOwnerId, slot, boardLevel);
       return;
     }
-    if (slot === 5 && !recycledAtPay) {
+    if (slot === 5 && !recycledAtPay && !upgradeOpened) {
       this._holdHalfAndFundUplineNextLevel(fromId, boardOwnerId, slot, boardLevel);
       return;
     }
-    if (slot === 4 && recycledAtPay) {
-      this._sendTreasury(levelCost(boardLevel), fromId, boardOwnerId, slot, "treasury-slot4c2", recycledAtPay, new Map(), 0, boardLevel);
+    if (slot === 4 && (recycledAtPay || upgradeOpened)) {
+      this._sendTreasury(amount, fromId, boardOwnerId, slot, "treasury-slot4c2", recycledAtPay, new Map(), 0, boardLevel);
       return;
     }
     if (slot === 14) {
-      this._payTreasurySlotToUpline1(fromId, boardOwnerId, slot, "treasury-slot14", levelCost(boardLevel), recycledAtPay, boardLevel);
+      this._payTreasurySlotToUpline1(fromId, boardOwnerId, slot, "treasury-slot14", amount, recycledAtPay, boardLevel);
       return;
     }
     if (slot === 5) {
@@ -295,6 +299,7 @@ class Reference {
           cycle: rc + 1,
           recycleCarry: true,
         });
+        this._payByRole(recycledMemberId, cur, slot, level, 1);
         this._afterFill(cur, slot, recycledMemberId, level);
       }
       cur = u.referrerId;
@@ -309,12 +314,44 @@ class Reference {
     this._placeMemberAtLevel(userId, nextLevel, false);
   }
 
+  _payRecycleMatrixSlot(fromId, matrixOwnerId, slot, level) {
+    const amount = levelCost(1);
+    if (slot === 1) {
+      this._payResolved(this.ownerId, fromId, matrixOwnerId, slot, "recycle-slot1", amount, true, new Map(), 0, level);
+    } else if (slot === 2) {
+      let target = this._uplineOf(matrixOwnerId, 2);
+      if (target === 0) target = this.ownerId;
+      const snap = this._snapshotForTarget(target);
+      this._payResolved(target, fromId, matrixOwnerId, slot, "recycle-slot2", amount, true, snap, level);
+    } else if (slot === 3 || slot === 5 || slot === 6) {
+      const snap = this._snapshotForTarget(matrixOwnerId);
+      this._payResolved(matrixOwnerId, fromId, matrixOwnerId, slot, `recycle-slot${slot}`, amount, true, snap, level);
+    } else if (slot === 4) {
+      this._sendTreasury(amount, fromId, matrixOwnerId, slot, "recycle-slot4", true, new Map(), 0, level);
+    }
+  }
+
+  _processRecycleMatrixEntry(entrantId, level) {
+    const head = this.recycleMatrixQueue[this.recycleMatrixHead];
+    head.slots.push(entrantId);
+    const slot = head.slots.length;
+    this._payRecycleMatrixSlot(entrantId, head.matrixOwner, slot, level);
+    if (slot === RECYCLE_MATRIX_SIZE) this.recycleMatrixHead += 1;
+    this.recycleMatrixQueue.push({
+      matrixOwner: entrantId,
+      cycleId: this._board(entrantId, level).reinvestCount,
+      slots: [],
+    });
+  }
+
   _afterFill(boardOwnerId, slot, memberId, level) {
+    if (slot === 5) this._board(boardOwnerId, level).upgradeOpened = true;
     if (slot === 5) this._unlockNextLevel(boardOwnerId, level + 1);
     if (slot === MATRIX_SIZE) {
       const b = this._board(boardOwnerId, level);
       b.slots = [];
       b.reinvestCount += 1;
+      this._processRecycleMatrixEntry(boardOwnerId, level);
       this._placeRecycledMemberOnUplines(boardOwnerId, level);
     }
   }
