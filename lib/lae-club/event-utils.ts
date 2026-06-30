@@ -66,9 +66,13 @@ export function splitIncomeEvents(events: MatrixUserEvent[], userId: bigint | un
     return !lapseTxKeys.has(pairKey);
   });
 
+  // One registration tx can pay the same receiver multiple times (L1 slots + L2+ recycle).
   const seenMatrix = new Set<string>();
   const uniqueIncome = income.filter((e) => {
-    const key = `${e.transactionHash}:${userId}`;
+    const key =
+      e.logIndex != null
+        ? `${e.transactionHash}:${e.logIndex}`
+        : `${e.transactionHash}:${userId}:${String((e.args as { amount?: bigint }).amount ?? "")}`;
     if (seenMatrix.has(key)) return false;
     seenMatrix.add(key);
     return true;

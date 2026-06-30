@@ -14,6 +14,13 @@ import { fmtEther } from "@/lib/contracts/format";
 import { txUrl, addressUrl } from "@/lib/lae-club/contracts";
 import { truncateAddress } from "@/lib/format";
 
+function sumIncomeRecords(records: LaeIncomeRecord[]): bigint {
+  return records.reduce((sum, r) => {
+    const amountRaw = r.amount.includes(".") ? r.amount.split(".")[0] : r.amount;
+    return sum + BigInt(amountRaw || "0");
+  }, 0n);
+}
+
 export default function IncomePage() {
   const user = useLaeUser();
   const income = useLaeIncomeEvents();
@@ -72,9 +79,28 @@ export default function IncomePage() {
     );
   }
 
-  const directMatrix = income.totalMatrixIncome;
-  const lapseTotal = income.totalLapseIncome;
-  const totalOnChain = user.totalIncome ?? directMatrix + lapseTotal;
+  const directMatrixFromRecords = useMemo(
+    () => sumIncomeRecords(matrixRecords),
+    [matrixRecords]
+  );
+  const lapseTotalFromRecords = useMemo(
+    () => sumIncomeRecords(lapseRecords),
+    [lapseRecords]
+  );
+  const clubTotalFromRecords = useMemo(
+    () => sumIncomeRecords(clubRecords),
+    [clubRecords]
+  );
+
+  const directMatrix =
+    directMatrixFromRecords > 0n
+      ? directMatrixFromRecords
+      : user.totalIncome ?? income.totalMatrixIncome;
+  const lapseTotal =
+    lapseTotalFromRecords > 0n ? lapseTotalFromRecords : income.totalLapseIncome;
+  const clubTotal =
+    clubTotalFromRecords > 0n ? clubTotalFromRecords : income.totalRoyalIncome;
+  const totalOnChain = user.totalIncome ?? directMatrix + lapseTotal + clubTotal;
 
   return (
     <div>
@@ -82,7 +108,7 @@ export default function IncomePage() {
       <p className="mt-1.5 text-sm text-slate-400">
         User #{String(user.userId ?? "—")} · On-chain total{" "}
         <span className="font-semibold text-[#D4AF37]">{fmtEther(totalOnChain)}</span> · Club pool{" "}
-        <span className="font-semibold text-emerald-400">{fmtEther(income.totalRoyalIncome)}</span>
+        <span className="font-semibold text-emerald-400">{fmtEther(clubTotal)}</span>
       </p>
 
       {(income.isLoading || enriched.isLoading) && (
@@ -122,7 +148,7 @@ export default function IncomePage() {
             Club pool income
           </h2>
           <p className="relative mt-3 text-2xl font-bold text-emerald-400 sm:text-3xl">
-            {fmtEther(income.totalRoyalIncome)}
+            {fmtEther(clubTotal)}
           </p>
           <p className="relative mt-1 text-xs text-slate-500">{clubRecords.length} club pool events</p>
         </div>
