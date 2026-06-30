@@ -483,9 +483,14 @@ class Reference {
   }
 
   _afterFill(boardOwnerId, slot, memberId, level) {
-    if (slot === 5) this._board(boardOwnerId, level).upgradeOpened = true;
+    const b = this._board(boardOwnerId, level);
+    if (slot === 5) {
+      b.upgradeOpened = true;
+      if (b.reinvestCount === 0 && level < LAST_LEVEL && !this.users.get(boardOwnerId).activeLevels[level + 1]) {
+        this._unlockNextLevel(boardOwnerId, level + 1);
+      }
+    }
     if (slot === MATRIX_SIZE) {
-      const b = this._board(boardOwnerId, level);
       b.slots = [];
       b.reinvestCount += 1;
       this._processRecycleMatrixEntry(boardOwnerId, level);

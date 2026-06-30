@@ -687,11 +687,17 @@ contract LAEClubMatrix {
      *      registration that propagates to this board (not the slot-14 member).
      */
     function _afterFill(address boardOwner, uint8 slot, uint8 level, address /*member*/) private {
+        Board storage b = users[boardOwner].board[level];
         if (slot == 5) {
-            users[boardOwner].board[level].upgradeOpened = true;
+            b.upgradeOpened = true;
+            // Cycle-1 slot 5 unlocks the owner's next matrix level (free self-placement).
+            if (b.reinvestCount == 0 && level < LAST_LEVEL && !users[boardOwner].activeLevels[level + 1]) {
+                users[boardOwner].activeLevels[level + 1] = true;
+                emit Upgrade(users[boardOwner].id, users[boardOwner].referrerId, level + 1);
+                _placeMemberAtLevel(boardOwner, level + 1, false, 1);
+            }
         }
         if (slot == MATRIX_SIZE) {
-            Board storage b = users[boardOwner].board[level];
             delete b.slots;
             b.reinvestCount += 1;
             emit Reinvest(users[boardOwner].id, users[boardOwner].id, users[boardOwner].id, level);

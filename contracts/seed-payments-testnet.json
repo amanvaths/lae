@@ -1,12 +1,12 @@
 {
-  "matrix": "0x93B9D45A2bB52058d138A9461816f800ee131B60",
-  "deployBlock": 116397435,
+  "matrix": "0x99f15a71cac129FcbB46478439599A876d6B721b",
+  "deployBlock": 116403246,
   "maxUsers": 200,
   "payments": [
     {
       "userId": 4,
       "sponsorId": 2,
-      "tx": "0xeb2e6669d44e41435b07155fc0529d65d1bf7f46c7845030577b70041c9a0b21",
+      "tx": "0xb3fc4dbd82450fe4a6508ec427ec4560cb09a7ee92cfda0db3c225df2474d1f9",
       "payment": {
         "receiverId": 1,
         "fromUserId": 4,
@@ -20,7 +20,7 @@
     {
       "userId": 5,
       "sponsorId": 2,
-      "tx": "0xb1130725e99ff6c182ee9dfe2e1bef5b96ca9276a44aeae10b8d4574006a0087",
+      "tx": "0x4c7bd6391b529eac15ec2fd30195b73c0e69b7392d00a83079e658719462e4b6",
       "payment": {
         "receiverId": 1,
         "fromUserId": 5,
@@ -34,7 +34,7 @@
     {
       "userId": 6,
       "sponsorId": 3,
-      "tx": "0x19d7fd9af762d4d9ef71c5e6ab41c9b3010b9dfc92a265d4dfcfe0f89cb4ab25",
+      "tx": "0x0d18c3ebb143be0dccbdae8044f7cd6cd1d35aca0d87eb27bc2253afe784fb3e",
       "payment": {
         "receiverId": 1,
         "fromUserId": 6,
@@ -48,7 +48,7 @@
     {
       "userId": 7,
       "sponsorId": 3,
-      "tx": "0x341e7f2428be12cadb22933ad9c8eac19f7810daa55dd1b19938c792096c6af9",
+      "tx": "0x3362fe5c7553df7fc2e9003b462b174305ee5f501e4436e2739f4865fc5298b7",
       "payment": {
         "receiverId": 1,
         "fromUserId": 7,
@@ -62,7 +62,7 @@
     {
       "userId": 8,
       "sponsorId": 4,
-      "tx": "0xea6c3ad4b2861fd13f299eceecf2c6bb51d6be23de9e5b7a9286dee70599963d",
+      "tx": "0xb2098d1284fd9cca75fd6dea0a75a8b05cdeb8d10b23483f739d69c54ed0fb65",
       "payment": {
         "receiverId": 2,
         "fromUserId": 8,
@@ -76,7 +76,7 @@
     {
       "userId": 9,
       "sponsorId": 4,
-      "tx": "0x9e393ffbc1ce32e01d04008f11e00d547273c210c91b7524a2e5a036564c36f8",
+      "tx": "0x1565d30d3597f924c1f9ed950bf38f9246d6293ed95e24ba5757d3a77843629b",
       "payment": {
         "receiverId": 1,
         "fromUserId": 9,
@@ -90,7 +90,7 @@
     {
       "userId": 10,
       "sponsorId": 5,
-      "tx": "0xef2dc1157457318bca6d93cfb8e1fc81ac7847c6a0bd0d656ec99a1a85334a8d",
+      "tx": "0xb0efa07708443f82ecd99efca3863c277d6f5b5c6e26496f7661ca84e873d1c6",
       "payment": {
         "receiverId": 2,
         "fromUserId": 10,
@@ -99,12 +99,12 @@
       },
       "expectedReceiver": 2,
       "verified": true,
-      "placementCount": 17
+      "placementCount": 19
     },
     {
       "userId": 11,
       "sponsorId": 5,
-      "tx": "0x29eaf650229f2e3bab8ba66131bff5ca30716c7aa0c90ebe4221727e4d886460",
+      "tx": "0x3db90f957b0eb5423b84df18b3b4f2eea3ffe9c758acc682fa097eb6bc2d93e9",
       "payment": {
         "receiverId": 1,
         "fromUserId": 11,
@@ -113,12 +113,12 @@
       },
       "expectedReceiver": 1,
       "verified": true,
-      "placementCount": 17
+      "placementCount": 18
     },
     {
       "userId": 12,
       "sponsorId": 6,
-      "tx": "0x26b565d916578525180b26292b2052d04ff2080a0ca26c954f669ada063c9ed1",
+      "tx": "0x2ff9161030c4bc16a551a91ece54e854fcf5dddce59009bdea64d401925e0d29",
       "payment": {
         "receiverId": 3,
         "fromUserId": 12,
@@ -132,7 +132,7 @@
     {
       "userId": 13,
       "sponsorId": 6,
-      "tx": "0xe0bc814c73201033453189c89666578ee844a03fb464657061a1a98e75d10a46",
+      "tx": "0x8e528933dec2f600ffc61a7af3e033055b5a781fe2369353b486f296c3119a2a",
       "payment": {
         "receiverId": 1,
         "fromUserId": 13,
@@ -146,7 +146,7 @@
     {
       "userId": 14,
       "sponsorId": 7,
-      "tx": "0x5465ba26cf9fc81cbf77945906afeb31f3ea62715b982cd6eb19bcff157f6463",
+      "tx": "0x43d84f7288c90bfb77cfd22dbb2b0470a29cea70ac9108a446ba6038dd725820",
       "payment": {
         "receiverId": 3,
         "fromUserId": 14,
@@ -155,12 +155,12 @@
       },
       "expectedReceiver": 3,
       "verified": true,
-      "placementCount": 17
+      "placementCount": 18
     },
     {
       "userId": 15,
       "sponsorId": 7,
-      "tx": "0x6de99c46219b95450c4a1ed10a36db40645739b86230198d4d8010ec736b2299",
+      "tx": "0x79765c59b790b5f75aa648d751a8a6549400864820051875f6ca7464741f7f5a",
       "payment": {
         "receiverId": 1,
         "fromUserId": 15,
@@ -174,7 +174,7 @@
     {
       "userId": 16,
       "sponsorId": 8,
-      "tx": "0xfc3eabd6d7a2b6be8a58edd34f1fd1d95fa8eaf4db42d268a732048bc066c59b",
+      "tx": "0x0b63aaf25e98273a6682cc6b8a6b6f328c936f5ac02067dea8cb57eb846b5616",
       "payment": {
         "receiverId": 4,
         "fromUserId": 16,
@@ -183,12 +183,12 @@
       },
       "expectedReceiver": 4,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 4
     },
     {
       "userId": 17,
       "sponsorId": 8,
-      "tx": "0x7d4d64e8f799e38781fc334c98cdc3d04615adf98360df831bd4de3bbedb2d95",
+      "tx": "0x01c5518ea7a407175e5e8ec0e0abf0a5f46e364d4b089688b13b886b3e2a6d7e",
       "payment": {
         "receiverId": 2,
         "fromUserId": 17,
@@ -197,12 +197,12 @@
       },
       "expectedReceiver": 2,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 4
     },
     {
       "userId": 18,
       "sponsorId": 9,
-      "tx": "0x7d7415aefd841c2337808c452243255446d90806cb9ffe232cc206985474d1fd",
+      "tx": "0x5df676a74d4689faae2d926a6a2609e7ec2843fc359db49c7577fda5517cde1b",
       "payment": {
         "receiverId": 4,
         "fromUserId": 18,
@@ -211,12 +211,12 @@
       },
       "expectedReceiver": 4,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 8
     },
     {
       "userId": 19,
       "sponsorId": 9,
-      "tx": "0xe955f6a70f1d8f3b89688938f59397bd31c10165f64f0a80a48a3f26febe9ba1",
+      "tx": "0x09cbb710f8c17403468816e026a5f6d4f6fee52e2ae1be5b6c7c550ac9b17b55",
       "payment": {
         "receiverId": 2,
         "fromUserId": 19,
@@ -225,12 +225,12 @@
       },
       "expectedReceiver": 2,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 6
     },
     {
       "userId": 20,
       "sponsorId": 10,
-      "tx": "0x56d3741580885fc150f64692714aaa5d8b847cef3838133b634509c88a0ef0a6",
+      "tx": "0xf1589427f4b550e45cf330d99d3dce3acec20101135fcc007f2ef10b4052d35b",
       "payment": {
         "receiverId": 5,
         "fromUserId": 20,
@@ -239,12 +239,12 @@
       },
       "expectedReceiver": 5,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 5
     },
     {
       "userId": 21,
       "sponsorId": 10,
-      "tx": "0x294f10bb1c963bacfb3dbb36a34a6f10393be9dd9f2e8a46910cc4819c0a6695",
+      "tx": "0x1d8cbda2ec83d31a03d3320d3fb7634d5dc430f164d90e00b45dc4c012aed810",
       "payment": {
         "receiverId": 2,
         "fromUserId": 21,
@@ -253,12 +253,12 @@
       },
       "expectedReceiver": 2,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 5
     },
     {
       "userId": 22,
       "sponsorId": 11,
-      "tx": "0x65e9ee0420ffed006e892386b6e9ba6652c8106557a0e6c8bcbf226115d73765",
+      "tx": "0x88dc6bef715a8dfab4a9f49960029665a494ae4b2b62c6bd5625a5a84ebbf999",
       "payment": {
         "receiverId": 5,
         "fromUserId": 22,
@@ -267,12 +267,12 @@
       },
       "expectedReceiver": 5,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 9
     },
     {
       "userId": 23,
       "sponsorId": 11,
-      "tx": "0x9a77b9e7a1070abe9dce97c595063b9032bb2e76fba4d2b9eab5f88553ff9370",
+      "tx": "0xded205d40f8e56efec7561cfbbacdc6af59bcc58f0243593d42ee087540a52b3",
       "payment": {
         "receiverId": 2,
         "fromUserId": 23,
@@ -281,12 +281,12 @@
       },
       "expectedReceiver": 2,
       "verified": true,
-      "placementCount": 4
+      "placementCount": 8
     },
     {
       "userId": 24,
       "sponsorId": 12,
-      "tx": "0xe71d3f4ca66f6a2d408027f2a1e1eeb1585fce66b13b24c10b99608f3ac61c02",
+      "tx": "0x4ca869e8d706a77af0f5c3e54e55a6dccb5601ee51f6254a5419a204593b05fe",
       "payment": {
         "receiverId": 6,
         "fromUserId": 24,
@@ -295,12 +295,12 @@
       },
       "expectedReceiver": 6,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 4
     },
     {
       "userId": 25,
       "sponsorId": 12,
-      "tx": "0x50ac1fe56c4baf0e267116333d0531c83438cf7f6d691445c36af3aac4563d50",
+      "tx": "0x926ff8a27c7bb2cc3414f099b8ab9c04d61fc9bd42a5a57078668ddc5d1b4748",
       "payment": {
         "receiverId": 3,
         "fromUserId": 25,
@@ -309,12 +309,12 @@
       },
       "expectedReceiver": 3,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 4
     },
     {
       "userId": 26,
       "sponsorId": 13,
-      "tx": "0x01010bd14602a8529b62ca109d92441bbb4350c7362abe5e9633a125334a994b",
+      "tx": "0x3c3156bb306a526dc91d6f403c47a4f379b33541e70cd4f742c9359e67f06045",
       "payment": {
         "receiverId": 6,
         "fromUserId": 26,
@@ -323,12 +323,12 @@
       },
       "expectedReceiver": 6,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 8
     },
     {
       "userId": 27,
       "sponsorId": 13,
-      "tx": "0x3e725fa35f72b69d4529347f457f156920a0d50e30c415de336bf9d664b2055d",
+      "tx": "0xdb87aad57d7c756cea938920473a781bbca4972caa037f991dcb55d992cfe348",
       "payment": {
         "receiverId": 3,
         "fromUserId": 27,
@@ -337,12 +337,12 @@
       },
       "expectedReceiver": 3,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 6
     },
     {
       "userId": 28,
       "sponsorId": 14,
-      "tx": "0xffdb491869c6a96b103afab44a9b44737b17dfb9fa7b1b03168f048c105d7416",
+      "tx": "0x92f5012758fdaa6320e61fe56481ce57507c4681b337339f09e2c897292fcfcf",
       "payment": {
         "receiverId": 7,
         "fromUserId": 28,
@@ -351,12 +351,12 @@
       },
       "expectedReceiver": 7,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 5
     },
     {
       "userId": 29,
       "sponsorId": 14,
-      "tx": "0xd8a98d38c39f24a691be55aa67d05474b40695beb2588176360bfb96c6d4bc35",
+      "tx": "0x0dbbea1a8c0d3d979230b9bcb44300b08672fa78232b61fcef710168cf0f6f09",
       "payment": {
         "receiverId": 3,
         "fromUserId": 29,
@@ -365,12 +365,12 @@
       },
       "expectedReceiver": 3,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 5
     },
     {
       "userId": 30,
       "sponsorId": 15,
-      "tx": "0x6d789bc72674f01780d503c67938b05947cc90be7ae7ab382027c8eaf410ded7",
+      "tx": "0x99af85be2a742928d7cbe3dac4cbca518cc8ddc6fd5f605f1f177855707a6506",
       "payment": {
         "receiverId": 7,
         "fromUserId": 30,
@@ -379,12 +379,12 @@
       },
       "expectedReceiver": 7,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 9
     },
     {
       "userId": 31,
       "sponsorId": 15,
-      "tx": "0xd330e1eec890ff9e455f5c113c707d90c773fdf773c43d607c9a98a281dae73f",
+      "tx": "0x6d25af437f71b55cfc3377f1dc681854b8ce8e0881880d1d3b3e413bb95c0bc5",
       "payment": {
         "receiverId": 3,
         "fromUserId": 31,
@@ -393,12 +393,12 @@
       },
       "expectedReceiver": 3,
       "verified": true,
-      "placementCount": 4
+      "placementCount": 8
     },
     {
       "userId": 32,
       "sponsorId": 16,
-      "tx": "0x98caafa3f263902bd9d4bcd1ec3fbfd91918f46c87e6564283a986166c85c061",
+      "tx": "0xd6d6c37c7c5d38c63066a4a378633f44d0126c3dcbd67ccc2e695986c9ee020b",
       "payment": {
         "receiverId": 8,
         "fromUserId": 32,
@@ -407,12 +407,12 @@
       },
       "expectedReceiver": 8,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 7
     },
     {
       "userId": 33,
       "sponsorId": 16,
-      "tx": "0xc80bf58a134153af91603b4cf46649f254499ebd452874b6f6b90769831a19cb",
+      "tx": "0xf563fbf998374e2bc5a05e9bdf315fcbb953eb39c04667a09569340e1285b710",
       "payment": {
         "receiverId": 4,
         "fromUserId": 33,
@@ -421,12 +421,12 @@
       },
       "expectedReceiver": 4,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 8
     },
     {
       "userId": 34,
       "sponsorId": 17,
-      "tx": "0x522e0b436f5fcb598df93e4827656b8d056b9f14896d009d3d39dc1a09bec939",
+      "tx": "0x3834741aee4436b1bbab6810ea2bdd5d9eccc87f02ed6830abcd4b12fdffabd6",
       "payment": {
         "receiverId": 8,
         "fromUserId": 34,
@@ -435,12 +435,12 @@
       },
       "expectedReceiver": 8,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 12
     },
     {
       "userId": 35,
       "sponsorId": 17,
-      "tx": "0x860bc1421ccbfa0efc8e0c5499837b58c03ab1a6b5ce7ce121beef143c004873",
+      "tx": "0x2290977b0687e1ad12dcf3270b051365ad656f442bc3372a42f822c38546002f",
       "payment": {
         "receiverId": 4,
         "fromUserId": 35,
@@ -449,12 +449,12 @@
       },
       "expectedReceiver": 4,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 9
     },
     {
       "userId": 36,
       "sponsorId": 18,
-      "tx": "0xd694227381d6ca573c01c49576c81c2a659c12f07e142c64618e89902d20aec3",
+      "tx": "0x5d21d27a72430092f9b5ea122efed4017f0048f375a2a1b6662ea0e634031694",
       "payment": {
         "receiverId": 9,
         "fromUserId": 36,
@@ -463,12 +463,12 @@
       },
       "expectedReceiver": 9,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 8
     },
     {
       "userId": 37,
       "sponsorId": 18,
-      "tx": "0xf6ce0b45cb813dfced656e715d8df64dfea748d8814ad287e4ca15641a942b5d",
+      "tx": "0x01d0680b9924656c91c66ea3e9e0e252e5178e837cf2413332af04b55952b3d0",
       "payment": {
         "receiverId": 4,
         "fromUserId": 37,
@@ -477,12 +477,12 @@
       },
       "expectedReceiver": 4,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 8
     },
     {
       "userId": 38,
       "sponsorId": 19,
-      "tx": "0x640cfd31103002b3fcc5ccff40496122130ec5d4c469d0553190b85a27573944",
+      "tx": "0x44b5826d26490687c1c921402cbc4f49a9e09b08e30c7757462129957bed5be8",
       "payment": {
         "receiverId": 9,
         "fromUserId": 38,
@@ -491,12 +491,12 @@
       },
       "expectedReceiver": 9,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 15
     },
     {
       "userId": 39,
       "sponsorId": 19,
-      "tx": "0x855953538505ea0bd1e60f5c3cfa1abfc568ae750984b9d58a65b728eac54f41",
+      "tx": "0xbf603a32471d97f11df8287ad5100e6bb1b911954a8b8db1d69d8aac8d730ea0",
       "payment": {
         "receiverId": 4,
         "fromUserId": 39,
@@ -505,12 +505,12 @@
       },
       "expectedReceiver": 4,
       "verified": true,
-      "placementCount": 5
+      "placementCount": 12
     },
     {
       "userId": 40,
       "sponsorId": 20,
-      "tx": "0x2a91dcc2ceb4710a72fc8cde03c037b65475264e4526916c1ea334776c1276ce",
+      "tx": "0xb66d1789570474bd0a36bff9a0af5035946bf21eb2137c68d15c6b7c9986fa0b",
       "payment": {
         "receiverId": 10,
         "fromUserId": 40,
@@ -519,12 +519,12 @@
       },
       "expectedReceiver": 10,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 7
     },
     {
       "userId": 41,
       "sponsorId": 20,
-      "tx": "0xf7937a5f87fd9695c18ddd211cca9f5e848db332ca83320fef6f7735cfb2b940",
+      "tx": "0xcfba2379fda2772e229a8f7dbb92168ecac4ec52edff246e0f091b501778b040",
       "payment": {
         "receiverId": 5,
         "fromUserId": 41,
@@ -533,12 +533,12 @@
       },
       "expectedReceiver": 5,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 7
     },
     {
       "userId": 42,
       "sponsorId": 21,
-      "tx": "0x940c38aa90eed2319ebf963ceaf8cbd1b02e99de171e425e25ed59f586c9cd49",
+      "tx": "0x766ee4d1854402cee957d9d83d5f2e1d9e02c8c97a029c5e04a1547e7b52a6cc",
       "payment": {
         "receiverId": 10,
         "fromUserId": 42,
@@ -547,12 +547,12 @@
       },
       "expectedReceiver": 10,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 14
     },
     {
       "userId": 43,
       "sponsorId": 21,
-      "tx": "0xda25a08b04287a5da2723e239c67eccca62e8ab621785743ee069b5fe7e452ac",
+      "tx": "0xeb5dce955dcd8e08e6937da170ea11036773188364d03614c4801c650833247b",
       "payment": {
         "receiverId": 5,
         "fromUserId": 43,
@@ -561,12 +561,12 @@
       },
       "expectedReceiver": 5,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 9
     },
     {
       "userId": 44,
       "sponsorId": 22,
-      "tx": "0xdccbe8f10092a7cec797ca04f7aec47efb7a7ef7ab7b323f3649177e62816329",
+      "tx": "0xa38fd3d0da04b91ae83b3185afe9531b9f5a622af7eb26aef8e0b7697babf878",
       "payment": {
         "receiverId": 11,
         "fromUserId": 44,
@@ -575,12 +575,12 @@
       },
       "expectedReceiver": 11,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 8
     },
     {
       "userId": 45,
       "sponsorId": 22,
-      "tx": "0x5a3a5580103cd1a6531fd096f1ff3e4b022f9d1a0c614a182aa8e54b25b55471",
+      "tx": "0xc85713e3e9c98d79b803a10c0c0dc5c5d40db750073e8e00b35fb9d6257d63da",
       "payment": {
         "receiverId": 5,
         "fromUserId": 45,
@@ -589,12 +589,12 @@
       },
       "expectedReceiver": 5,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 8
     },
     {
       "userId": 46,
       "sponsorId": 23,
-      "tx": "0xecd44163094bfd4fb56646201bd8a689ae18d8316b92b2cc464e8190e0a70ee9",
+      "tx": "0x23e9df233e9fbf9414dc25f5d28380005fd111ab907c9bc15c2dc6222c5907cc",
       "payment": {
         "receiverId": 11,
         "fromUserId": 46,
@@ -603,12 +603,12 @@
       },
       "expectedReceiver": 11,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 14
     },
     {
       "userId": 47,
       "sponsorId": 23,
-      "tx": "0xcbacd1964f259c2c56ccd384de58d0aef8798e180185a627c758339e2202e06c",
+      "tx": "0x56e17619098bed4defb33a23dcc9caf67b660f90dc1f1f0a46a24394dd11b3dc",
       "payment": {
         "receiverId": 5,
         "fromUserId": 47,
@@ -617,12 +617,12 @@
       },
       "expectedReceiver": 5,
       "verified": true,
-      "placementCount": 5
+      "placementCount": 14
     },
     {
       "userId": 48,
       "sponsorId": 24,
-      "tx": "0x8ce78d6e674b8098474dfd0f22dca480338f961322fe10cfa36794b507418bf5",
+      "tx": "0xa85dfcb9249214c410bb7a4ca41a86eecf31595a3a0f50228c7d1163ee3dfe32",
       "payment": {
         "receiverId": 12,
         "fromUserId": 48,
@@ -631,12 +631,12 @@
       },
       "expectedReceiver": 12,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 7
     },
     {
       "userId": 49,
       "sponsorId": 24,
-      "tx": "0x33c692a78d8aeea29101e9b180072cdc2065acce0c356bebd641792915e7dc34",
+      "tx": "0xbc420fb4e9c4800573cbb65a4bb846c0cd5d0ff2e8aafbf20dc4120c5a7209d3",
       "payment": {
         "receiverId": 6,
         "fromUserId": 49,
@@ -645,12 +645,12 @@
       },
       "expectedReceiver": 6,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 8
     },
     {
       "userId": 50,
       "sponsorId": 25,
-      "tx": "0x8b9df13bbd39710ce4b2b31401aac9c519c8c7f43e7622c953cd96c136f5ec4e",
+      "tx": "0xadfa680a47591b694e2e4c64b881ea1295af043823587155e12bac1e8d6f89e1",
       "payment": {
         "receiverId": 12,
         "fromUserId": 50,
@@ -659,12 +659,12 @@
       },
       "expectedReceiver": 12,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 12
     },
     {
       "userId": 51,
       "sponsorId": 25,
-      "tx": "0x882ad34eecb4821efd94383eb220426137429edfd15da095c112a482eaf6230d",
+      "tx": "0xf50a304bf6bb9d991f79bed03073070ec9c325c56673a50c3c013edd535d9230",
       "payment": {
         "receiverId": 6,
         "fromUserId": 51,
@@ -673,12 +673,12 @@
       },
       "expectedReceiver": 6,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 9
     },
     {
       "userId": 52,
       "sponsorId": 26,
-      "tx": "0x4bdb1999fe11a630352d290e03177fe73f12ae432afeb720bf6b8a2805c8f308",
+      "tx": "0x3dc470fa6f387ed23abfa9415305b5e3393e5d228ddc3c5d86293006922d08c0",
       "payment": {
         "receiverId": 13,
         "fromUserId": 52,
@@ -687,12 +687,12 @@
       },
       "expectedReceiver": 13,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 8
     },
     {
       "userId": 53,
       "sponsorId": 26,
-      "tx": "0x20bb90cc69d3942e448bc65d243c0bb7456da8c19ca45c9ecb13734d8be9f370",
+      "tx": "0x5185ef795c73460815d2e21fb806005f8486b964d756d35e82f995992acc5e9c",
       "payment": {
         "receiverId": 6,
         "fromUserId": 53,
@@ -701,12 +701,12 @@
       },
       "expectedReceiver": 6,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 8
     },
     {
       "userId": 54,
       "sponsorId": 27,
-      "tx": "0x05890f119302b2d079b3117d137fa529ed9f86e475b226d10b4601fe1e47416b",
+      "tx": "0x7df4807ae0c28c96e5f8660c019b8ed79bc0e106b5d47e8371f7def5280b4bb3",
       "payment": {
         "receiverId": 13,
         "fromUserId": 54,
@@ -715,12 +715,12 @@
       },
       "expectedReceiver": 13,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 15
     },
     {
       "userId": 55,
       "sponsorId": 27,
-      "tx": "0xe4c5f76f422c295c8349fe67ec63c4bf1dc44f5def7a311180e146ab57191f01",
+      "tx": "0xd595f0c70f4db3c8dfd9657c202b82a520a3aba638c39550a17daea4032bc4dc",
       "payment": {
         "receiverId": 6,
         "fromUserId": 55,
@@ -729,12 +729,12 @@
       },
       "expectedReceiver": 6,
       "verified": true,
-      "placementCount": 5
+      "placementCount": 12
     },
     {
       "userId": 56,
       "sponsorId": 28,
-      "tx": "0xda4fa6b63324d3e8a2bf89fef8a835ea5503ad0bb2163653d93c82884a88be84",
+      "tx": "0xad6871b988ee4c6eb4edf48ae5e24bdb44b63878ca7b32455f4e78f85cd13422",
       "payment": {
         "receiverId": 14,
         "fromUserId": 56,
@@ -743,12 +743,12 @@
       },
       "expectedReceiver": 14,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 7
     },
     {
       "userId": 57,
       "sponsorId": 28,
-      "tx": "0x1fed1eefabb73dc00bfd686988f4817fe78597b8b4491ca40a3c09db5e985c65",
+      "tx": "0x3aa7ca48884393153c2ec993a003cfdffb6b34d4aab3d2e0bad155f104470c72",
       "payment": {
         "receiverId": 7,
         "fromUserId": 57,
@@ -757,12 +757,12 @@
       },
       "expectedReceiver": 7,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 7
     },
     {
       "userId": 58,
       "sponsorId": 29,
-      "tx": "0xd0b3df976441ad3824fd1e0ece3f0d5c7eb339de3e3500e23d3ac5b945ccf873",
+      "tx": "0xab6354856c97554ef6a4afdef473030914c51f8faf1802b3a4ecc5b828f6b4eb",
       "payment": {
         "receiverId": 14,
         "fromUserId": 58,
@@ -771,12 +771,12 @@
       },
       "expectedReceiver": 14,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 14
     },
     {
       "userId": 59,
       "sponsorId": 29,
-      "tx": "0x908fabeea37e2396059b2c7ce224cd09293a82dc30e8abf1d7a838cd7a9a8d22",
+      "tx": "0xf9123655f76a6fc1989ca3aeb028521223daa58e222349ef006647103347900c",
       "payment": {
         "receiverId": 7,
         "fromUserId": 59,
@@ -785,12 +785,12 @@
       },
       "expectedReceiver": 7,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 9
     },
     {
       "userId": 60,
       "sponsorId": 30,
-      "tx": "0x90188d54126c5bc821ec13ea74062a8994410dfb29a70d96c9f0318d871a1fdb",
+      "tx": "0xd59a7dacca992b1de65f4b30602abe642ada03c2bbe68659a5b81936cf774349",
       "payment": {
         "receiverId": 15,
         "fromUserId": 60,
@@ -799,12 +799,12 @@
       },
       "expectedReceiver": 15,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 8
     },
     {
       "userId": 61,
       "sponsorId": 30,
-      "tx": "0x5476af5f7e855310d1db36378ffc755636197e11f0a7b877932a0238013c7796",
+      "tx": "0x6e3a1afafc3a5a8924a44030a106c8bb833125571a3098ea8e12f0edf1546df0",
       "payment": {
         "receiverId": 7,
         "fromUserId": 61,
@@ -813,12 +813,12 @@
       },
       "expectedReceiver": 7,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 8
     },
     {
       "userId": 62,
       "sponsorId": 31,
-      "tx": "0xffc59a580d1648a6437f08383361b9a41343f344903425b7034ec11f29e26ebf",
+      "tx": "0x08bf1145883f0e4526161d3a881f551593de87c49d9f99a90b3d92baa9dc5b5c",
       "payment": {
         "receiverId": 15,
         "fromUserId": 62,
@@ -827,12 +827,12 @@
       },
       "expectedReceiver": 15,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 14
     },
     {
       "userId": 63,
       "sponsorId": 31,
-      "tx": "0x884bf3f7825193645f7079611cf6803a339130189de4c120f83e1a7076436646",
+      "tx": "0xb382ac101387e903e718d2bb05c75d486fa797f2163ce40121f54a318f8c89c5",
       "payment": {
         "receiverId": 7,
         "fromUserId": 63,
@@ -841,12 +841,12 @@
       },
       "expectedReceiver": 7,
       "verified": true,
-      "placementCount": 5
+      "placementCount": 14
     },
     {
       "userId": 64,
       "sponsorId": 32,
-      "tx": "0x5948215ff2e084073d955d223b62a5e6955435ad6b7fb62bbf92290a3f8fcb01",
+      "tx": "0xb418dcb3d0467a10264f3cfe899cacf5f2096ac551ab6b1abae180392996fe7f",
       "payment": {
         "receiverId": 16,
         "fromUserId": 64,
@@ -855,12 +855,12 @@
       },
       "expectedReceiver": 16,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 10
     },
     {
       "userId": 65,
       "sponsorId": 32,
-      "tx": "0x2e9d375309e78f40f96336027772bd2645b8b82c0e9c21ec39ddba94f1ae4556",
+      "tx": "0x8e4de5dcf2814acb1630c8c49eca7ad5ee2b4b911502d18c87d8c2e0409fdc03",
       "payment": {
         "receiverId": 8,
         "fromUserId": 65,
@@ -869,12 +869,12 @@
       },
       "expectedReceiver": 8,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 12
     },
     {
       "userId": 66,
       "sponsorId": 33,
-      "tx": "0xa878e3f41b016940c868b77c4bb4a95315925df0cf6e3d432f1191f3a9f03e0a",
+      "tx": "0xf2514c038b5099dd822b806436c3332d8d19047eda17ceaaf5f18302e15c876f",
       "payment": {
         "receiverId": 16,
         "fromUserId": 66,
@@ -883,12 +883,12 @@
       },
       "expectedReceiver": 16,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 17
     },
     {
       "userId": 67,
       "sponsorId": 33,
-      "tx": "0xa2551e02a10f743727e2de97fa0209a0040e962c4da2df734c22d3dcc1dd5ff3",
+      "tx": "0xe29f1c8714efcf9bc2773babac9422a03be064d8f59d52fbc9fd288bd90895f5",
       "payment": {
         "receiverId": 8,
         "fromUserId": 67,
@@ -897,12 +897,12 @@
       },
       "expectedReceiver": 8,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 14
     },
     {
       "userId": 68,
       "sponsorId": 34,
-      "tx": "0x5e582695278b1aa8415392a28ddbd89afc2065495a86981fb7d295d88b5fcdad",
+      "tx": "0xd16276e4cbc5aa6c29288f11db611fb534c5f15915a42db0a6d2c3531af7a1a5",
       "payment": {
         "receiverId": 17,
         "fromUserId": 68,
@@ -911,12 +911,12 @@
       },
       "expectedReceiver": 17,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 11
     },
     {
       "userId": 69,
       "sponsorId": 34,
-      "tx": "0x27c372e4e188a62aa7c088e14372607cbe1401c30fe66eb6c1f20c9630e42dff",
+      "tx": "0x5bf5954c383391db1a9f290dbac23427da22a4d6cf5d0ce7f70fd2ae0e1a1b74",
       "payment": {
         "receiverId": 8,
         "fromUserId": 69,
@@ -925,12 +925,12 @@
       },
       "expectedReceiver": 8,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 11
     },
     {
       "userId": 70,
       "sponsorId": 35,
-      "tx": "0xf93f825eff64e3ecefdbff33ec83230723c55904766d75663e736f4d40064c8a",
+      "tx": "0xb3a46cf2d3fc007553a2306191c737a55737b20b2cb9d25b531d74c50c0ae750",
       "payment": {
         "receiverId": 17,
         "fromUserId": 70,
@@ -939,12 +939,12 @@
       },
       "expectedReceiver": 17,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 21
     },
     {
       "userId": 71,
       "sponsorId": 35,
-      "tx": "0xf4eaae3cf28f4c58bcce96ab327e8f9156ce382cfefadfb13155f6f2f1a371bd",
+      "tx": "0x78c885584e2b1a7298107ff32ffd60a8e2eb6413ebcb9edb654254385dac2019",
       "payment": {
         "receiverId": 8,
         "fromUserId": 71,
@@ -953,12 +953,12 @@
       },
       "expectedReceiver": 8,
       "verified": true,
-      "placementCount": 6
+      "placementCount": 18
     },
     {
       "userId": 72,
       "sponsorId": 36,
-      "tx": "0x943c0ee95b56e43f19b2d608d999deef0b3dc8ba0a7e64377908832270441843",
+      "tx": "0x6076e93aec6185adaccd2ceee126458fc4aec8a604e0ea2abecdd8e1f6f46792",
       "payment": {
         "receiverId": 18,
         "fromUserId": 72,
@@ -967,12 +967,12 @@
       },
       "expectedReceiver": 18,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 10
     },
     {
       "userId": 73,
       "sponsorId": 36,
-      "tx": "0xbf4f4f472ef313ffda433d211e159bfedaa36f96cf23b352fd8ed2ba88e3a9ac",
+      "tx": "0x0bc2989ff85bc254e0e7904e8b880562b4ad3eddf85f4c830f93e2e28620072a",
       "payment": {
         "receiverId": 9,
         "fromUserId": 73,
@@ -981,12 +981,12 @@
       },
       "expectedReceiver": 9,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 10
     },
     {
       "userId": 74,
       "sponsorId": 37,
-      "tx": "0xe1d06fe643ed49a21c0f7bf8f61251047274845b71376e30d261bf3a093e0122",
+      "tx": "0x33e2960f3af4e866ab04f5811c32cde89b87f548cc4a21a91a4f2e6147c0ac1c",
       "payment": {
         "receiverId": 18,
         "fromUserId": 74,
@@ -995,12 +995,12 @@
       },
       "expectedReceiver": 18,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 20
     },
     {
       "userId": 75,
       "sponsorId": 37,
-      "tx": "0xf942ae6413a29a5cfccc1f3b6f4bb286a0da1497f501fbed69a3f7e99abe47c1",
+      "tx": "0xe1fd825c09c4fec11d9e35145ca36f5a3ff02b0f1ada973ba3d9ad0f6fcd0f64",
       "payment": {
         "receiverId": 9,
         "fromUserId": 75,
@@ -1009,12 +1009,12 @@
       },
       "expectedReceiver": 9,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 14
     },
     {
       "userId": 76,
       "sponsorId": 38,
-      "tx": "0x92f354c0cfe9c89b89458912b7e9a5010cd0aa0234bd243b160add2506a9d838",
+      "tx": "0x2598f84f8bc5a0971c4cff8bb1a0cd1792fa45e2916a6d6c634e607aa488df91",
       "payment": {
         "receiverId": 19,
         "fromUserId": 76,
@@ -1023,12 +1023,12 @@
       },
       "expectedReceiver": 19,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 11
     },
     {
       "userId": 77,
       "sponsorId": 38,
-      "tx": "0x2b9b8916863108b25fbe653a2f7cf6adff28c25b0b707776b95e9efeab6d470a",
+      "tx": "0x0196055ab4599b9c2e271322b739c22fe0d2a820de06d3f2be02d3cd14705227",
       "payment": {
         "receiverId": 9,
         "fromUserId": 77,
@@ -1037,12 +1037,12 @@
       },
       "expectedReceiver": 9,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 11
     },
     {
       "userId": 78,
       "sponsorId": 39,
-      "tx": "0x42f181d4e80674712cf49707389d76d5597897875ec07c6ec279d7446a163327",
+      "tx": "0x3ecc46c5fff88498d046068cedf5eb1bac1d561fba4552ed86e090007148a872",
       "payment": {
         "receiverId": 19,
         "fromUserId": 78,
@@ -1051,12 +1051,12 @@
       },
       "expectedReceiver": 19,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 19
     },
     {
       "userId": 79,
       "sponsorId": 39,
-      "tx": "0xfaf594f0e8f1f5cd8f36563475854c8221fc091841e1922150ac32b04f20f6ea",
+      "tx": "0x212af10b6771f7b1f899551b66ccd832b6e0300d9ccd42102c00fb4a7d7ee690",
       "payment": {
         "receiverId": 9,
         "fromUserId": 79,
@@ -1065,12 +1065,12 @@
       },
       "expectedReceiver": 9,
       "verified": true,
-      "placementCount": 6
+      "placementCount": 21
     },
     {
       "userId": 80,
       "sponsorId": 40,
-      "tx": "0x59124b3849f0f1a2941ade303f6023d3f09d2e40d3f53f3e4a9ae50791c4c87e",
+      "tx": "0xa3f8d889fa9a7c870eed7afbd338af4f8a1f5044f5a39be69a8e34fc6129df77",
       "payment": {
         "receiverId": 20,
         "fromUserId": 80,
@@ -1079,12 +1079,12 @@
       },
       "expectedReceiver": 20,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 10
     },
     {
       "userId": 81,
       "sponsorId": 40,
-      "tx": "0xab26fcf18ecb2602eff65c6eb107794fa10f28714f32bc2b41ef7dfcdcc8daad",
+      "tx": "0x462d0cde3b2f73e23e58f0dd70a02b23476ad320f3adbd20c145a6da6c9034ad",
       "payment": {
         "receiverId": 10,
         "fromUserId": 81,
@@ -1093,12 +1093,12 @@
       },
       "expectedReceiver": 10,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 12
     },
     {
       "userId": 82,
       "sponsorId": 41,
-      "tx": "0x08f5f318e1837f33de2b801e071a5467713b1e11c0def1e06e2b1a53594760f9",
+      "tx": "0x4c4c2486d05dbb9cc07f62b66a5118f0090065298617b8c29b1a09951e82e39b",
       "payment": {
         "receiverId": 20,
         "fromUserId": 82,
@@ -1107,12 +1107,12 @@
       },
       "expectedReceiver": 20,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 17
     },
     {
       "userId": 83,
       "sponsorId": 41,
-      "tx": "0xe443c84c8e52fe881ed5e723c50aecb3826ed929c35980397af50b65dfee3214",
+      "tx": "0x617c0316d0bcdc7dba08b035527128a0d466d1552e403b0eaf475ceb0aa0b648",
       "payment": {
         "receiverId": 10,
         "fromUserId": 83,
@@ -1121,12 +1121,12 @@
       },
       "expectedReceiver": 10,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 14
     },
     {
       "userId": 84,
       "sponsorId": 42,
-      "tx": "0x7616348bddee35e13b105e1241de97904c61af4559c60095197d612a6c564c0e",
+      "tx": "0xfbf8e25dd90c86a614d8eec9dcaaa5ed75e81b6ca57e1cd35c72c074a88e19b7",
       "payment": {
         "receiverId": 21,
         "fromUserId": 84,
@@ -1135,12 +1135,12 @@
       },
       "expectedReceiver": 21,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 11
     },
     {
       "userId": 85,
       "sponsorId": 42,
-      "tx": "0x3043e576344d96daf7072d6c6729f5970fb99b748ba00d4c5d81b5fd5532b5ce",
+      "tx": "0xc3ed41b9202645190ef7fc4d7ee1f268ca6fcdd6bf0d6bb1cc55c60c48874661",
       "payment": {
         "receiverId": 10,
         "fromUserId": 85,
@@ -1149,12 +1149,12 @@
       },
       "expectedReceiver": 10,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 11
     },
     {
       "userId": 86,
       "sponsorId": 43,
-      "tx": "0x0179dc2d2636f24dd67644d9e1840cfdf9b61ffef7557c7daebdb8f3c7a8f911",
+      "tx": "0x5d57e48e6fdf6be7805ff7a0045f7ad0420d328f21714ef1c9a84147a4a36b40",
       "payment": {
         "receiverId": 21,
         "fromUserId": 86,
@@ -1163,12 +1163,12 @@
       },
       "expectedReceiver": 21,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 21
     },
     {
       "userId": 87,
       "sponsorId": 43,
-      "tx": "0x6de9a118d3070a269d62551c0dbec11dec3fb81975a988b49695cfdf0b50332f",
+      "tx": "0x63f7e5726f54bf7bc67541b9519b7aa9ca05818788993ca749e5f64e0b55a56d",
       "payment": {
         "receiverId": 10,
         "fromUserId": 87,
@@ -1177,12 +1177,12 @@
       },
       "expectedReceiver": 10,
       "verified": true,
-      "placementCount": 6
+      "placementCount": 18
     },
     {
       "userId": 88,
       "sponsorId": 44,
-      "tx": "0xf54584be4a5f298fa6d4765095f98b8d2a7bad6c8c10bdd346cb61941a0bc772",
+      "tx": "0xc8296eca14b3bbabaf309da08fea39a82a4e273f4b83dc1f66c3cd67017d43ee",
       "payment": {
         "receiverId": 22,
         "fromUserId": 88,
@@ -1191,12 +1191,12 @@
       },
       "expectedReceiver": 22,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 10
     },
     {
       "userId": 89,
       "sponsorId": 44,
-      "tx": "0x085693e909826e49a57df6bc357ce2717754fe2e051d95051d17c641956b782e",
+      "tx": "0xc698323cef7bfe56341b80cb99f095916bfc7b3612e1ee85cacd91cef2dd9930",
       "payment": {
         "receiverId": 11,
         "fromUserId": 89,
@@ -1205,12 +1205,12 @@
       },
       "expectedReceiver": 11,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 10
     },
     {
       "userId": 90,
       "sponsorId": 45,
-      "tx": "0xdd1ec4aa51696612840db50683219a886942ae5d781cd9701176c03c5cac53a2",
+      "tx": "0x910fb4315543d120cc217e55796ac5f1f967ba5b0f4d6f456a2baae5d1365deb",
       "payment": {
         "receiverId": 22,
         "fromUserId": 90,
@@ -1219,12 +1219,12 @@
       },
       "expectedReceiver": 22,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 20
     },
     {
       "userId": 91,
       "sponsorId": 45,
-      "tx": "0x90c8b2a062290417e4eebc831718adcc893f7782cab45c024b61fbf5e21b1c03",
+      "tx": "0x5bb3f2d6ef6c0aa941d5e6410d10939c6d1a0ffee9602ea73df047dcfdbbc42f",
       "payment": {
         "receiverId": 11,
         "fromUserId": 91,
@@ -1233,12 +1233,12 @@
       },
       "expectedReceiver": 11,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 14
     },
     {
       "userId": 92,
       "sponsorId": 46,
-      "tx": "0x39b35d98743d2275bf59d96fd264f488f438e96ac111f488f2e7a813605913c4",
+      "tx": "0x812fe33386ec29d86b68d297ef1f46e0378e871f278d23d3dbea52a2ad329f83",
       "payment": {
         "receiverId": 23,
         "fromUserId": 92,
@@ -1247,12 +1247,12 @@
       },
       "expectedReceiver": 23,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 11
     },
     {
       "userId": 93,
       "sponsorId": 46,
-      "tx": "0x021bfa6926003ef0b5f196480ad503816e4338582032385c7b19395f724e2479",
+      "tx": "0xb88b2346dd9d22f7661d92730871cae2e164dbc4e53e32109a586d1f71cc1e56",
       "payment": {
         "receiverId": 11,
         "fromUserId": 93,
@@ -1261,12 +1261,12 @@
       },
       "expectedReceiver": 11,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 11
     },
     {
       "userId": 94,
       "sponsorId": 47,
-      "tx": "0xaaa28cbbe221dc10c14487312a9faca8f38b4580ae44776f52e34819c085bb42",
+      "tx": "0xfab3d8569e00dcd00c106aa94e9c7217881b84255ead3b4fce189a4ecbed4789",
       "payment": {
         "receiverId": 23,
         "fromUserId": 94,
@@ -1275,12 +1275,12 @@
       },
       "expectedReceiver": 23,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 17
     },
     {
       "userId": 95,
       "sponsorId": 47,
-      "tx": "0x8cbf17c86cf22de2b46adc9765fff43e07943eb1d684914120a3728438a90698",
+      "tx": "0xb80254ae5793b861ea932899e8c820d4364866bb9c4075168c23843ba3f32fbd",
       "payment": {
         "receiverId": 11,
         "fromUserId": 95,
@@ -1289,12 +1289,12 @@
       },
       "expectedReceiver": 11,
       "verified": true,
-      "placementCount": 6
+      "placementCount": 20
     },
     {
       "userId": 96,
       "sponsorId": 48,
-      "tx": "0x15176a94105c183ba5c964e90384387a12724173658f83860163289de2decdc5",
+      "tx": "0x775baa5bb10f5429a234bd3192d954c22fb92b5b2b65080c9cdea108437f95cb",
       "payment": {
         "receiverId": 24,
         "fromUserId": 96,
@@ -1303,12 +1303,12 @@
       },
       "expectedReceiver": 24,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 10
     },
     {
       "userId": 97,
       "sponsorId": 48,
-      "tx": "0x46884a89fa99d8fe92be583554947b2a2b4d9235286ba85b6e4b8c6840be7990",
+      "tx": "0x8a6bc4c3848c7e42ad944032d38c67a86167a3dc07bfae75ac5603d085ea24dd",
       "payment": {
         "receiverId": 12,
         "fromUserId": 97,
@@ -1317,12 +1317,12 @@
       },
       "expectedReceiver": 12,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 12
     },
     {
       "userId": 98,
       "sponsorId": 49,
-      "tx": "0x5d1ce6bc4f6149125c6a5943aaeedf590bf6d4d308e8dd42f2a3b0fa74b4b92c",
+      "tx": "0x65568c29f812a53c14289929f054450aa0580bf1fce78efe1fdea8ce0f092d8d",
       "payment": {
         "receiverId": 24,
         "fromUserId": 98,
@@ -1331,12 +1331,12 @@
       },
       "expectedReceiver": 24,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 17
     },
     {
       "userId": 99,
       "sponsorId": 49,
-      "tx": "0xb764869cde3ed6b83b03bbcb16853ab7ababe88f888c4304302a541f2508cb75",
+      "tx": "0x14144ad9e2dd20e96b93b292c9e214c113408fe1f4418c12b0919ffd0e79bfcf",
       "payment": {
         "receiverId": 12,
         "fromUserId": 99,
@@ -1345,12 +1345,12 @@
       },
       "expectedReceiver": 12,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 14
     },
     {
       "userId": 100,
       "sponsorId": 50,
-      "tx": "0xa0f4b3a68696048a67ff6199476cbd705f6ae71a16d5d972e93a39a20117b277",
+      "tx": "0x28a63cf9f8f0ebd0c8d28203b4ac77131ac24eae37df2faab3739f0c8492195d",
       "payment": {
         "receiverId": 25,
         "fromUserId": 100,
@@ -1359,12 +1359,12 @@
       },
       "expectedReceiver": 25,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 11
     },
     {
       "userId": 101,
       "sponsorId": 50,
-      "tx": "0xe977a7d6990c8b7952dc6103fe3826c701b95dc833b8482cdc9f1584ccae861e",
+      "tx": "0x01f28be63a65af4938808f006bfc15a01b194573803dc2721fe39a88f884efc4",
       "payment": {
         "receiverId": 12,
         "fromUserId": 101,
@@ -1373,12 +1373,12 @@
       },
       "expectedReceiver": 12,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 11
     },
     {
       "userId": 102,
       "sponsorId": 51,
-      "tx": "0xde74af1013b6469cf3c9b7b6ad1d5f2c9a22d96987cdcac08b37b5cf969042cb",
+      "tx": "0x693585805611deea58814e928198bd38c161ebeb403e79c892b6254428384b15",
       "payment": {
         "receiverId": 25,
         "fromUserId": 102,
@@ -1387,12 +1387,12 @@
       },
       "expectedReceiver": 25,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 21
     },
     {
       "userId": 103,
       "sponsorId": 51,
-      "tx": "0xf895eaeb6ad5e506789e1b3fdc7e075030107a9051bc488f24ac5dbff2d48e2e",
+      "tx": "0x03cf9754b0048f576e39002d3c58699258be974b7e0d9e6d84e72346f3f4d43e",
       "payment": {
         "receiverId": 12,
         "fromUserId": 103,
@@ -1401,12 +1401,12 @@
       },
       "expectedReceiver": 12,
       "verified": true,
-      "placementCount": 6
+      "placementCount": 18
     },
     {
       "userId": 104,
       "sponsorId": 52,
-      "tx": "0xd2e449a5fe860e7a590736c8b8befe5d1db8dc72c28c6a31d2570ed0bf4a23c7",
+      "tx": "0x5ed2fd6584f0a9a78559604a99483deae299b3c8d79d8a3f56fa25d5a30a175c",
       "payment": {
         "receiverId": 26,
         "fromUserId": 104,
@@ -1415,12 +1415,12 @@
       },
       "expectedReceiver": 26,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 10
     },
     {
       "userId": 105,
       "sponsorId": 52,
-      "tx": "0xd39823b717dfea5ab1fc63173ee5656dc89ab2aeca8764ca70eae0f9641335e3",
+      "tx": "0x19267235082aa25294aca380a9c7237cad472e130f1e6c5652a0306ecc606d14",
       "payment": {
         "receiverId": 13,
         "fromUserId": 105,
@@ -1429,12 +1429,12 @@
       },
       "expectedReceiver": 13,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 10
     },
     {
       "userId": 106,
       "sponsorId": 53,
-      "tx": "0xc277bbf6a619def4b69122fcb88dfccb6041ee9a5c3a337e0c874c83d185bc3a",
+      "tx": "0xda6009fc9ae6cad5cc944971c20431e36a061d13c7e645dad7ecda36093658c5",
       "payment": {
         "receiverId": 26,
         "fromUserId": 106,
@@ -1443,12 +1443,12 @@
       },
       "expectedReceiver": 26,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 20
     },
     {
       "userId": 107,
       "sponsorId": 53,
-      "tx": "0x9ecf3ac7ea7e5e63c69950f11fb4ed0c00f7f23a166b02e1a3ee6255a3a62a98",
+      "tx": "0x577f2632a4d56ab7a2e66f4dfcc8008da237749508fe49208a5505f665ab7448",
       "payment": {
         "receiverId": 13,
         "fromUserId": 107,
@@ -1457,12 +1457,12 @@
       },
       "expectedReceiver": 13,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 14
     },
     {
       "userId": 108,
       "sponsorId": 54,
-      "tx": "0x72ea23e36661044fde0c37699e439438efbd271abe82e0ecd002a3dccee06a17",
+      "tx": "0x5765f1fcbc0342b0e9d29c8e72490dc1420f5a916979c33f585aa8686be3605d",
       "payment": {
         "receiverId": 27,
         "fromUserId": 108,
@@ -1471,12 +1471,12 @@
       },
       "expectedReceiver": 27,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 11
     },
     {
       "userId": 109,
       "sponsorId": 54,
-      "tx": "0x53765ba61cef52cbeedff3e75cc61a3352f96ba031bc00f76fb8d579ddef05a7",
+      "tx": "0x624cba96e696aa1d6edf34ce6cb274e2bc5504f17f425d6834b9b7a7a4b616cc",
       "payment": {
         "receiverId": 13,
         "fromUserId": 109,
@@ -1485,12 +1485,12 @@
       },
       "expectedReceiver": 13,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 11
     },
     {
       "userId": 110,
       "sponsorId": 55,
-      "tx": "0x9d15929ed01a5e17f1c5bc8c97de355210f4b1658f2fc6c995315bafb467c9d1",
+      "tx": "0x695aa09f9c20a7d733dec5e7aaf86045271b8433523c855c172f97f4d15e3639",
       "payment": {
         "receiverId": 27,
         "fromUserId": 110,
@@ -1499,12 +1499,12 @@
       },
       "expectedReceiver": 27,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 19
     },
     {
       "userId": 111,
       "sponsorId": 55,
-      "tx": "0xc9cd8ef106b23a6b97aa5bc3cc834bc3032166237847b4f18a6498d077a7cb31",
+      "tx": "0x27a894b374701e920ba66a92a3fd8da10a6b3928bf0d1e5e14b9f2dfc61e1279",
       "payment": {
         "receiverId": 13,
         "fromUserId": 111,
@@ -1513,12 +1513,12 @@
       },
       "expectedReceiver": 13,
       "verified": true,
-      "placementCount": 6
+      "placementCount": 21
     },
     {
       "userId": 112,
       "sponsorId": 56,
-      "tx": "0xc68fcfe98fe0026427740ba43552f4816c4c034c31417a8e4cd20e1c78c72b22",
+      "tx": "0x44f9bb496f224e1def4aa822f29b5dcf414f4ff5b5e69dfff29b365f28a7d608",
       "payment": {
         "receiverId": 28,
         "fromUserId": 112,
@@ -1527,12 +1527,12 @@
       },
       "expectedReceiver": 28,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 10
     },
     {
       "userId": 113,
       "sponsorId": 56,
-      "tx": "0xa7f2ceec514d913adba7b40968085c31a53a0cef8b7a94c8a3916eec5a5e9d98",
+      "tx": "0xb86dad80df4d466cf535a0234b94fc86d2c2dc922350e7cae4965b5adfb42086",
       "payment": {
         "receiverId": 14,
         "fromUserId": 113,
@@ -1541,12 +1541,12 @@
       },
       "expectedReceiver": 14,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 12
     },
     {
       "userId": 114,
       "sponsorId": 57,
-      "tx": "0x484a8d238cf77a1f0d8606dc53c23271f651a45ffaa92c0d2cc92fb0a2be1dc5",
+      "tx": "0x1772961a8d3385298764f0fa5ba671be57ceb7377ddb0f53cf0f92efb884bc09",
       "payment": {
         "receiverId": 28,
         "fromUserId": 114,
@@ -1555,12 +1555,12 @@
       },
       "expectedReceiver": 28,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 17
     },
     {
       "userId": 115,
       "sponsorId": 57,
-      "tx": "0xf3a9c071f6df82d937e5dd81dc0de9c31a1bb5f023395bedaefd353b51f3489b",
+      "tx": "0x66664be8287a1ecad7974658a13771533d03e3f374cff24b3667b6ccce2e61ed",
       "payment": {
         "receiverId": 14,
         "fromUserId": 115,
@@ -1569,12 +1569,12 @@
       },
       "expectedReceiver": 14,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 14
     },
     {
       "userId": 116,
       "sponsorId": 58,
-      "tx": "0x2af107d1a7a35b1dee5ebad0be959cf561082ecd0e277ad4cf0ad0e309a264bc",
+      "tx": "0x6fce1782973f412fda44f6bf9e34045cedac90c9bf2865e6af4b0eb07c4bb566",
       "payment": {
         "receiverId": 29,
         "fromUserId": 116,
@@ -1583,12 +1583,12 @@
       },
       "expectedReceiver": 29,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 11
     },
     {
       "userId": 117,
       "sponsorId": 58,
-      "tx": "0x7cfc349a70ed39522ccb522f6c37c809b251452de450e33d40e303cf91243fe2",
+      "tx": "0x31f962c73d05643141365d70043f1b8a354777d9d7b4ad8d95c9939188c94bd3",
       "payment": {
         "receiverId": 14,
         "fromUserId": 117,
@@ -1597,12 +1597,12 @@
       },
       "expectedReceiver": 14,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 11
     },
     {
       "userId": 118,
       "sponsorId": 59,
-      "tx": "0xd6670359d2269b8eff6d7abf293281968bcb12f5ed54929495f1e961fa87be73",
+      "tx": "0x80dc33051beb6826c4f156347ed6b1438d36f7e43c2dcf7eaa0e343c7ac322fa",
       "payment": {
         "receiverId": 29,
         "fromUserId": 118,
@@ -1611,12 +1611,12 @@
       },
       "expectedReceiver": 29,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 21
     },
     {
       "userId": 119,
       "sponsorId": 59,
-      "tx": "0x02a0db83828315537744325bb0373d40aebf573ce9ded19731c5fd73df483330",
+      "tx": "0x34d8b18d191e845036bd48891b4a8dc62b46e2a4d24a8b01ca47815375b4d954",
       "payment": {
         "receiverId": 14,
         "fromUserId": 119,
@@ -1625,12 +1625,12 @@
       },
       "expectedReceiver": 14,
       "verified": true,
-      "placementCount": 6
+      "placementCount": 18
     },
     {
       "userId": 120,
       "sponsorId": 60,
-      "tx": "0xe7c936a704a84ea93d9a82d2e0de796a23a98a9ec2d04c184e1d974a39e5c46d",
+      "tx": "0x7db4d3a50e3eb15da07997f1ee13ca506281742c678e239cd5b95ff8a7d7e8a9",
       "payment": {
         "receiverId": 30,
         "fromUserId": 120,
@@ -1639,12 +1639,12 @@
       },
       "expectedReceiver": 30,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 10
     },
     {
       "userId": 121,
       "sponsorId": 60,
-      "tx": "0xae5c2cb700e05c94a1f59baefa449875df7e5f2df93a6cb14d80c868dc794ce2",
+      "tx": "0x67b487cd626a1f4b1da1c4bf4a619a859e771a292d311fe77328a9ace845de8e",
       "payment": {
         "receiverId": 15,
         "fromUserId": 121,
@@ -1653,12 +1653,12 @@
       },
       "expectedReceiver": 15,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 10
     },
     {
       "userId": 122,
       "sponsorId": 61,
-      "tx": "0x3235aaf2d70ea6d4b80f701ec3d1dee62a3110ea1902b4832d5d2f79f92fa8a0",
+      "tx": "0x98f06e719925d1a1370280992cd50048d1028ca88f606cda639fc7ee5daa5eec",
       "payment": {
         "receiverId": 30,
         "fromUserId": 122,
@@ -1667,12 +1667,12 @@
       },
       "expectedReceiver": 30,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 20
     },
     {
       "userId": 123,
       "sponsorId": 61,
-      "tx": "0xaa9182f61554c84c000605ce83ed98e4aace87abcd99d2e46fee3a5792afa2dc",
+      "tx": "0xc3ad4986a709c6741562069334d10b14a9b4f595c9cc18e10b58455a0a0e1482",
       "payment": {
         "receiverId": 15,
         "fromUserId": 123,
@@ -1681,12 +1681,12 @@
       },
       "expectedReceiver": 15,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 14
     },
     {
       "userId": 124,
       "sponsorId": 62,
-      "tx": "0xcc9db5f9fed55960fd67f9349077517a574260b4cce8d8074afb206be3febd39",
+      "tx": "0xe948e4b1e3684c5cd40a38b1bfc46d9fef8ac4851723aefee26fcb53dec0400a",
       "payment": {
         "receiverId": 31,
         "fromUserId": 124,
@@ -1695,12 +1695,12 @@
       },
       "expectedReceiver": 31,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 11
     },
     {
       "userId": 125,
       "sponsorId": 62,
-      "tx": "0x1bb8f66b7573dc45a7f1920d81afab2146151f6b366c3a0686cfd1edce429f35",
+      "tx": "0x37c5abd24320d9caa9cdb8c3c9ac5b1872f108beb5e9161f76ebcfcea89bdb1e",
       "payment": {
         "receiverId": 15,
         "fromUserId": 125,
@@ -1709,12 +1709,12 @@
       },
       "expectedReceiver": 15,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 11
     },
     {
       "userId": 126,
       "sponsorId": 63,
-      "tx": "0x4041ba17b252e8fb6438e14fd62a43e3842c60757049af21536a36a2e872dd8d",
+      "tx": "0xaedad2f01a46ea4713798239abe96f1904ac24b35375ad9419cfb030a478b1b4",
       "payment": {
         "receiverId": 31,
         "fromUserId": 126,
@@ -1723,12 +1723,12 @@
       },
       "expectedReceiver": 31,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 17
     },
     {
       "userId": 127,
       "sponsorId": 63,
-      "tx": "0x3a11de24cb580fc01e3040e1b0fcc8041fcd8df0583f1a372a765b2579dafaa2",
+      "tx": "0xf5fd8e6618fbf6d9fdbd2f8a9ddc6debaf7f58d0c1312a655643fdc63271127c",
       "payment": {
         "receiverId": 15,
         "fromUserId": 127,
@@ -1737,12 +1737,12 @@
       },
       "expectedReceiver": 15,
       "verified": true,
-      "placementCount": 6
+      "placementCount": 20
     },
     {
       "userId": 128,
       "sponsorId": 64,
-      "tx": "0xcadbaa5b9fe0601d0ccd9db6e6d7dc6dbe780ce901240a8245cecc951f1e8fd9",
+      "tx": "0x4ae159a89a1f554c4125cf8f54797fd7e302f10110fbaa487bb4c3ab859f1417",
       "payment": {
         "receiverId": 32,
         "fromUserId": 128,
@@ -1751,12 +1751,12 @@
       },
       "expectedReceiver": 32,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 12
     },
     {
       "userId": 129,
       "sponsorId": 64,
-      "tx": "0x1c1da73e3f0238ddd06bd7a1c83abbd277e12f0c41f9dcf69b7b10b1e9a19f03",
+      "tx": "0xe914f9442a7784a09f4c8322bc6a7b811be79844a0c86a16ae154ef547a49f18",
       "payment": {
         "receiverId": 16,
         "fromUserId": 129,
@@ -1765,12 +1765,12 @@
       },
       "expectedReceiver": 16,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 15
     },
     {
       "userId": 130,
       "sponsorId": 65,
-      "tx": "0x0f73ad725c7c81045981c10829efece5310cf31ed98428d75470340f56c08f40",
+      "tx": "0xa25618a9b5b3cf66730cd18a10f8eaa28e97244defef28aee4ec184c82fcef40",
       "payment": {
         "receiverId": 32,
         "fromUserId": 130,
@@ -1779,12 +1779,12 @@
       },
       "expectedReceiver": 32,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 19
     },
     {
       "userId": 131,
       "sponsorId": 65,
-      "tx": "0x73751d2724593ed73ba1032ee04bad3f87ba18cd6a774d02f07dd5959a84dded",
+      "tx": "0xeab5f6fe4a7c0871211170d2d5aadef4c83532e88944744164615fb84f3fcb45",
       "payment": {
         "receiverId": 16,
         "fromUserId": 131,
@@ -1793,12 +1793,12 @@
       },
       "expectedReceiver": 16,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 18
     },
     {
       "userId": 132,
       "sponsorId": 66,
-      "tx": "0x2e48a9047b2f2a168802838d2c876ab10033a4480e2a2afb9b4beeed1b4c649b",
+      "tx": "0x8fdce98480aa43db947e053306711e666ef6cf04e799c8d083cd1ea0e3f6ea18",
       "payment": {
         "receiverId": 33,
         "fromUserId": 132,
@@ -1807,12 +1807,12 @@
       },
       "expectedReceiver": 33,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 12
     },
     {
       "userId": 133,
       "sponsorId": 66,
-      "tx": "0x7b0155178a2e73f23781a87464214382a1ed94acd3fe131c152ca3339b703f82",
+      "tx": "0x8dbed4facef4cda3f8d6b16e88a6c3e5773ff9ecf16e27b22fed370fef8d3ab0",
       "payment": {
         "receiverId": 16,
         "fromUserId": 133,
@@ -1821,12 +1821,12 @@
       },
       "expectedReceiver": 16,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 12
     },
     {
       "userId": 134,
       "sponsorId": 67,
-      "tx": "0xfe9320cfea83273770eb136672590268155379b207486e36142e282864c8224a",
+      "tx": "0xbcc8d4d2fbe8c98b2ad71aac308f4e4064faa8093cf3f99b471d8fbffdb1fabb",
       "payment": {
         "receiverId": 33,
         "fromUserId": 134,
@@ -1835,12 +1835,12 @@
       },
       "expectedReceiver": 33,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 23
     },
     {
       "userId": 135,
       "sponsorId": 67,
-      "tx": "0x574db2207e8010ae535ab629593d9472b978d4bffb75f9bea134d5d70d23a1ab",
+      "tx": "0xd3399f2645bb7856613600bdc375f8500ae04b4cfa022848933ca4abc597da50",
       "payment": {
         "receiverId": 16,
         "fromUserId": 135,
@@ -1849,12 +1849,12 @@
       },
       "expectedReceiver": 16,
       "verified": true,
-      "placementCount": 7
+      "placementCount": 22
     },
     {
       "userId": 136,
       "sponsorId": 68,
-      "tx": "0x6cb8b27510546bb6785f5afca6da69cc5f3f434c2637d85bafb7596b74e89ced",
+      "tx": "0xea992d1e141e494f977de654ecbe36df2beae3a6d8d2713d0908bb3c4cf55684",
       "payment": {
         "receiverId": 34,
         "fromUserId": 136,
@@ -1863,12 +1863,12 @@
       },
       "expectedReceiver": 34,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 10
     },
     {
       "userId": 137,
       "sponsorId": 68,
-      "tx": "0x7d88ce1641b6882ce3203358d2d88bb527784d9e70c18918964dcecd9b851e15",
+      "tx": "0x0a6218ff4c8f06e084db3866b6618ef566c27e3ba87ebe7964850d6ee874a117",
       "payment": {
         "receiverId": 17,
         "fromUserId": 137,
@@ -1877,12 +1877,12 @@
       },
       "expectedReceiver": 17,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 10
     },
     {
       "userId": 138,
       "sponsorId": 69,
-      "tx": "0x2f677c5b17dba8867a14ad7aede5426677202fee8bf5239542c48b58332225a1",
+      "tx": "0xa2972028f96180bf84781fc5877107b1dd98a5bbbdd62326969144c50aeb02ac",
       "payment": {
         "receiverId": 34,
         "fromUserId": 138,
@@ -1891,12 +1891,12 @@
       },
       "expectedReceiver": 34,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 21
     },
     {
       "userId": 139,
       "sponsorId": 69,
-      "tx": "0x2300d28a171aa0b9def6308204c4d190c009f517521db3b25486ea250d47d9ad",
+      "tx": "0xc65094d7e10c5002db52852e5f060441a1bf1a21304b3a7f5805cec5651c8a1d",
       "payment": {
         "receiverId": 17,
         "fromUserId": 139,
@@ -1905,12 +1905,12 @@
       },
       "expectedReceiver": 17,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 15
     },
     {
       "userId": 140,
       "sponsorId": 70,
-      "tx": "0x6a2a3fb404101b825abae1213739f6e676b30dda021c566e6363a40ee2799044",
+      "tx": "0x082d707c31fee8a2c63649075deb11a62ddbc43049a4ab13ae8b112ab0431df2",
       "payment": {
         "receiverId": 35,
         "fromUserId": 140,
@@ -1919,12 +1919,12 @@
       },
       "expectedReceiver": 35,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 11
     },
     {
       "userId": 141,
       "sponsorId": 70,
-      "tx": "0xd79e2eccce030d14ff0f0cb4ad42543e949d8339a7cabadc544f390ad7e614cc",
+      "tx": "0xb5bfc2d994be256adbbfd7af6be53d3704af26309d36f44f4a8efdc378cc330a",
       "payment": {
         "receiverId": 17,
         "fromUserId": 141,
@@ -1933,12 +1933,12 @@
       },
       "expectedReceiver": 17,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 11
     },
     {
       "userId": 142,
       "sponsorId": 71,
-      "tx": "0x4708945f7e9ac65c4a5a41d599c9632b4830e45081c1afcb0dde4f49cefc6038",
+      "tx": "0x48f532cca2d72fdd43fd3ce0bc1504c989762fd3a6dbe7018233e06446d25323",
       "payment": {
         "receiverId": 35,
         "fromUserId": 142,
@@ -1947,12 +1947,12 @@
       },
       "expectedReceiver": 35,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 19
     },
     {
       "userId": 143,
       "sponsorId": 71,
-      "tx": "0xe4aa6c0b7c6516fc6cb4988d8643d582ed1968941b9f9681d653f8a931485c6f",
+      "tx": "0x89632240b994bb870fb082c689cae708e572a4c0674520ed9d674ad93a382f13",
       "payment": {
         "receiverId": 17,
         "fromUserId": 143,
@@ -1961,12 +1961,12 @@
       },
       "expectedReceiver": 17,
       "verified": true,
-      "placementCount": 7
+      "placementCount": 24
     },
     {
       "userId": 144,
       "sponsorId": 72,
-      "tx": "0x76846b614c7d2797361e0a930e43a3ef8a3f2f03043fe2d975c9e1ba6170e716",
+      "tx": "0x11fe83aefeed7a9a94e496f09b582dd59f47254bd256dcb5d98afd3818cbd4d9",
       "payment": {
         "receiverId": 36,
         "fromUserId": 144,
@@ -1975,12 +1975,12 @@
       },
       "expectedReceiver": 36,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 10
     },
     {
       "userId": 145,
       "sponsorId": 72,
-      "tx": "0x9288545bb8e508b5108b52f6a83995830f33cb231551ad210a799bb06d5ecde0",
+      "tx": "0x00a17bbea10f9acec861a6d917b631f38af838c4b9a2aa87d859ca83c598f682",
       "payment": {
         "receiverId": 18,
         "fromUserId": 145,
@@ -1989,12 +1989,12 @@
       },
       "expectedReceiver": 18,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 13
     },
     {
       "userId": 146,
       "sponsorId": 73,
-      "tx": "0x9a8933959da298ae1a7f75059d3655c94f282cd2b2bd039fae805cfab1b822ba",
+      "tx": "0x4d53bc051b9213b1ac72a2252f1ef8a1f0de536d1688cc8ae7ec86b307531bd5",
       "payment": {
         "receiverId": 36,
         "fromUserId": 146,
@@ -2003,12 +2003,12 @@
       },
       "expectedReceiver": 36,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 17
     },
     {
       "userId": 147,
       "sponsorId": 73,
-      "tx": "0x1d13c5f2e929fba705e16a30ead601177b884d3ef7646026584116a85d11b95e",
+      "tx": "0x02ed1eacdd17ba731ec6e78b9b6b6c324167ca01f3cda51db0d777de513d53fb",
       "payment": {
         "receiverId": 18,
         "fromUserId": 147,
@@ -2017,12 +2017,12 @@
       },
       "expectedReceiver": 18,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 15
     },
     {
       "userId": 148,
       "sponsorId": 74,
-      "tx": "0x00af60a66064e05e9b6cb00e82d2bc64ff5bb5084a630b34ecc4c9182a356c44",
+      "tx": "0x4a46c71caf34576e1a1fb0e6dcbcaaf588c60b65355e6972087df6a8f2feac6f",
       "payment": {
         "receiverId": 37,
         "fromUserId": 148,
@@ -2031,12 +2031,12 @@
       },
       "expectedReceiver": 37,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 11
     },
     {
       "userId": 149,
       "sponsorId": 74,
-      "tx": "0x32801cf55eb9863a3ebcd9bc87a48f883e83584b2094b5ff2b9802cd0301dacc",
+      "tx": "0x9bcbd842f410439cd9b5db4ec80aa502e9b5d0e585fb8becdd1e002d18018544",
       "payment": {
         "receiverId": 18,
         "fromUserId": 149,
@@ -2045,12 +2045,12 @@
       },
       "expectedReceiver": 18,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 11
     },
     {
       "userId": 150,
       "sponsorId": 75,
-      "tx": "0x6d4bf7fd33be003a88c2f321fabd7803fb16cb3286c9c35e7f9856a633fa9d13",
+      "tx": "0x0e1d6a158dc11eaefb2087c1b8a362a727b05a89ed252055c56c49d3ca055377",
       "payment": {
         "receiverId": 37,
         "fromUserId": 150,
@@ -2059,12 +2059,12 @@
       },
       "expectedReceiver": 37,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 22
     },
     {
       "userId": 151,
       "sponsorId": 75,
-      "tx": "0xc78ea6da9f26b12201a4c3f0b509051e2ef80fbc602cd14c4c59897e5d6cca93",
+      "tx": "0x73cf71a7a5b2b17700175507725aee7ec1297a6c3678d7279db41a123bee6317",
       "payment": {
         "receiverId": 18,
         "fromUserId": 151,
@@ -2073,12 +2073,12 @@
       },
       "expectedReceiver": 18,
       "verified": true,
-      "placementCount": 7
+      "placementCount": 20
     },
     {
       "userId": 152,
       "sponsorId": 76,
-      "tx": "0xdd4c98c392d6a1ca098883d4f1103406a2828f694296dca10ca8fb3825bda143",
+      "tx": "0x6a52e439b3d76bb42d830220f09775adceb07342f7e2abb2da98576b722ac70c",
       "payment": {
         "receiverId": 38,
         "fromUserId": 152,
@@ -2087,12 +2087,12 @@
       },
       "expectedReceiver": 38,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 10
     },
     {
       "userId": 153,
       "sponsorId": 76,
-      "tx": "0xf31bbd200953fbaa57b6550ab2de4086ab5c3b59d907f4a4b348dbe090680e5f",
+      "tx": "0x968723e270199bdf34c8673cbd4e9358f0b8d854397b53defe5df2bfbd26c157",
       "payment": {
         "receiverId": 19,
         "fromUserId": 153,
@@ -2101,12 +2101,12 @@
       },
       "expectedReceiver": 19,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 10
     },
     {
       "userId": 154,
       "sponsorId": 77,
-      "tx": "0xc495c29e44eb82eec2eca825bd2a79fc19eb00ad25e7c3bb1bafb4851f5dc997",
+      "tx": "0x37a3ad4939d8c0bf5f40a16de45114782615f0abbd06183b08ea565834a514d3",
       "payment": {
         "receiverId": 38,
         "fromUserId": 154,
@@ -2115,12 +2115,12 @@
       },
       "expectedReceiver": 38,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 21
     },
     {
       "userId": 155,
       "sponsorId": 77,
-      "tx": "0xaea4b6bdf95bb078966c3c27c2755a66c1a04b1cb815267e4b402936e0857f1c",
+      "tx": "0xc1c11dfe3ea6188643a6740d3428f3ba373980a4d79c30fdea2929d8861645f6",
       "payment": {
         "receiverId": 19,
         "fromUserId": 155,
@@ -2129,12 +2129,12 @@
       },
       "expectedReceiver": 19,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 15
     },
     {
       "userId": 156,
       "sponsorId": 78,
-      "tx": "0xe3f19567f6fb2020349987a6937b531cdc16c1f070dcf69378c50023446ccb00",
+      "tx": "0x88747cc05c3f60168ccfde0c521b69e23f9d5abac4fda37a3f8db0032c0f60fa",
       "payment": {
         "receiverId": 39,
         "fromUserId": 156,
@@ -2143,12 +2143,12 @@
       },
       "expectedReceiver": 39,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 11
     },
     {
       "userId": 157,
       "sponsorId": 78,
-      "tx": "0x0ba59a4c42d4f10907c16892cdf5a53112a01fb741701bb358d4498bb152dd99",
+      "tx": "0x74bcbba07802a407af6c96004779c3e315325ee29807e1d8503ecdebfa496fb5",
       "payment": {
         "receiverId": 19,
         "fromUserId": 157,
@@ -2157,12 +2157,12 @@
       },
       "expectedReceiver": 19,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 11
     },
     {
       "userId": 158,
       "sponsorId": 79,
-      "tx": "0x354b002b45540175643141896aaee2b6d8a48b8bc620915fe23537b2d1f55ea7",
+      "tx": "0x8cd03404a382979125a19ce0b01d340fbdc293bcdeb68d83915b6a6964aaf996",
       "payment": {
         "receiverId": 39,
         "fromUserId": 158,
@@ -2171,12 +2171,12 @@
       },
       "expectedReceiver": 39,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 17
     },
     {
       "userId": 159,
       "sponsorId": 79,
-      "tx": "0x5c2a9dd9db9a07b4297acb9f171ae36a8bc9fd3c45945f639134a6bd25df6fcc",
+      "tx": "0x4beaae03352425699076057469b80216ac4d6a348ce4db932cde12d1719e5634",
       "payment": {
         "receiverId": 19,
         "fromUserId": 159,
@@ -2185,12 +2185,12 @@
       },
       "expectedReceiver": 19,
       "verified": true,
-      "placementCount": 7
+      "placementCount": 23
     },
     {
       "userId": 160,
       "sponsorId": 80,
-      "tx": "0x8d48668d76059ca4aaf0c1f0f648b379e9e776bbae92d903fa7af3a289eea395",
+      "tx": "0xfcb56d60a30e45c780aab1df3bec4540af94838c39670ce17149053fbbefefeb",
       "payment": {
         "receiverId": 40,
         "fromUserId": 160,
@@ -2199,12 +2199,12 @@
       },
       "expectedReceiver": 40,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 10
     },
     {
       "userId": 161,
       "sponsorId": 80,
-      "tx": "0x88cb9f858b66dc94f621bddef759fa4b4c68979e0777605b035c711eafb10fce",
+      "tx": "0x248063192cb788a97ea20b354443c18d24b3fc162d046e217a960634acdb7dd0",
       "payment": {
         "receiverId": 20,
         "fromUserId": 161,
@@ -2213,12 +2213,12 @@
       },
       "expectedReceiver": 20,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 13
     },
     {
       "userId": 162,
       "sponsorId": 81,
-      "tx": "0x8deb040c51ff861bc554d1cd994dd15f0b37d6dc7f1201c0c936cdb9dfc90aa4",
+      "tx": "0x7abee6caa2384a747dd4529cb1d02698790bd56b47f61cba2734093ee9493f83",
       "payment": {
         "receiverId": 40,
         "fromUserId": 162,
@@ -2227,12 +2227,12 @@
       },
       "expectedReceiver": 40,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 17
     },
     {
       "userId": 163,
       "sponsorId": 81,
-      "tx": "0x8e8466f0b02fb916f39a54e2ec890046d6bf63ac9e6662289acb8258a4b2ef60",
+      "tx": "0x3e999d750400a93d1fd87feaa3500250ce0b00e0dbabdad3eb2a92a9a9ed455f",
       "payment": {
         "receiverId": 20,
         "fromUserId": 163,
@@ -2241,12 +2241,12 @@
       },
       "expectedReceiver": 20,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 15
     },
     {
       "userId": 164,
       "sponsorId": 82,
-      "tx": "0x4ac9b87abd286af7cb255808f19fefeb37a268229406e82c32da3e8fbbb8f4ce",
+      "tx": "0x3b0713013d518aa4d5423a8a661eb9828298a4e8f950bb82c5e14337d7cbef46",
       "payment": {
         "receiverId": 41,
         "fromUserId": 164,
@@ -2255,12 +2255,12 @@
       },
       "expectedReceiver": 41,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 11
     },
     {
       "userId": 165,
       "sponsorId": 82,
-      "tx": "0x9ccd549883a96e4160c47297c8796cb50e3572e9dde471494e0a0c5b0ab94488",
+      "tx": "0x301ed808d22ab0f442af2bdf55b216167ae9918afec4280797ab46754cbfcf62",
       "payment": {
         "receiverId": 20,
         "fromUserId": 165,
@@ -2269,12 +2269,12 @@
       },
       "expectedReceiver": 20,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 11
     },
     {
       "userId": 166,
       "sponsorId": 83,
-      "tx": "0x9511b5c2b2e90a06531500ffe936179c40d1b333362c19f94486c0cef8df809e",
+      "tx": "0x3d8c379af6f6d66295805378c18779a3463eb9ff35cc26ed313b66f2b1383ab4",
       "payment": {
         "receiverId": 41,
         "fromUserId": 166,
@@ -2283,12 +2283,12 @@
       },
       "expectedReceiver": 41,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 22
     },
     {
       "userId": 167,
       "sponsorId": 83,
-      "tx": "0x990c218559a9ebf865796df78bd140e8039a87a119cd94ce591dd86b3a4818b5",
+      "tx": "0x206f5078cf75a2a76cfd5d26ea8b2918a44e9680e1906b576e89fa04f7c6ede7",
       "payment": {
         "receiverId": 20,
         "fromUserId": 167,
@@ -2297,12 +2297,12 @@
       },
       "expectedReceiver": 20,
       "verified": true,
-      "placementCount": 7
+      "placementCount": 20
     },
     {
       "userId": 168,
       "sponsorId": 84,
-      "tx": "0x723869a5fd0c333a48a2569a9a7f19dcc17d60897598d32fa5f1404a95940804",
+      "tx": "0x2d46fddbab0c8ad0e24a703e1042c61ca312e2a3427df003b093a6359cc0b1c8",
       "payment": {
         "receiverId": 42,
         "fromUserId": 168,
@@ -2311,12 +2311,12 @@
       },
       "expectedReceiver": 42,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 10
     },
     {
       "userId": 169,
       "sponsorId": 84,
-      "tx": "0x0d327769209bf72ca2ab5f7430febbceb99625491a4e2ab06141ce5d39cd2353",
+      "tx": "0xbbf761a726a3eeb4155782425f5626f95b6ee85522bd61b5427f7e0d1d69caf0",
       "payment": {
         "receiverId": 21,
         "fromUserId": 169,
@@ -2325,12 +2325,12 @@
       },
       "expectedReceiver": 21,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 10
     },
     {
       "userId": 170,
       "sponsorId": 85,
-      "tx": "0xcf686b6d1e2e6e8a57b88b143d7dde6a63d4890d3b77c3e74f61766b39614de0",
+      "tx": "0x48f6401286e6ee6b15edfa54dca06e808a1aec19576462f53eaa7d968430d235",
       "payment": {
         "receiverId": 42,
         "fromUserId": 170,
@@ -2339,12 +2339,12 @@
       },
       "expectedReceiver": 42,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 21
     },
     {
       "userId": 171,
       "sponsorId": 85,
-      "tx": "0x35a735a4bfae23803a9c2f35e493aeda81a7fd2d954b89939f36391472d03cb4",
+      "tx": "0xd08c5043ade6580e8db666ad1ca20492e26f4ae4dd202a7cdee736de4e54405a",
       "payment": {
         "receiverId": 21,
         "fromUserId": 171,
@@ -2353,12 +2353,12 @@
       },
       "expectedReceiver": 21,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 15
     },
     {
       "userId": 172,
       "sponsorId": 86,
-      "tx": "0xba03ec47bb893de62b5fc651054472c5cce5c34019a19ae5d6324c53ba1938b4",
+      "tx": "0xce3fc7054cf1b41ce347ca1a2a2b3f51320529362c1b58f271c8f48ffa43c508",
       "payment": {
         "receiverId": 43,
         "fromUserId": 172,
@@ -2367,12 +2367,12 @@
       },
       "expectedReceiver": 43,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 11
     },
     {
       "userId": 173,
       "sponsorId": 86,
-      "tx": "0x4bec93129d38c928160e9ba104f6c7913e40fe48bf2f664d7dcd3b5656dd7a5d",
+      "tx": "0xcade388c838a1d747288a135bce8b7dd66c5bbf4a97e1ffe376e71e733f95d5c",
       "payment": {
         "receiverId": 21,
         "fromUserId": 173,
@@ -2381,12 +2381,12 @@
       },
       "expectedReceiver": 21,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 11
     },
     {
       "userId": 174,
       "sponsorId": 87,
-      "tx": "0x53d9187d30a70944a5a9a5035b07d9cfa2f57025041452c1584db88e3d1ec5e1",
+      "tx": "0x3ebb3db5c30ef0e48a41d39c12a88edbd7d90789d3874f7e4f1c0b2d430da06b",
       "payment": {
         "receiverId": 43,
         "fromUserId": 174,
@@ -2395,12 +2395,12 @@
       },
       "expectedReceiver": 43,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 19
     },
     {
       "userId": 175,
       "sponsorId": 87,
-      "tx": "0xee2b7e9470537149d416c522aaa7f3bf76a294c7eb7182a15fd56ccc8eff94d8",
+      "tx": "0xbf7a374957c907e0469c87c566dadf279bd8592dcaad071b850e35853822e60b",
       "payment": {
         "receiverId": 21,
         "fromUserId": 175,
@@ -2409,12 +2409,12 @@
       },
       "expectedReceiver": 21,
       "verified": true,
-      "placementCount": 7
+      "placementCount": 24
     },
     {
       "userId": 176,
       "sponsorId": 88,
-      "tx": "0x4e9147cc5b5dc9c414deb2a3e406ede8ea90706ef00dab6abdb64e1289344491",
+      "tx": "0xe42a4c9309ac7bb970b587301adcc3c5198990fff287635e27d46200591c8b75",
       "payment": {
         "receiverId": 44,
         "fromUserId": 176,
@@ -2423,12 +2423,12 @@
       },
       "expectedReceiver": 44,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 10
     },
     {
       "userId": 177,
       "sponsorId": 88,
-      "tx": "0x28dbb94cd2b712cb55b532f724dc0f92eb911c2161b71280b60429e18260f93b",
+      "tx": "0x9e98a3ea68bb2bdbe8fb3439dd48c11d0ead6f78a2c1ce7273c8635f417baa53",
       "payment": {
         "receiverId": 22,
         "fromUserId": 177,
@@ -2437,12 +2437,12 @@
       },
       "expectedReceiver": 22,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 13
     },
     {
       "userId": 178,
       "sponsorId": 89,
-      "tx": "0x51b4811b937eff26bb774980c912250585dd57d60728e9d077cbffa8462e610e",
+      "tx": "0x4b49d19405847d6cd8a1da83d91193ff0198b39684da0fd77882545e261f4afc",
       "payment": {
         "receiverId": 44,
         "fromUserId": 178,
@@ -2451,12 +2451,12 @@
       },
       "expectedReceiver": 44,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 17
     },
     {
       "userId": 179,
       "sponsorId": 89,
-      "tx": "0xad3fe8906eab1c5482ca233313c121bb4b2e7e2826a239ee178a03e1031982a5",
+      "tx": "0x85dcb2fdacbb8e6cedc132baa13eaef2b7b763f34c57592cc8d33e3885856bc6",
       "payment": {
         "receiverId": 22,
         "fromUserId": 179,
@@ -2465,12 +2465,12 @@
       },
       "expectedReceiver": 22,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 15
     },
     {
       "userId": 180,
       "sponsorId": 90,
-      "tx": "0xd574fe82dcb6d7288c4e4822ecf859d4791601c45efa707ae1c875f59fcb106b",
+      "tx": "0x8e4674eed37e512e5756e47a24943719b33d88d4fe8f74aa3f670eda0764b890",
       "payment": {
         "receiverId": 45,
         "fromUserId": 180,
@@ -2479,12 +2479,12 @@
       },
       "expectedReceiver": 45,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 11
     },
     {
       "userId": 181,
       "sponsorId": 90,
-      "tx": "0xd4c2f6822010e473eafc5f0adc93284bbfeaeb8bedb771e15766a776379cb255",
+      "tx": "0x470753f5e6fdcf4d7b0577ba6f9ab54854461b156b68549689babb2f0d05b0f9",
       "payment": {
         "receiverId": 22,
         "fromUserId": 181,
@@ -2493,12 +2493,12 @@
       },
       "expectedReceiver": 22,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 11
     },
     {
       "userId": 182,
       "sponsorId": 91,
-      "tx": "0x8ee0335a2b9b7ba291369901d993d339208a4d7ec588eceff877bccfaa18f45b",
+      "tx": "0xd9a5ff9922cc6e4eac919da95f96ea9f61b639c69a5bbdb5adc4fad88db42d90",
       "payment": {
         "receiverId": 45,
         "fromUserId": 182,
@@ -2507,12 +2507,12 @@
       },
       "expectedReceiver": 45,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 22
     },
     {
       "userId": 183,
       "sponsorId": 91,
-      "tx": "0x5be77b4a85c54532ce703e31f6178deeb667b08b52c1fe418b524263c093d5b6",
+      "tx": "0xe066767b91556605aa9649dcfb0a6e1e3bceb70bb579c05701c60f13a3e42801",
       "payment": {
         "receiverId": 22,
         "fromUserId": 183,
@@ -2521,12 +2521,12 @@
       },
       "expectedReceiver": 22,
       "verified": true,
-      "placementCount": 7
+      "placementCount": 20
     },
     {
       "userId": 184,
       "sponsorId": 92,
-      "tx": "0x973c59249bcdcac94644ad6f78c46dc6ed86388de1e58364f46829a4ff4f4d96",
+      "tx": "0xfba40dfde4271ab30275cf1077c46b9e4ed9c619bcdb2d3d259d46a06a609dd9",
       "payment": {
         "receiverId": 46,
         "fromUserId": 184,
@@ -2535,12 +2535,12 @@
       },
       "expectedReceiver": 46,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 10
     },
     {
       "userId": 185,
       "sponsorId": 92,
-      "tx": "0x789d754e799b18b94de2a95509417694b72cb96d62fb77a27c7e96df17ec96cd",
+      "tx": "0x13305b2e4e21b4398cdbfe2cbdb342807db03a5241a4a4201b53327554dc7953",
       "payment": {
         "receiverId": 23,
         "fromUserId": 185,
@@ -2549,12 +2549,12 @@
       },
       "expectedReceiver": 23,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 10
     },
     {
       "userId": 186,
       "sponsorId": 93,
-      "tx": "0x759df628e47b28115f8310a8ba53d53ed1b6425a020b366918f7d762c8fac669",
+      "tx": "0x4e365165d47ea366647915af1ec250b20edd037424a29957cfa7dcc011da5dca",
       "payment": {
         "receiverId": 46,
         "fromUserId": 186,
@@ -2563,12 +2563,12 @@
       },
       "expectedReceiver": 46,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 21
     },
     {
       "userId": 187,
       "sponsorId": 93,
-      "tx": "0x8042ee8ef911c761db076f18dac1888874981a09f22653d1d1eca504378c8d44",
+      "tx": "0x0a56a886beb2fc541ea743b2e0b6cbe2fd1acd72dfe35f395896a783e3d28871",
       "payment": {
         "receiverId": 23,
         "fromUserId": 187,
@@ -2577,12 +2577,12 @@
       },
       "expectedReceiver": 23,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 15
     },
     {
       "userId": 188,
       "sponsorId": 94,
-      "tx": "0x14d328219e35e6ecf9bc499646366f0d0900f35a67017bdd9a6df8c2d000fb48",
+      "tx": "0x0b4d6e09edfb831ce789c1a54cb30ac0272428c6c392783742c82ee8502a1792",
       "payment": {
         "receiverId": 47,
         "fromUserId": 188,
@@ -2591,12 +2591,12 @@
       },
       "expectedReceiver": 47,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 11
     },
     {
       "userId": 189,
       "sponsorId": 94,
-      "tx": "0x7b2550ba778efa10c4e321d7683ae6f3db17eb42d0f7aedd413c1e1cec8938d5",
+      "tx": "0x50cc70bbe766ffd5e4d563130a3aaef6830b9be650fc87fb9510f7624ef86c1c",
       "payment": {
         "receiverId": 23,
         "fromUserId": 189,
@@ -2605,12 +2605,12 @@
       },
       "expectedReceiver": 23,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 11
     },
     {
       "userId": 190,
       "sponsorId": 95,
-      "tx": "0x7ca5289be428e76d0628e5781ff35caab1ddf10e9ec2fdcf181c3093fe1fb845",
+      "tx": "0x61587009ae8b3e0229472abc4808b04813b732894cc3c5de4c9320e4c65b22e5",
       "payment": {
         "receiverId": 47,
         "fromUserId": 190,
@@ -2619,12 +2619,12 @@
       },
       "expectedReceiver": 47,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 17
     },
     {
       "userId": 191,
       "sponsorId": 95,
-      "tx": "0x705f341e004d3abe436cb46507b3c704bfcceab615f2620bec38f73fca9597ec",
+      "tx": "0x8284e31af54b1a68cf7fcc5cf227a1f0163de6d2b4bcf595ffdc786ccf5b0f67",
       "payment": {
         "receiverId": 23,
         "fromUserId": 191,
@@ -2633,12 +2633,12 @@
       },
       "expectedReceiver": 23,
       "verified": true,
-      "placementCount": 8
+      "placementCount": 24
     },
     {
       "userId": 192,
       "sponsorId": 96,
-      "tx": "0x46852db16e7d3bf13686528e05e71cb0b8a3c5f5850e923ca62a3e54aef33534",
+      "tx": "0x95bb9592e7fc7895a8331ce617e730655292c320ca60c3fd7838ef34c9088530",
       "payment": {
         "receiverId": 48,
         "fromUserId": 192,
@@ -2647,12 +2647,12 @@
       },
       "expectedReceiver": 48,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 12
     },
     {
       "userId": 193,
       "sponsorId": 96,
-      "tx": "0x60711bc40b15068c83324b7b741c413a0b38a86164ebabbdfc61a4574cf60fe7",
+      "tx": "0x634fc9204fbce498eebcb63b21d265f861f50d9b4b04768562f602db9d0a5ce7",
       "payment": {
         "receiverId": 24,
         "fromUserId": 193,
@@ -2661,12 +2661,12 @@
       },
       "expectedReceiver": 24,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 15
     },
     {
       "userId": 194,
       "sponsorId": 97,
-      "tx": "0x8f91cd356617df66464298854d235300b5c1d487fb750d8261628d0b8df4bd05",
+      "tx": "0x2fd9ec3bdd18366af12e21fc7fdf68b2d02e798c232b58bee4758376af66597d",
       "payment": {
         "receiverId": 48,
         "fromUserId": 194,
@@ -2675,12 +2675,12 @@
       },
       "expectedReceiver": 48,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 19
     },
     {
       "userId": 195,
       "sponsorId": 97,
-      "tx": "0x7c8673c9fb9bb5a8043e85aebbaddc643bb63b33dc26a1bbba53b1414c1b9c25",
+      "tx": "0xc6cf042a7297c8d57dc4b1a106b4e0093f68f6f036487d5773e7f83ebefcaad9",
       "payment": {
         "receiverId": 24,
         "fromUserId": 195,
@@ -2689,12 +2689,12 @@
       },
       "expectedReceiver": 24,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 18
     },
     {
       "userId": 196,
       "sponsorId": 98,
-      "tx": "0xf8f849739151ee722840fee3339a08fd4b756e4247ff488e94641091f57050f3",
+      "tx": "0xfef04a0030eb8643b1e27e781e587c5917ec10275acf736d079bc59942d10e37",
       "payment": {
         "receiverId": 49,
         "fromUserId": 196,
@@ -2703,12 +2703,12 @@
       },
       "expectedReceiver": 49,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 12
     },
     {
       "userId": 197,
       "sponsorId": 98,
-      "tx": "0x2411a28c5015057f7b59ca6692dfe8e40f45f5f853160dc51ef6f84dd8968edc",
+      "tx": "0xe7cd78d5ac544342981eb8a6b55e30a73de8761317c1abfcc508d51f353c48aa",
       "payment": {
         "receiverId": 24,
         "fromUserId": 197,
@@ -2717,12 +2717,12 @@
       },
       "expectedReceiver": 24,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 12
     },
     {
       "userId": 198,
       "sponsorId": 99,
-      "tx": "0x70975d47a12567ddc35dfe587ed63e8b8d3f5b6a1c029127a68e8550461994e4",
+      "tx": "0xe59dfb00f742458adec4de8ebf94704894a2f9008dfebb9a9294bdd982430c81",
       "payment": {
         "receiverId": 49,
         "fromUserId": 198,
@@ -2731,12 +2731,12 @@
       },
       "expectedReceiver": 49,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 23
     },
     {
       "userId": 199,
       "sponsorId": 99,
-      "tx": "0x08410d225fa26a37b2b1e29269e24a6edfdd47b47eb8e229942ba3d6ce014683",
+      "tx": "0x36f929d8a77a3bb8806120fc2666b9f99b27b0feb9871cbfb7245bd9af5f7ee9",
       "payment": {
         "receiverId": 24,
         "fromUserId": 199,
@@ -2745,12 +2745,12 @@
       },
       "expectedReceiver": 24,
       "verified": true,
-      "placementCount": 7
+      "placementCount": 22
     },
     {
       "userId": 200,
       "sponsorId": 100,
-      "tx": "0x04909c1f281ca8aa61304bb4bb64ef80ccf00e00ab879dc050aab28ee1648eec",
+      "tx": "0x1635a01de23997e7da37b509267374a11c802ca344b6befb4904854eb4793cb2",
       "payment": {
         "receiverId": 50,
         "fromUserId": 200,
@@ -2759,8 +2759,8 @@
       },
       "expectedReceiver": 50,
       "verified": true,
-      "placementCount": 3
+      "placementCount": 10
     }
   ],
-  "generatedAt": "2026-06-30T12:50:56.634Z"
+  "generatedAt": "2026-06-30T13:34:36.425Z"
 }
