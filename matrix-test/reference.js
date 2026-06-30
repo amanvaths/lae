@@ -181,7 +181,7 @@ class Reference {
   }
 
   _payByRole(fromId, boardOwnerId, slot, boardLevel = 1, feeLevel = 1) {
-    const amount = levelCost(feeLevel);
+    const amount = levelCost(boardLevel);
     const recycledAtPay = this._board(boardOwnerId, boardLevel).reinvestCount > 0;
 
     if (slot === 4 && !recycledAtPay) {

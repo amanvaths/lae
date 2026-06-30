@@ -213,6 +213,15 @@ export default function IncomePage() {
   );
 }
 
+function spotPaymentLabel(spot: number | null | undefined, cycleId: number | null | undefined): string | null {
+  if (spot == null) return null;
+  if (spot === 14) return "Slot 14 · Recycle → upline next cycle";
+  if (spot === 5 && cycleId === 1) return "Slot 5 · 2× upgrade release";
+  if (spot === 4 && cycleId === 1) return "Slot 4 · Upgrade hold (½)";
+  if (spot === 5) return "Slot 5 · Board owner";
+  return `Slot ${spot}`;
+}
+
 function IncomeReportRow({
   record,
   fromAddress,
@@ -244,6 +253,8 @@ function IncomeReportRow({
     record.cycleId != null &&
     record.position != null;
 
+  const spotLabel = spotPaymentLabel(record.position, record.cycleId);
+
   return (
     <div className="flex flex-col gap-2 border-b border-white/[0.06] py-3.5 text-sm transition-colors hover:bg-white/[0.02] sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
       <div className="flex min-w-0 flex-1 flex-col gap-2">
@@ -253,11 +264,18 @@ function IncomeReportRow({
           >
             {label}
           </span>
-          {record.level != null && (
+          {record.boardLevel != null && (
             <span
               className={`inline-flex shrink-0 items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${badge}`}
             >
-              Pay L{record.level}
+              Board L{record.boardLevel}
+            </span>
+          )}
+          {spotLabel && (
+            <span
+              className={`inline-flex shrink-0 items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${badge}`}
+            >
+              {spotLabel}
             </span>
           )}
         </div>

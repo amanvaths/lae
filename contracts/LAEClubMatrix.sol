@@ -616,7 +616,8 @@ contract LAEClubMatrix {
         uint8 boardLevel,
         uint8 feeLevel
     ) private {
-        uint256 amount = levelTokenCost[feeLevel];
+        // Pay at the board's level price (L1=0.001, L2=0.002, …); registration fee is always L1.
+        uint256 amount = levelTokenCost[boardLevel];
         bool recycled = users[boardOwner].board[boardLevel].reinvestCount > 0;
 
         // Cycle 1 slots 4 & 5 on L1 boards: hold shares then release 2x L2 to upline on slot 5.

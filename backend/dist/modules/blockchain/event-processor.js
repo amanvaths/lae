@@ -9,14 +9,41 @@ function dec(v) {
         return String(v);
     return String(v ?? "0");
 }
-/** Pick the board placement that triggered the single registration payout. */
-async function resolvePayingPlacement(txHash, fromUserId) {
+async function loadPlacementsForTx(txHash, fromUserId) {
     const positions = await prisma.matrixCorePosition.findMany({
         where: { txHash, occupantId: fromUserId },
     });
-    if (!positions.length)
+    if (positions.length) {
+        return positions.map((p) => ({
+            matrixOwnerId: p.matrixOwnerId,
+            level: p.level,
+            cycleId: p.cycleId,
+            position: p.position,
+        }));
+    }
+    const events = await prisma.chainEvent.findMany({
+        where: { txHash, eventName: "NewUserPlace" },
+        orderBy: { logIndex: "asc" },
+    });
+    const rows = [];
+    for (const e of events) {
+        const p = (e.payload ?? {});
+        if (num(p.user) !== fromUserId)
+            continue;
+        rows.push({
+            matrixOwnerId: num(p.referrer),
+            level: num(p.level) || 1,
+            cycleId: num(p.cycle),
+            position: num(p.spot),
+        });
+    }
+    return rows;
+}
+async function resolvePayingPlacement(txHash, fromUserId) {
+    const placements = await loadPlacementsForTx(txHash, fromUserId);
+    if (!placements.length)
         return null;
-    const slot14 = positions.find((p) => p.position === 14);
+    const slot14 = placements.find((p) => p.position === 14);
     if (slot14)
         return slot14;
     const user = await prisma.matrixCoreUser.findUnique({
@@ -24,15 +51,33 @@ async function resolvePayingPlacement(txHash, fromUserId) {
         select: { sponsorId: true },
     });
     if (user?.sponsorId) {
-        const direct = positions.find((p) => p.cycleId > 1 && p.matrixOwnerId === user.sponsorId);
+        const direct = placements.find((p) => p.cycleId > 1 && p.matrixOwnerId === user.sponsorId);
         if (direct)
             return direct;
     }
-    const l1 = positions.filter((p) => p.level === 1);
+    const l1 = placements.filter((p) => p.level === 1);
     if (l1.length) {
         return l1.reduce((best, p) => (p.cycleId < best.cycleId ? p : best));
     }
-    return positions[0];
+    return placements[0];
+}
+async function backfillIncomeBoardContext(txHash, fromUserId) {
+    const placement = await resolvePayingPlacement(txHash, fromUserId);
+    if (!placement)
+        return;
+    await prisma.matrixCoreIncome.updateMany({
+        where: {
+            txHash,
+            fromUserId,
+            OR: [{ matrixOwnerId: null }, { position: null }],
+        },
+        data: {
+            matrixOwnerId: placement.matrixOwnerId,
+            boardLevel: placement.level,
+            cycleId: placement.cycleId,
+            position: placement.position,
+        },
+    });
 }
 function lower(v) {
     return typeof v === "string" ? v.toLowerCase() : undefined;
@@ -124,6 +169,7 @@ export async function processIndexedLog(log) {
                 },
                 update: { occupantId },
             });
+            await backfillIncomeBoardContext(txHash, occupantId);
             break;
         }
         case "TokenReceived": {
