@@ -123,7 +123,7 @@ async function ensureTokenFunding(wallet, matrixAddr, regCount) {
   const matrix = new ethers.Contract(matrixAddr, matrixAbi, wallet);
   const price = await matrix.levelTokenCost(1);
   const need = price * BigInt(regCount + 5);
-  const contractFloat = price * BigInt(Math.max(regCount, 1)) * 16n;
+  const contractFloat = ethers.parseEther(String(Math.max(80, regCount * 3)));
   const token = new ethers.Contract(PAYMENT_TOKEN, tokenAbi, wallet);
   const bal = await token.balanceOf(wallet.address);
   console.log("\n[2/4] Payment token — need", ethers.formatEther(need), "have", ethers.formatEther(bal));
@@ -204,6 +204,11 @@ async function seedUsers(matrixC, wallet, maxUsers) {
   for (const [userId, sponsorId] of sponsors) {
     if (userId <= 3) continue;
     const userAddr = addrForUserId(userId);
+    const idAddr = await matrixC.idToAddress(userId);
+    if (idAddr !== ethers.ZeroAddress) {
+      console.log(`      reg #${userId} — already registered, skip`);
+      continue;
+    }
     process.stdout.write(`      reg #${userId} under #${sponsorId}... `);
     const tx = await matrixC.registrationSys(sponsorId, userAddr, gas);
     const rcpt = await tx.wait();
