@@ -185,19 +185,11 @@ class Reference {
     const recycledAtPay = this._board(boardOwnerId, boardLevel).reinvestCount > 0;
 
     if (slot === 4 && !recycledAtPay) {
-      if (boardLevel === 1) {
-        this._holdHalfForNextLevel(fromId, boardOwnerId, slot, boardLevel);
-      } else {
-        this._payTreasurySlotToUpline1(fromId, boardOwnerId, slot, "treasury-slot4", levelCost(boardLevel), recycledAtPay, boardLevel);
-      }
+      this._holdHalfForNextLevel(fromId, boardOwnerId, slot, boardLevel);
       return;
     }
     if (slot === 5 && !recycledAtPay) {
-      if (boardLevel === 1) {
-        this._holdHalfAndFundUplineNextLevel(fromId, boardOwnerId, slot, boardLevel);
-      } else {
-        this._payTreasurySlotToUpline1(fromId, boardOwnerId, slot, "treasury-slot5c1", levelCost(boardLevel), recycledAtPay, boardLevel);
-      }
+      this._holdHalfAndFundUplineNextLevel(fromId, boardOwnerId, slot, boardLevel);
       return;
     }
     if (slot === 4 && recycledAtPay) {
@@ -210,7 +202,7 @@ class Reference {
     }
     if (slot === 5) {
       const snap = this._snapshotForTarget(boardOwnerId);
-      this._payResolved(boardOwnerId, fromId, boardOwnerId, slot, "self-slot5c2", levelCost(boardLevel), recycledAtPay, snap, boardLevel);
+      this._payResolved(boardOwnerId, fromId, boardOwnerId, slot, "self-slot5c2", amount, recycledAtPay, snap, boardLevel);
       return;
     }
 
@@ -240,7 +232,7 @@ class Reference {
       this._sendTreasury(levelCost(boardLevel), fromId, boardOwnerId, slot, "treasury-slot4max", false, new Map(), 0, boardLevel);
       return;
     }
-    const holdShare = matrixShare(AMOUNT);
+    const holdShare = matrixShare(levelCost(boardLevel));
     this._board(boardOwnerId, boardLevel).heldTokenForUpgrade += holdShare;
     this.payouts.push({
       fromId, boardOwnerId, slot, kind: "hold-slot4", receiverId: 0, amount: holdShare, treasury: false,
@@ -254,7 +246,7 @@ class Reference {
       return;
     }
     const nextLevel = boardLevel + 1;
-    const holdShare = matrixShare(AMOUNT);
+    const holdShare = matrixShare(levelCost(boardLevel));
     const b = this._board(boardOwnerId, boardLevel);
     b.heldTokenForUpgrade += holdShare;
     const releaseNominal = levelCost(nextLevel);
@@ -350,17 +342,11 @@ class Reference {
         targets.recyclePaySlot = slot;
         targets.recyclePayLevel = level;
       }
-      if (level === 1) {
-        if (rc < targets.minReinvest) {
-          targets.minReinvest = rc;
-          targets.frontierOwner = boardOwnerId;
-          targets.frontierSlot = slot;
-          targets.frontierLevel = level;
-        } else if (rc === targets.minReinvest && rc === 0) {
-          targets.frontierOwner = boardOwnerId;
-          targets.frontierSlot = slot;
-          targets.frontierLevel = level;
-        }
+      if (rc < targets.minReinvest) {
+        targets.minReinvest = rc;
+        targets.frontierOwner = boardOwnerId;
+        targets.frontierSlot = slot;
+        targets.frontierLevel = level;
       }
     }
 

@@ -24,6 +24,9 @@ import path from "path";
 import { fileURLToPath } from "url";
 import solc from "solc";
 import { ethers } from "../backend/node_modules/ethers/lib.esm/index.js";
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+const { Reference, matrixShare } = require("../matrix-test/reference.js");
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, "..");
@@ -123,7 +126,7 @@ async function ensureTokenFunding(wallet, matrixAddr, regCount) {
   const matrix = new ethers.Contract(matrixAddr, matrixAbi, wallet);
   const price = await matrix.levelTokenCost(1);
   const need = price * BigInt(regCount + 5);
-  const contractFloat = ethers.parseEther(String(Math.max(80, regCount * 3)));
+  const contractFloat = ethers.parseEther(String(Math.max(150, regCount * 5)));
   const token = new ethers.Contract(PAYMENT_TOKEN, tokenAbi, wallet);
   const bal = await token.balanceOf(wallet.address);
   console.log("\n[2/4] Payment token — need", ethers.formatEther(need), "have", ethers.formatEther(bal));
@@ -186,6 +189,9 @@ async function seedUsers(matrixC, wallet, maxUsers) {
   const iface = matrixC.interface;
   const allPayments = [];
   const allRegs = [];
+  const ref = new Reference();
+  let verifyOk = 0;
+  let verifyFail = 0;
 
   const partnersDone = await matrixC.partnersInitialized();
   if (!partnersDone) {
@@ -195,8 +201,12 @@ async function seedUsers(matrixC, wallet, maxUsers) {
     const ev = parseReceiptEvents(iface, rcpt);
     allRegs.push({ step: "partners", tx: rcpt.hash, ...ev });
     console.log("      partners tx:", rcpt.hash);
+    ref.register(1); // #2 under owner
+    ref.register(1); // #3 under owner
   } else {
     console.log("      partners already initialized — skip");
+    ref.register(1);
+    ref.register(1);
   }
 
   const sponsors = buildBinaryTreeSponsors(maxUsers);
@@ -209,25 +219,62 @@ async function seedUsers(matrixC, wallet, maxUsers) {
       console.log(`      reg #${userId} — already registered, skip`);
       continue;
     }
+
+    const payoutsBefore = ref.payouts.length;
+    const expectedId = ref.register(sponsorId);
+    if (expectedId !== userId) {
+      console.error(`      REF mismatch: expected id ${expectedId} got ${userId}`);
+      verifyFail++;
+    }
+    const expectedPay = ref.payouts[payoutsBefore] ?? null;
+
     process.stdout.write(`      reg #${userId} under #${sponsorId}... `);
     const tx = await matrixC.registrationSys(sponsorId, userAddr, gas);
     const rcpt = await tx.wait();
     const ev = parseReceiptEvents(iface, rcpt);
     const pay = ev.payments[0];
     const recv = pay ? `#${pay.receiverId}` : "none";
-    console.log(`ok → pay ${recv} (L${pay?.level ?? "-"} S? tx ${rcpt.hash.slice(0, 12)}…)`);
+
+    let match = true;
+    if (expectedPay && !expectedPay.held && !expectedPay.treasury) {
+      if (!pay || pay.receiverId !== expectedPay.receiverId) match = false;
+    } else if (expectedPay?.held && pay) {
+      match = false; // hold expected, got token transfer
+    } else if (!expectedPay?.held && !expectedPay?.treasury && !pay && expectedPay) {
+      match = false;
+    }
+
+    if (match) {
+      verifyOk++;
+      console.log(`ok → pay ${recv} (L${pay?.level ?? "-"} amt ${pay?.amount ?? "hold"}) ✓`);
+    } else {
+      verifyFail++;
+      const exp = expectedPay
+        ? expectedPay.held
+          ? "hold"
+          : `#${expectedPay.receiverId}`
+        : "none";
+      console.log(`MISMATCH on-chain ${recv} expected ${exp} (L${pay?.level ?? "-"}) ✗`);
+    }
+
     allPayments.push({
       userId,
       sponsorId,
       tx: rcpt.hash,
       payment: pay ?? null,
+      expectedReceiver: expectedPay?.held ? "hold" : expectedPay?.receiverId ?? null,
+      verified: match,
       placementCount: ev.placements.length,
     });
     allRegs.push({ userId, sponsorId, tx: rcpt.hash, events: ev });
     done++;
   }
   console.log("      registered", done, "users");
-  return { allPayments, allRegs };
+  console.log("      payment verify:", verifyOk, "ok,", verifyFail, "mismatch");
+  if (verifyFail > 0) {
+    console.warn("      ⚠ Some payments did not match reference — review seed-payments-testnet.json");
+  }
+  return { allPayments, allRegs, verifyOk, verifyFail };
 }
 
 function saveDeployJson(matrixAddr, deployBlock, wallet) {

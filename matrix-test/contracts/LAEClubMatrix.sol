@@ -490,17 +490,12 @@ contract LAEClubMatrix {
                 targets.recyclePaySlot = slot;
                 targets.recyclePayLevel = level;
             }
-            if (level == 1) {
-                if (rc < targets.minReinvest) {
-                    targets.minReinvest = rc;
-                    targets.frontierOwner = boardOwner;
-                    targets.frontierSlot = slot;
-                    targets.frontierLevel = level;
-                } else if (rc == targets.minReinvest && rc == 0) {
-                    targets.frontierOwner = boardOwner;
-                    targets.frontierSlot = slot;
-                    targets.frontierLevel = level;
-                }
+            // Frontier: earliest cycle wins; ties keep first (closest upline in walk).
+            if (rc < targets.minReinvest) {
+                targets.minReinvest = rc;
+                targets.frontierOwner = boardOwner;
+                targets.frontierSlot = slot;
+                targets.frontierLevel = level;
             }
         }
 
@@ -616,43 +611,35 @@ contract LAEClubMatrix {
         uint8 boardLevel,
         uint8 feeLevel
     ) private {
-        // Default: one L1 registration fee share; treasury slots use board-level price.
+        // Normal matrix slots: one L1 registration share (0.0009).
         uint256 amount = levelTokenCost[feeLevel];
         bool recycled = users[boardOwner].board[boardLevel].reinvestCount > 0;
 
-        // Cycle 1 slots 4 & 5 on L1 boards: hold shares then release 2x L2 to upline on slot 5.
+        // Cycle-1 slots 4 & 5 (every board level): hold then release next-level upgrade to upline.
         if (slot == 4 && !recycled) {
-            if (boardLevel == 1) {
-                _holdHalfForNextLevel(boardOwner, member, boardLevel, feeLevel);
-            } else {
-                _payTreasurySlotToUpline1(boardOwner, member, boardLevel, levelTokenCost[boardLevel]);
-            }
+            _holdHalfForNextLevel(boardOwner, member, boardLevel, feeLevel);
             return;
         }
         if (slot == 5 && !recycled) {
-            if (boardLevel == 1) {
-                _holdHalfAndFundUplineNextLevel(boardOwner, member, boardLevel, feeLevel);
-            } else {
-                _payTreasurySlotToUpline1(boardOwner, member, boardLevel, levelTokenCost[boardLevel]);
-            }
+            _holdHalfAndFundUplineNextLevel(boardOwner, member, boardLevel, feeLevel);
             return;
         }
 
-        // Slot 4 after recycle → club/treasury at this board level's price.
+        // Slot 4 after recycle → treasury at board level.
         if (slot == 4 && recycled) {
             _sendToPlatformTreasury(levelTokenCost[boardLevel]);
             return;
         }
 
-        // Slot 14 recycles → fund upline's next cycle at this board level's full price.
+        // Slot 14 → fund upline's next cycle at this board level (L1, L2, L3… same rule).
         if (slot == 14) {
             _payTreasurySlotToUpline1(boardOwner, member, boardLevel, levelTokenCost[boardLevel]);
             return;
         }
 
-        // Position 5 cycle 2+: board owner at this board level's price.
+        // Slot 5 cycle 2+: normal board-owner income (L1 share), not upgrade.
         if (slot == 5) {
-            _payResolved(boardOwner, member, boardLevel, levelTokenCost[boardLevel]);
+            _payResolved(boardOwner, member, boardLevel, amount);
             return;
         }
 
@@ -695,13 +682,13 @@ contract LAEClubMatrix {
             _sendToPlatformTreasury(levelTokenCost[feeLevel]);
             return;
         }
-        uint256 holdShare = _matrixShare(levelTokenCost[1]);
+        uint256 holdShare = _matrixShare(levelTokenCost[boardLevel]);
         users[boardOwner].board[boardLevel].heldTokenForUpgrade += holdShare;
         emit UpgradeHold(users[boardOwner].id, users[member].id, boardLevel, holdShare);
     }
 
     /**
-     * @dev Cycle-1 slot 5 on L1: hold second share, then pay upline the 2x next-level amount (0.0018 for L1→L2).
+     * @dev Cycle-1 slot 5: hold second share at this level, release next-level (2×) upgrade to upline.
      */
     function _holdHalfAndFundUplineNextLevel(
         address boardOwner,
@@ -714,7 +701,7 @@ contract LAEClubMatrix {
             return;
         }
         uint8 nextLevel = boardLevel + 1;
-        uint256 holdShare = _matrixShare(levelTokenCost[1]);
+        uint256 holdShare = _matrixShare(levelTokenCost[boardLevel]);
         Board storage b = users[boardOwner].board[boardLevel];
         b.heldTokenForUpgrade += holdShare;
         emit UpgradeHold(users[boardOwner].id, users[member].id, boardLevel, holdShare);
