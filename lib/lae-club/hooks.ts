@@ -471,8 +471,8 @@ async function loadUserEvents(
 
   // Income API is a fallback only — never merge with events (duplicate TokenReceived rows).
   const apiIncome = await fetchLaeUserIncomeFromApi(userAddress);
-  if (apiIncome && apiIncome.length > 0) {
-    return sortEventsNewestFirst(dedupeEvents(apiIncome));
+  if (apiIncome && apiIncome.events.length > 0) {
+    return sortEventsNewestFirst(dedupeEvents(apiIncome.events));
   }
 
   const chainResult = await fetchMatrixUserEvents(client, userId, userAddress, {

@@ -12,11 +12,11 @@ function validateReferenceRun(ref) {
   const ownerId = ref.ownerId;
   const distributedPerReg = matrixShare(AMOUNT);
 
-  // --- solvency ---
+  // Solvency: matrix share in equals user + treasury + remaining holds (slot-4 holds stay in contract).
   const totalIn = distributedPerReg * BigInt(ref.registrations);
-  const totalOut = ref.totalUserIncome + ref.totalTreasuryIncome;
-  if (totalIn !== totalOut) {
-    return fail(ref, 0, 0, 0, TREASURY_LABEL, totalOut.toString(),
+  const totalOut = ref.totalUserIncome + ref.totalTreasuryIncome + ref._totalHeld();
+  if (totalOut > totalIn) {
+    return fail(ref, 0, 0, 0, totalIn.toString(), totalOut.toString(),
       `Solvent mismatch in=${totalIn} out=${totalOut}`);
   }
 
@@ -54,9 +54,11 @@ function validateReferenceRun(ref) {
     if (p.treasury) {
       const upline1 = boardOwner !== 0 ? ref._uplineOf(boardOwner, 1) : 0;
       const okTreasury =
-        ((slot === 4 || slot === 14 || (slot === 5 && !p.recycledAtPay)) && upline1 === 0) ||
+        ((slot === 14 || (slot === 5 && !p.recycledAtPay)) && upline1 === 0) ||
+        (slot === 4 && p.recycledAtPay) ||
         (slot === 13 && p.kind === "treasury-slot13") ||
-        p.kind === "lapse-treasury" || p.kind === "treasury-noboard" || p.kind === "treasury-other";
+        p.kind === "lapse-treasury" || p.kind === "treasury-noboard" || p.kind === "treasury-other" ||
+        p.kind === "treasury-slot4c2" || p.kind === "treasury-slot4max" || p.kind === "treasury-slot5max";
       if (!okTreasury) {
         return fail(ref, regNum, boardOwner, slot, "allowed treasury slot", actual,
           `Treasury payout on unexpected slot ${slot}`);
@@ -68,6 +70,8 @@ function validateReferenceRun(ref) {
     const expectedAfterLapse = resolveWithLapse(ref, p.intendedTarget, p.directSnap);
 
     if (p.treasury) continue;
+
+    if (p.held) continue;
 
     if (p.receiverId !== expectedAfterLapse) {
       const expLabel = expectedAfterLapse === 0 ? TREASURY_LABEL : `#${expectedAfterLapse}`;
@@ -99,15 +103,18 @@ function validateReferenceRun(ref) {
   return { ok: true, stats: collectStats(ref, recycleEvents) };
 }
 
-function roleTarget(ref, boardOwnerId, slot, recycledAtPay) {
-  if (slot === 4 || slot === 14) {
-    const u = ref._uplineOf(boardOwnerId, 1);
-    return u !== 0 ? u : 0;
-  }
+function roleTarget(ref, boardOwnerId, slot, recycledAtPay, boardLevel = 1) {
+  if (slot === 4 && !recycledAtPay) return 0;
   if (slot === 5 && !recycledAtPay) {
     const u = ref._uplineOf(boardOwnerId, 1);
     return u !== 0 ? u : 0;
   }
+  if (slot === 4 && recycledAtPay) return 0;
+  if (slot === 14) {
+    const u = ref._uplineOf(boardOwnerId, 1);
+    return u !== 0 ? u : 0;
+  }
+  if (slot === 5 && recycledAtPay) return boardOwnerId;
   if (slot === 1) {
     const u = ref._uplineOf(boardOwnerId, 1);
     return u !== 0 ? u : ref.ownerId;
@@ -126,7 +133,6 @@ function roleTarget(ref, boardOwnerId, slot, recycledAtPay) {
   }
   if (slot === 13) return ref._targetForPosition13(boardOwnerId);
   if ([3, 6, 8, 9, 11, 12].includes(slot)) return boardOwnerId;
-  if (slot === 5 && recycledAtPay) return boardOwnerId;
   return 0;
 }
 

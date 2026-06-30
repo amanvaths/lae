@@ -883,7 +883,9 @@ model MatrixCoreIncome {
   fromUserId      Int?     @map("from_user_id")
   toUserId        Int?     @map("to_user_id")
   matrixOwnerId   Int?     @map("matrix_owner_id")
+  boardLevel      Int?     @map("board_level")
   level           Int?
+  cycleId         Int?     @map("cycle_id")
   position        Int?
   amount          Decimal  @db.Decimal(36, 18)
   blockNumber     BigInt   @map("block_number")

@@ -1,6 +1,21 @@
 import { API_BASE_URL } from "@/lib/api-client";
 import type { MatrixUserEvent } from "./matrix-events";
 
+export type LaeIncomeRecord = {
+  kind: string;
+  fromUserId?: number | null;
+  toUserId?: number | null;
+  matrixOwnerId?: number | null;
+  boardLevel?: number | null;
+  cycleId?: number | null;
+  position?: number | null;
+  level?: number | null;
+  amount: string;
+  blockNumber: string | number;
+  txHash: string;
+  logIndex: number;
+};
+
 type ApiEventRow = {
   transactionHash?: string;
   txHash?: string;
@@ -37,7 +52,7 @@ export async function fetchLaeUserIncomeFromApi(
   wallet: string,
   kind?: "matrix" | "treasury" | "lapse",
   limit = 200
-): Promise<MatrixUserEvent[] | null> {
+): Promise<{ events: MatrixUserEvent[]; records: LaeIncomeRecord[] } | null> {
   const base = API_BASE_URL.replace(/\/$/, "");
   if (!base) return null;
 
@@ -54,19 +69,11 @@ export async function fetchLaeUserIncomeFromApi(
     clearTimeout(timeout);
     if (!res.ok) return null;
     const data = (await res.json()) as {
-      incomes?: Array<{
-        kind: string;
-        fromUserId?: number | null;
-        toUserId?: number;
-        level?: number | null;
-        amount: string;
-        blockNumber: string | number;
-        txHash: string;
-        logIndex: number;
-      }>;
+      incomes?: LaeIncomeRecord[];
     };
 
-    return (data.incomes ?? []).map((row) => {
+    const records = data.incomes ?? [];
+    const events = records.map((row) => {
       const amountRaw = row.amount.includes(".") ? row.amount.split(".")[0] : row.amount;
       const amount = BigInt(amountRaw || "0");
       const eventName =
@@ -77,6 +84,12 @@ export async function fetchLaeUserIncomeFromApi(
             : "ClubPoolPayment";
       const isMatrix = eventName === "TokenReceived";
       const isLapse = eventName === "LapseIncome";
+      const boardMeta = {
+        matrixOwnerId: row.matrixOwnerId != null ? BigInt(row.matrixOwnerId) : undefined,
+        boardLevel: row.boardLevel != null ? BigInt(row.boardLevel) : undefined,
+        cycleId: row.cycleId != null ? BigInt(row.cycleId) : undefined,
+        spot: row.position != null ? BigInt(row.position) : undefined,
+      };
       return {
         transactionHash: row.txHash as `0x${string}`,
         logIndex: row.logIndex,
@@ -88,6 +101,7 @@ export async function fetchLaeUserIncomeFromApi(
               fromId: row.fromUserId ? BigInt(row.fromUserId) : undefined,
               receiverId: row.toUserId ? BigInt(row.toUserId) : undefined,
               level: row.level ?? undefined,
+              ...boardMeta,
             }
           : isLapse
             ? {
@@ -95,14 +109,17 @@ export async function fetchLaeUserIncomeFromApi(
                 fromId: row.fromUserId ? BigInt(row.fromUserId) : undefined,
                 receiverId: row.toUserId ? BigInt(row.toUserId) : undefined,
                 level: row.level ?? undefined,
+                ...boardMeta,
               }
             : {
                 amount,
                 userId: row.toUserId ? BigInt(row.toUserId) : undefined,
                 level: row.level ?? undefined,
+                matrixOwnerId: row.matrixOwnerId != null ? BigInt(row.matrixOwnerId) : undefined,
               },
       } as MatrixUserEvent;
     });
+    return { events, records };
   } catch {
     return null;
   }

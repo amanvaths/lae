@@ -20,6 +20,35 @@ function dec(v: unknown): string {
   return String(v ?? "0");
 }
 
+/** Pick the board placement that triggered the single registration payout. */
+async function resolvePayingPlacement(txHash: string, fromUserId: number) {
+  const positions = await prisma.matrixCorePosition.findMany({
+    where: { txHash, occupantId: fromUserId },
+  });
+  if (!positions.length) return null;
+
+  const slot14 = positions.find((p) => p.position === 14);
+  if (slot14) return slot14;
+
+  const user = await prisma.matrixCoreUser.findUnique({
+    where: { userId: fromUserId },
+    select: { sponsorId: true },
+  });
+  if (user?.sponsorId) {
+    const direct = positions.find(
+      (p) => p.cycleId > 1 && p.matrixOwnerId === user.sponsorId
+    );
+    if (direct) return direct;
+  }
+
+  const l1 = positions.filter((p) => p.level === 1);
+  if (l1.length) {
+    return l1.reduce((best, p) => (p.cycleId < best.cycleId ? p : best));
+  }
+
+  return positions[0];
+}
+
 function lower(v: unknown): string | undefined {
   return typeof v === "string" ? v.toLowerCase() : undefined;
 }
@@ -123,19 +152,30 @@ export async function processIndexedLog(log: ParsedLog): Promise<void> {
     }
 
     case "TokenReceived": {
+      const fromUserId = num(args.fromId);
+      const placement = await resolvePayingPlacement(txHash, fromUserId);
       await prisma.matrixCoreIncome.upsert({
         where: { txHash_logIndex: { txHash, logIndex } },
         create: {
           kind: "matrix",
-          fromUserId: num(args.fromId),
+          fromUserId,
           toUserId: num(args.receiverId),
+          matrixOwnerId: placement?.matrixOwnerId ?? null,
+          boardLevel: placement?.level ?? null,
           level: num(args.level) || null,
+          cycleId: placement?.cycleId ?? null,
+          position: placement?.position ?? null,
           amount: dec(args.amount),
           blockNumber: BigInt(blockNumber),
           txHash,
           logIndex,
         },
-        update: {},
+        update: {
+          matrixOwnerId: placement?.matrixOwnerId ?? null,
+          boardLevel: placement?.level ?? null,
+          cycleId: placement?.cycleId ?? null,
+          position: placement?.position ?? null,
+        },
       });
       break;
     }
@@ -177,19 +217,30 @@ export async function processIndexedLog(log: ParsedLog): Promise<void> {
     }
 
     case "LapseIncome": {
+      const fromUserId = num(args.fromId);
+      const placement = await resolvePayingPlacement(txHash, fromUserId);
       await prisma.matrixCoreIncome.upsert({
         where: { txHash_logIndex: { txHash, logIndex } },
         create: {
           kind: "lapse",
-          fromUserId: num(args.fromId),
+          fromUserId,
           toUserId: num(args.receiverId),
+          matrixOwnerId: placement?.matrixOwnerId ?? null,
+          boardLevel: placement?.level ?? null,
           level: num(args.level) || null,
+          cycleId: placement?.cycleId ?? null,
+          position: placement?.position ?? null,
           amount: dec(args.amount),
           blockNumber: BigInt(blockNumber),
           txHash,
           logIndex,
         },
-        update: {},
+        update: {
+          matrixOwnerId: placement?.matrixOwnerId ?? null,
+          boardLevel: placement?.level ?? null,
+          cycleId: placement?.cycleId ?? null,
+          position: placement?.position ?? null,
+        },
       });
       break;
     }

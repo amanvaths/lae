@@ -36,7 +36,7 @@ const OWNER = process.env.OWNER_WALLET ?? "0xef9594fC5145404BfC7B5640296C3864319
 const CLUB_POOL = process.env.CLUB_POOL ?? OWNER;
 const TREASURY = process.env.TREASURY_WALLET ?? OWNER;
 const LIQUIDITY_POOL = process.env.LIQUIDITY_POOL ?? OWNER;
-const MAX_USERS = Number(process.env.MAX_USERS ?? "50");
+const MAX_USERS = Number(process.env.MAX_USERS ?? "200");
 const SKIP_DEPLOY = process.env.SKIP_DEPLOY === "1";
 
 function addrForUserId(userId) {
@@ -284,6 +284,31 @@ function updateEnvFiles(matrixAddr, deployBlock) {
     LAE_COIN_CONTRACT_ADDRESS: LAE_COIN,
     CHAIN_ID: "97",
   });
+
+  patchRepoContractDefaults(matrixAddr, deployBlock);
+}
+
+/** Keep hardcoded fallbacks in repo aligned after fresh deploy. */
+function patchRepoContractDefaults(matrixAddr, deployBlock) {
+  const oldMatrix = /0x912623C0Dd9f0aeF626080438DA41322A7E93425/gi;
+  const oldBlock = /116339372/g;
+  const files = [
+    path.join(ROOT, "lib", "lae-club", "contracts.ts"),
+    path.join(ROOT, "backend", "src", "config", "chains.ts"),
+    path.join(ROOT, ".github", "workflows", "deploy-vps.yml"),
+    path.join(ROOT, ".github", "workflows", "deploy-backend-vps.yml"),
+    path.join(ROOT, "scripts", "production-readiness.mjs"),
+    path.join(ROOT, "backend", "scripts", "production-readiness.mjs"),
+  ];
+  for (const fp of files) {
+    if (!fs.existsSync(fp)) continue;
+    let text = fs.readFileSync(fp, "utf8");
+    const next = text.replace(oldMatrix, matrixAddr).replace(oldBlock, String(deployBlock));
+    if (next !== text) {
+      fs.writeFileSync(fp, next);
+      console.log("      Patched", path.relative(ROOT, fp));
+    }
+  }
 }
 
 async function main() {
