@@ -377,9 +377,8 @@ contract LAEClubMatrix {
         emit Registration(currentUserId, referrerId, userAddress);
 
         _bumpTeamSize(referrerAddress);
-        // Sequential placement into every upline's level-1 board; pays income once
-        // (decided by the new member's slot in its direct sponsor's board).
-        _placeMember(userAddress, 1, true);
+        // Place on every active upline level (1..15); pay once from the best board/slot.
+        _placeMemberAllLevels(userAddress, true, 1);
     }
 
     function _registerPartner(address userAddress, uint256 partnerId) private {
@@ -396,8 +395,7 @@ contract LAEClubMatrix {
         emit Registration(partnerId, 1, userAddress);
 
         _bumpTeamSize(owner);
-        // Initial partners are placed for free (setup) — no payout from an unfunded contract.
-        _placeMember(userAddress, 1, false);
+        _placeMemberAllLevels(userAddress, false, 1);
     }
 
     /**
@@ -448,9 +446,17 @@ contract LAEClubMatrix {
     struct PaymentTargets {
         address frontierOwner;
         uint8 frontierSlot;
+        uint8 frontierLevel;
         uint256 minReinvest;
         address directOwner;
         uint8 directSlot;
+        uint8 directLevel;
+        address recyclePayOwner;
+        uint8 recyclePaySlot;
+        uint8 recyclePayLevel;
+        address treasurySlotOwner;
+        uint8 treasurySlot;
+        uint8 treasurySlotLevel;
     }
 
     function _emitNewUserPlace(
@@ -478,14 +484,32 @@ contract LAEClubMatrix {
             if (rc > 0 && users[member].referrer == boardOwner && targets.directOwner == address(0)) {
                 targets.directOwner = boardOwner;
                 targets.directSlot = slot;
+                targets.directLevel = level;
             }
-            if (rc < targets.minReinvest) {
-                targets.minReinvest = rc;
-                targets.frontierOwner = boardOwner;
-                targets.frontierSlot = slot;
-            } else if (rc == targets.minReinvest && rc == 0) {
-                targets.frontierOwner = boardOwner;
-                targets.frontierSlot = slot;
+            if (slot == MATRIX_SIZE && targets.recyclePayOwner == address(0)) {
+                targets.recyclePayOwner = boardOwner;
+                targets.recyclePaySlot = slot;
+                targets.recyclePayLevel = level;
+            }
+            if (
+                targets.treasurySlotOwner == address(0) &&
+                (slot == 4 || (slot == 5 && rc == 0))
+            ) {
+                targets.treasurySlotOwner = boardOwner;
+                targets.treasurySlot = slot;
+                targets.treasurySlotLevel = level;
+            }
+            if (level == 1) {
+                if (rc < targets.minReinvest) {
+                    targets.minReinvest = rc;
+                    targets.frontierOwner = boardOwner;
+                    targets.frontierSlot = slot;
+                    targets.frontierLevel = level;
+                } else if (rc == targets.minReinvest && rc == 0) {
+                    targets.frontierOwner = boardOwner;
+                    targets.frontierSlot = slot;
+                    targets.frontierLevel = level;
+                }
             }
         }
 
@@ -493,20 +517,12 @@ contract LAEClubMatrix {
         return targets;
     }
 
-    /**
-     * @dev Place `member` into the level-`level` board of its sponsor and of every
-     *      eligible upline (cycle 1 = all uplines; cycle 2+ = directs only).
-     *
-     *      INCOME is paid ONCE from the upline board with minimum reinvestCount,
-     *      unless the member lands on a cycle-2+ board as a direct referral — then
-     *      that board is used. Ties at cycle 1 go to the highest upline.
-     */
-    function _placeMember(address member, uint8 level, bool doPay) private {
-        if (level == 0 || level > LAST_LEVEL) return;
-
-        PaymentTargets memory targets;
-        targets.minReinvest = type(uint256).max;
-
+    function _walkLevelPlacements(
+        address member,
+        uint8 level,
+        bool doPay,
+        PaymentTargets memory targets
+    ) private returns (PaymentTargets memory) {
         address cur = users[member].referrer;
         for (uint256 hops = 0; cur != address(0) && hops < MAX_UPLINE; hops++) {
             if (users[cur].activeLevels[level] && _shouldPlaceOnBoard(cur, member, level)) {
@@ -514,16 +530,50 @@ contract LAEClubMatrix {
             }
             cur = users[cur].referrer;
         }
+        return targets;
+    }
+
+    function _settleRegistrationPayment(address member, PaymentTargets memory targets, uint8 feeLevel) private {
+        if (targets.recyclePayOwner != address(0)) {
+            _payByRole(member, targets.recyclePayOwner, targets.recyclePaySlot, targets.recyclePayLevel, feeLevel);
+        } else if (targets.directOwner != address(0)) {
+            _payByRole(member, targets.directOwner, targets.directSlot, targets.directLevel, feeLevel);
+        } else if (targets.treasurySlotOwner != address(0)) {
+            _payByRole(member, targets.treasurySlotOwner, targets.treasurySlot, targets.treasurySlotLevel, feeLevel);
+        } else if (targets.frontierOwner != address(0)) {
+            _payByRole(member, targets.frontierOwner, targets.frontierSlot, targets.frontierLevel, feeLevel);
+        } else {
+            _sendToPlatformTreasury(levelTokenCost[feeLevel]);
+        }
+    }
+
+    /**
+     * @dev Registration genealogy across all active levels; one matrix payout per call.
+     */
+    function _placeMemberAllLevels(address member, bool doPay, uint8 feeLevel) private {
+        PaymentTargets memory targets;
+        targets.minReinvest = type(uint256).max;
+
+        for (uint8 level = 1; level <= LAST_LEVEL; level++) {
+            targets = _walkLevelPlacements(member, level, doPay, targets);
+        }
 
         if (!doPay) return;
+        _settleRegistrationPayment(member, targets, feeLevel);
+    }
 
-        if (targets.directOwner != address(0)) {
-            _payByRole(member, targets.directOwner, targets.directSlot, level);
-        } else if (targets.frontierOwner != address(0)) {
-            _payByRole(member, targets.frontierOwner, targets.frontierSlot, level);
-        } else {
-            _sendToPlatformTreasury(levelTokenCost[level]);
-        }
+    /**
+     * @dev Single-level genealogy (upgrade unlock self-placement, no payout).
+     */
+    function _placeMemberAtLevel(address member, uint8 level, bool doPay, uint8 feeLevel) private {
+        if (level == 0 || level > LAST_LEVEL) return;
+
+        PaymentTargets memory targets;
+        targets.minReinvest = type(uint256).max;
+        targets = _walkLevelPlacements(member, level, doPay, targets);
+
+        if (!doPay) return;
+        _settleRegistrationPayment(member, targets, feeLevel);
     }
 
     /**
@@ -565,38 +615,42 @@ contract LAEClubMatrix {
         if (users[user].activeLevels[nextLevel]) return;
         users[user].activeLevels[nextLevel] = true;
         emit Upgrade(users[user].id, users[users[user].referrer].id, nextLevel);
-        _placeMember(user, nextLevel, false);
+        _placeMemberAtLevel(user, nextLevel, false, 1);
     }
 
     // --- INCOME (single 90% payout, role table + eligibility/lapse) ---
 
-    function _payByRole(address member, address boardOwner, uint8 slot, uint8 level) private {
-        uint256 amount = levelTokenCost[level];
-        bool recycled = users[boardOwner].board[level].reinvestCount > 0;
+    function _payByRole(
+        address member,
+        address boardOwner,
+        uint8 slot,
+        uint8 boardLevel,
+        uint8 feeLevel
+    ) private {
+        uint256 amount = levelTokenCost[feeLevel];
+        bool recycled = users[boardOwner].board[boardLevel].reinvestCount > 0;
 
         // Slots 4 & 14 fund the board owner's upline next-cycle board (treasury only for owner).
         if (slot == 4 || slot == 14) {
-            _payTreasurySlotToUpline1(boardOwner, member, level, amount);
+            _payTreasurySlotToUpline1(boardOwner, member, boardLevel, amount);
             return;
         }
 
         // Position 5: cycle 1 -> upline (treasury when owner has no upline); cycle 2+ -> board owner.
         if (slot == 5) {
             if (!recycled) {
-                _payTreasurySlotToUpline1(boardOwner, member, level, amount);
+                _payTreasurySlotToUpline1(boardOwner, member, boardLevel, amount);
                 return;
             }
-            _payResolved(boardOwner, member, level, amount);
+            _payResolved(boardOwner, member, boardLevel, amount);
             return;
         }
 
         address target;
         if (slot == 1) {
-            // board owner's 1st upline
             target = _uplineOf(boardOwner, 1);
             if (target == address(0)) target = owner;
         } else if (slot == 2) {
-            // board owner's 2nd upline; owner wallet when it does not exist
             target = _uplineOf(boardOwner, 2);
             if (target == address(0)) target = owner;
         } else if (slot == 7) {
@@ -620,7 +674,7 @@ contract LAEClubMatrix {
             return;
         }
 
-        _payResolved(target, member, level, amount);
+        _payResolved(target, member, boardLevel, amount);
     }
 
     /**
@@ -628,13 +682,18 @@ contract LAEClubMatrix {
      *      to fund that upline's recycled-cycle board. Only the root owner (no upline)
      *      sends these legs to the platform treasury.
      */
-    function _payTreasurySlotToUpline1(address boardOwner, address member, uint8 level, uint256 amount) private {
+    function _payTreasurySlotToUpline1(
+        address boardOwner,
+        address member,
+        uint8 boardLevel,
+        uint256 amount
+    ) private {
         address upline1 = _uplineOf(boardOwner, 1);
         if (upline1 == address(0)) {
             _sendToPlatformTreasury(amount);
             return;
         }
-        _payResolved(upline1, member, level, amount);
+        _payResolved(upline1, member, boardLevel, amount);
     }
 
     /**

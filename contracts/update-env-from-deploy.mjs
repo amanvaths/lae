@@ -11,7 +11,8 @@ if (!fs.existsSync(deployPath)) {
 }
 const d = JSON.parse(fs.readFileSync(deployPath, "utf8"));
 
-const matrixCore = d.matrixCore ?? d.matrix;
+const matrixCore =
+  d.contracts?.LAEClubMatrix ?? d.matrixCore ?? d.matrix ?? d.contracts?.matrixCore;
 const deployBlock = String(d.matrixCoreDeployBlock ?? d.deployBlock ?? 0);
 
 function upsertEnv(filePath, updates) {
@@ -31,19 +32,23 @@ const root = path.join(__dirname, "..");
 
 upsertEnv(path.join(root, ".env.local"), {
   NEXT_PUBLIC_CHAIN_ID: String(d.chainId ?? 97),
+  NEXT_PUBLIC_LAE_MATRIX_CONTRACT: matrixCore,
   NEXT_PUBLIC_MATRIX_CORE_CONTRACT: matrixCore,
   NEXT_PUBLIC_MATRIX_CORE_DEPLOY_BLOCK: deployBlock,
-  NEXT_PUBLIC_PAYMENT_TOKEN: d.paymentToken,
-  NEXT_PUBLIC_LAE_COIN_CONTRACT: d.laeCoin,
+  NEXT_PUBLIC_LAE_MATRIX_DEPLOY_BLOCK: deployBlock,
+  NEXT_PUBLIC_PAYMENT_TOKEN: d.paymentToken ?? d.contracts?.TestPaymentToken,
+  NEXT_PUBLIC_LAE_COIN_CONTRACT: d.laeCoin ?? d.contracts?.LAECoin,
   NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000",
 });
 
 upsertEnv(path.join(root, "backend", ".env"), {
+  LAE_MATRIX_CONTRACT_ADDRESS: matrixCore,
   MATRIX_CORE_CONTRACT_ADDRESS: matrixCore,
+  LAE_MATRIX_DEPLOY_BLOCK: deployBlock,
   MATRIX_CORE_DEPLOY_BLOCK: deployBlock,
   INDEXER_START_BLOCK: deployBlock,
-  LAE_COIN_CONTRACT_ADDRESS: d.laeCoin,
-  PAYMENT_TOKEN_ADDRESS: d.paymentToken,
+  LAE_COIN_CONTRACT_ADDRESS: d.laeCoin ?? d.contracts?.LAECoin,
+  PAYMENT_TOKEN_ADDRESS: d.paymentToken ?? d.contracts?.TestPaymentToken,
   CHAIN_ID: String(d.chainId ?? 97),
 });
 
