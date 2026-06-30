@@ -3,7 +3,7 @@ export const MATRIX_CORE_DEPLOY_BLOCK = BigInt(
   process.env.LAE_MATRIX_DEPLOY_BLOCK ??
     process.env.MATRIX_CORE_DEPLOY_BLOCK ??
     process.env.INDEXER_START_BLOCK ??
-    "116382526"
+    "116389117"
 );
 
 export const CHAIN = {
@@ -20,7 +20,7 @@ export const CONTRACTS = {
   matrixCore:
     process.env.LAE_MATRIX_CONTRACT_ADDRESS ??
     process.env.MATRIX_CORE_CONTRACT_ADDRESS ??
-    "0x57455f4487285d7a826Be6aD88e1C7B5bbF5A229",
+    "0x3de28D8C5031581D595Ec401d89d5E8911ec49bE",
   senso: process.env.SENSO_CONTRACT_ADDRESS ?? "0x6521619C38fe4be6B800263CC783d9524ED4F7BA",
   slt: process.env.SLT_CONTRACT_ADDRESS ?? "0xc842c083E703ecf82496813cc3BFe6d36c0A49b0",
   spin: process.env.SPIN_CONTRACT_ADDRESS ?? "0xF9bdE4a2Ca487b18DA8546124b63Ec9e938ea1aE",
