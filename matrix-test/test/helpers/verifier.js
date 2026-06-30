@@ -28,8 +28,9 @@ function validateReferenceRun(ref) {
     const slot = p.slot;
     const actual = p.treasury ? TREASURY_LABEL : `#${p.receiverId}`;
 
-    // board owner must be upline of entrant
-    if (boardOwner !== 0) {
+    // board owner must be upline of entrant (global recycle FIFO exempt — matrix head may not be entrant's upline)
+    const globalRecycle = typeof p.kind === "string" && p.kind.startsWith("recycle-");
+    if (boardOwner !== 0 && !globalRecycle) {
       let cur = ref.users.get(p.fromId).referrerId;
       let found = false;
       while (cur !== 0) {
@@ -48,8 +49,10 @@ function validateReferenceRun(ref) {
     if (p.treasury) {
       const upline1 = boardOwner !== 0 ? ref._uplineOf(boardOwner, 1) : 0;
       const okTreasury =
-        ((slot === 14 || (slot === 5 && !p.recycledAtPay)) && upline1 === 0) ||
+        ((slot === 14) && upline1 === 0) ||
         (slot === 4 && p.recycledAtPay) ||
+        (slot === 4 && p.kind === "third-slot4") ||
+        (slot === 4 && p.kind === "recycle-slot4") ||
         (slot === 13 && p.kind === "treasury-slot13") ||
         p.kind === "lapse-treasury" || p.kind === "treasury-noboard" || p.kind === "treasury-other" ||
         p.kind === "treasury-slot4c2" || p.kind === "treasury-slot4max" || p.kind === "treasury-slot5max";

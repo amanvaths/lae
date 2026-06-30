@@ -41,7 +41,7 @@ class Reference {
   _err(m) { this.violations.push(m); }
 
   _emptyBoard() {
-    return { slots: [], reinvestCount: 0, totalFilled: 0, heldTokenForUpgrade: 0n, upgradeOpened: false };
+    return { slots: [], reinvestCount: 0, totalFilled: 0, heldTokenForUpgrade: 0n, fundingBalance: 0n, upgradeOpened: false };
   }
 
   _emptySubBoard() {
@@ -176,6 +176,14 @@ class Reference {
     });
   }
 
+  _sendDividendsFromFunding(receiverId, amount, fromId, boardOwnerId, slot, kind, viaLapse, recycledAtPay, directSnap, intendedTarget, boardLevel = 1) {
+    const share = matrixShare(amount);
+    const b = this._board(boardOwnerId, boardLevel);
+    if (b.fundingBalance < share) return;
+    b.fundingBalance -= share;
+    this._sendDividends(receiverId, amount, fromId, boardOwnerId, slot, kind, viaLapse, recycledAtPay, directSnap, intendedTarget, boardLevel);
+  }
+
   _resolveRecipient(targetId, directSnap) {
     let cur = targetId;
     for (let i = 0; i < 3; i++) {
@@ -189,8 +197,11 @@ class Reference {
 
   _payResolved(targetId, fromId, boardOwnerId, slot, kind, amount, recycledAtPay, directSnap, boardLevel = 1) {
     const r = this._resolveRecipient(targetId, directSnap);
+    const fromFundingPool = boardLevel >= 2;
     if (r.isTreasury) {
       this._sendTreasury(amount, fromId, boardOwnerId, slot, "lapse-treasury", recycledAtPay, directSnap, targetId, boardLevel);
+    } else if (fromFundingPool) {
+      this._sendDividendsFromFunding(r.recipientId, amount, fromId, boardOwnerId, slot, kind, r.viaLapse, recycledAtPay, directSnap, targetId, boardLevel);
     } else {
       this._sendDividends(r.recipientId, amount, fromId, boardOwnerId, slot, kind, r.viaLapse, recycledAtPay, directSnap, targetId, boardLevel);
     }
@@ -277,6 +288,14 @@ class Reference {
       recycledAtPay: false, directSnap: new Map(), intendedTarget: 0, boardLevel, held: true,
     });
     this._openUpgradeBoard(boardOwnerId, boardLevel);
+    if (boardLevel < LAST_LEVEL) {
+      const upline1 = this._uplineOf(boardOwnerId, 1);
+      const release = b.heldTokenForUpgrade;
+      if (upline1 !== 0 && release > 0n) {
+        b.heldTokenForUpgrade = 0n;
+        this._board(upline1, boardLevel + 1).fundingBalance += release;
+      }
+    }
   }
 
   _appendBoard(boardOwnerId, memberId, level) {

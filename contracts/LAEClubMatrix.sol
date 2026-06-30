@@ -30,10 +30,15 @@ interface ILAECoin {
  *
  *  INCOME (money)
  *  --------------
- *  **L1–L15:** every upline-board placement pays 90% of that board level's entry
- *  cost (0.0009 at L1, 0.0018 at L2, 0.0036 at L3, …) by slot role.
- *  **L2+ settlement:** slot 14 recycle, cycle-2+ direct, cycle-1 frontier — separate
- *  from L1 immediate pays so higher boards never block L1 slot income.
+ *  **L1:** each upline-board placement pays immediately by slot role (0.0009 on
+ *      cycle-1 slots 1–3,6–13; slots 4 & 5 hold). Registration fee = 0.001.
+ *      the board owner's 1st upline **next-level funding pool** (0.0009+0.0009=0.0018
+ *      at L1→L2). No extra tokens are minted for L2+.
+ *  **L2–L15:** payouts use the same slot role table but draw **only** from that board's
+ *      `fundingBalance` (fed by downline slot 4+5 releases on level N−1). If unfunded,
+ *      the payout is skipped — total distributed never exceeds collected registration fees.
+ *  **L2+ settlement:** slot 14 recycle, cycle-2+ direct, cycle-1 frontier — one pay
+ *      per level per registration, same priority as L1.
  *  **Recycle matrix:** on main slot 14, user enters a global 6-slot FIFO board
  *  (top→bottom, left→right) with recycle income rules; cycle-2+ carry pays.
  *  **upgradeOpened:** after cycle-1 slot 5, slots 4/5 never hold again on that board.
@@ -47,7 +52,7 @@ interface ILAECoin {
  *      10             -> board owner's 2nd direct (Downline 2)
  *      13             -> first eligible 2nd-level downline (left-to-right)
  *  Cycle 2+ direct-referral boards still use direct-owner priority on that level.
- *  Higher levels may draw from contract float for slot 14 / upgrade legs.
+ *  Upgrade / recycle sub-boards still settle from on-hand registration liquidity.
  *
  *  ELIGIBILITY + LAPSE
  *  -------------------
@@ -79,7 +84,8 @@ contract LAEClubMatrix {
         uint256 reinvestCount;  // completed cycles (0 = first cycle)
         uint256 totalFilled;    // lifetime placements (all cycles)
         uint256 totalEarning;   // BTC earned by this board's owner at this level
-        uint256 heldTokenForUpgrade; // cycle-1 slot 4+5 halves held toward next-level (2x) funding
+        uint256 heldTokenForUpgrade; // cycle-1 slot 4+5 halves held until slot 5 releases upward
+        uint256 fundingBalance; // L2+ payout pool (from downline slot 4+5 releases on level-1)
         bool upgradeOpened;     // slot 5 cycle-1 opened upgrade — never hold slots 4/5 again
     }
 
@@ -198,6 +204,13 @@ contract LAEClubMatrix {
     );
     event LaeRewardClaimed(address indexed user, uint256 amount);
     event UpgradeHold(uint256 indexed boardOwnerId, uint256 indexed fromUserId, uint8 boardLevel, uint256 amount);
+    event LevelFundingReleased(
+        uint256 indexed fromBoardOwnerId,
+        uint256 indexed toBoardOwnerId,
+        uint8 fromLevel,
+        uint8 toLevel,
+        uint256 amount
+    );
     event RecycleMatrixPlace(
         uint256 indexed user,
         uint256 indexed matrixOwner,
@@ -411,6 +424,9 @@ contract LAEClubMatrix {
             dst.reinvestCount = src.reinvestCount;
             dst.totalFilled = src.totalFilled;
             dst.totalEarning = src.totalEarning;
+            dst.heldTokenForUpgrade = src.heldTokenForUpgrade;
+            dst.fundingBalance = src.fundingBalance;
+            dst.upgradeOpened = src.upgradeOpened;
             newUser.lastDownlineIdx[level] = oldUser.lastDownlineIdx[level];
         }
 
@@ -547,26 +563,22 @@ contract LAEClubMatrix {
         _emitNewUserPlace(member, boardOwner, level, rc + 1, slot);
 
         if (doPay) {
-            // L1: pay every placement on every upline board (cycle 1 behaviour).
+            // L1: pay each upline-board placement immediately (cycle-1 behaviour).
             if (level == 1) {
                 _payByRole(member, boardOwner, slot, level, feeLevel);
-            } else {
-                if (rc > 0 && users[member].referrer == boardOwner && targets.directOwner == address(0)) {
-                    targets.directOwner = boardOwner;
-                    targets.directSlot = slot;
-                    targets.directLevel = level;
-                }
-                if (slot == MATRIX_SIZE && targets.recyclePayOwner == address(0)) {
-                    targets.recyclePayOwner = boardOwner;
-                    targets.recyclePaySlot = slot;
-                    targets.recyclePayLevel = level;
-                }
-                if (rc < targets.minReinvest) {
-                    targets.minReinvest = rc;
-                    targets.frontierOwner = boardOwner;
-                    targets.frontierSlot = slot;
-                    targets.frontierLevel = level;
-                }
+            } else if (rc > 0 && users[member].referrer == boardOwner && targets.directOwner == address(0)) {
+                targets.directOwner = boardOwner;
+                targets.directSlot = slot;
+                targets.directLevel = level;
+            } else if (slot == MATRIX_SIZE && targets.recyclePayOwner == address(0)) {
+                targets.recyclePayOwner = boardOwner;
+                targets.recyclePaySlot = slot;
+                targets.recyclePayLevel = level;
+            } else if (rc < targets.minReinvest) {
+                targets.minReinvest = rc;
+                targets.frontierOwner = boardOwner;
+                targets.frontierSlot = slot;
+                targets.frontierLevel = level;
             }
         }
 
@@ -938,7 +950,8 @@ contract LAEClubMatrix {
             upgradeOpenedFlag,
             recycledBoard
         );
-        _payResolved(target, member, level, amount);
+        bool fromFundingPool = matrixType == uint8(MatrixKind.RECYCLE) && level >= 2;
+        _payResolved(target, member, level, amount, boardOwner, level, fromFundingPool);
     }
 
     function _treasuryWithTrace(
@@ -1009,7 +1022,7 @@ contract LAEClubMatrix {
 
         // Slot 5 cycle 2+ / post-upgrade: board-owner income at 009 share.
         if (slot == 5) {
-            _payResolved(boardOwner, member, boardLevel, amount);
+            _payResolved(boardOwner, member, boardLevel, amount, boardOwner, boardLevel, boardLevel >= 2);
             return;
         }
 
@@ -1041,7 +1054,7 @@ contract LAEClubMatrix {
             return;
         }
 
-        _payResolved(target, member, boardLevel, amount);
+        _payResolved(target, member, boardLevel, amount, boardOwner, boardLevel, boardLevel >= 2);
     }
 
     /**
@@ -1072,6 +1085,23 @@ contract LAEClubMatrix {
         emit UpgradeHold(users[boardOwner].id, users[member].id, boardLevel, holdShare);
         b.upgradeOpened = true;
         _openUpgradeBoard(boardOwner, boardLevel);
+
+        if (boardLevel < LAST_LEVEL) {
+            address upline1 = _uplineOf(boardOwner, 1);
+            uint256 release = b.heldTokenForUpgrade;
+            if (upline1 != address(0) && release > 0) {
+                b.heldTokenForUpgrade = 0;
+                users[upline1].board[boardLevel + 1].fundingBalance += release;
+                emit LevelFundingReleased(
+                    users[boardOwner].id,
+                    users[upline1].id,
+                    boardLevel,
+                    boardLevel + 1,
+                    release
+                );
+            }
+        }
+
         _emitPaymentTrace(
             0,
             0,
@@ -1104,17 +1134,27 @@ contract LAEClubMatrix {
             _sendToPlatformTreasury(amount);
             return;
         }
-        _payResolved(upline1, member, boardLevel, amount);
+        _payResolved(upline1, member, boardLevel, amount, boardOwner, boardLevel, boardLevel >= 2);
     }
 
     /**
      * @dev Apply eligibility + lapse to `target`, then pay the 90% BTC share to
-     *      the resolved recipient (or treasury when nobody in the chain qualifies).
+     *      the resolved recipient. L2+ draws from the board's funding pool only.
      */
-    function _payResolved(address target, address member, uint8 level, uint256 amount) private {
+    function _payResolved(
+        address target,
+        address member,
+        uint8 level,
+        uint256 amount,
+        address boardOwner,
+        uint8 boardLevel,
+        bool fromFundingPool
+    ) private {
         (address recipient, bool isTreasury) = _resolveRecipient(target, member, level);
         if (isTreasury) {
             _sendToPlatformTreasury(amount);
+        } else if (fromFundingPool) {
+            _sendTokenDividendsFromFunding(recipient, member, level, amount, boardOwner, boardLevel);
         } else {
             _sendTokenDividends(recipient, member, level, amount);
         }
@@ -1191,6 +1231,35 @@ contract LAEClubMatrix {
         bool success = IERC20(PAYMENT_TOKEN).transfer(receiver, distributable);
         if (!success) {
             emit TokenTransferFailed(receiver, distributable, "BTC transfer failed from contract balance");
+            revert("LAEClubMatrix: token transfer failed to receiver");
+        }
+        users[receiver].totalIncome += distributable;
+        users[receiver].board[level].totalEarning += distributable;
+        emit TokenReceived(users[receiver].id, users[from].id, from, level, distributable);
+    }
+
+    /**
+     * @dev L2+ matrix payout — debits the board's funding pool (fed by downline slot 4+5).
+     *      Skips silently when the pool is empty (closed-loop solvency).
+     */
+    function _sendTokenDividendsFromFunding(
+        address receiver,
+        address from,
+        uint8 level,
+        uint256 amount,
+        address boardOwner,
+        uint8 boardLevel
+    ) private {
+        uint256 distributable = _matrixShare(amount);
+        Board storage b = users[boardOwner].board[boardLevel];
+        if (b.fundingBalance < distributable) {
+            return;
+        }
+        b.fundingBalance -= distributable;
+        bool success = IERC20(PAYMENT_TOKEN).transfer(receiver, distributable);
+        if (!success) {
+            b.fundingBalance += distributable;
+            emit TokenTransferFailed(receiver, distributable, "BTC transfer failed from level funding");
             revert("LAEClubMatrix: token transfer failed to receiver");
         }
         users[receiver].totalIncome += distributable;
