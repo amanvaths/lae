@@ -29,6 +29,7 @@ async function deployMatrixHarness() {
     minted += chunk;
   }
   await token.approve(await matrix.getAddress(), ethers.MaxUint256);
+  await token.transfer(await matrix.getAddress(), ethers.parseEther("3000000"));
   return { matrix, token, owner, treasury, clubPool };
 }
 
@@ -40,6 +41,7 @@ async function registerAndParse(matrix, referrerId, userAddr) {
   let registeredId = null;
   let receiverId = null;
   let tokenAmount = null;
+  const tokenPayments = [];
   const placements = [];
 
   for (const log of receipt.logs) {
@@ -48,8 +50,15 @@ async function registerAndParse(matrix, referrerId, userAddr) {
       if (parsed.name === "Registration") {
         registeredId = Number(parsed.args.userId);
       } else if (parsed.name === "TokenReceived") {
-        receiverId = Number(parsed.args.receiverId);
-        tokenAmount = parsed.args.amount;
+        const row = {
+          receiverId: Number(parsed.args.receiverId),
+          fromId: Number(parsed.args.fromId),
+          level: Number(parsed.args.level),
+          amount: parsed.args.amount,
+        };
+        tokenPayments.push(row);
+        receiverId = row.receiverId;
+        tokenAmount = row.amount;
       } else if (parsed.name === "NewUserPlace") {
         placements.push({
           userId: Number(parsed.args.user),
@@ -68,6 +77,7 @@ async function registerAndParse(matrix, referrerId, userAddr) {
     registeredId,
     receiverId,
     tokenAmount,
+    tokenPayments,
     treasury: receiverId === null,
     placements,
     receipt,

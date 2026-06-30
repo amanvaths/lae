@@ -332,21 +332,25 @@ class Reference {
     });
 
     if (doPay) {
-      if (rc > 0 && this.users.get(memberId).referrerId === boardOwnerId && targets.directOwner === 0) {
-        targets.directOwner = boardOwnerId;
-        targets.directSlot = slot;
-        targets.directLevel = level;
-      }
-      if (slot === MATRIX_SIZE && targets.recyclePayOwner === 0) {
-        targets.recyclePayOwner = boardOwnerId;
-        targets.recyclePaySlot = slot;
-        targets.recyclePayLevel = level;
-      }
-      if (rc < targets.minReinvest) {
-        targets.minReinvest = rc;
-        targets.frontierOwner = boardOwnerId;
-        targets.frontierSlot = slot;
-        targets.frontierLevel = level;
+      if (level === 1) {
+        this._payByRole(memberId, boardOwnerId, slot, level, 1);
+      } else {
+        if (rc > 0 && this.users.get(memberId).referrerId === boardOwnerId && targets.directOwner === 0) {
+          targets.directOwner = boardOwnerId;
+          targets.directSlot = slot;
+          targets.directLevel = level;
+        }
+        if (slot === MATRIX_SIZE && targets.recyclePayOwner === 0) {
+          targets.recyclePayOwner = boardOwnerId;
+          targets.recyclePaySlot = slot;
+          targets.recyclePayLevel = level;
+        }
+        if (rc < targets.minReinvest) {
+          targets.minReinvest = rc;
+          targets.frontierOwner = boardOwnerId;
+          targets.frontierSlot = slot;
+          targets.frontierLevel = level;
+        }
       }
     }
 
@@ -373,29 +377,42 @@ class Reference {
       this._payByRole(memberId, targets.directOwner, targets.directSlot, targets.directLevel, feeLevel);
     } else if (targets.frontierOwner !== 0) {
       this._payByRole(memberId, targets.frontierOwner, targets.frontierSlot, targets.frontierLevel, feeLevel);
-    } else {
-      this._sendTreasury(AMOUNT, memberId, 0, 0, "treasury-noboard", false, new Map(), 0, 1);
+    }
+  }
+
+  _settleHigherLevelPayment(memberId, targets, level, feeLevel = 1) {
+    if (targets.recyclePayOwner !== 0) {
+      this._payByRole(memberId, targets.recyclePayOwner, targets.recyclePaySlot, targets.recyclePayLevel, feeLevel);
+      return;
+    }
+    if (targets.directOwner !== 0) {
+      this._payByRole(memberId, targets.directOwner, targets.directSlot, targets.directLevel, feeLevel);
+      return;
+    }
+    if (targets.frontierOwner === 0) return;
+    if (this._board(targets.frontierOwner, level).reinvestCount === 0) {
+      this._payByRole(memberId, targets.frontierOwner, targets.frontierSlot, targets.frontierLevel, feeLevel);
     }
   }
 
   _placeMemberAllLevels(memberId, doPay) {
-    let targets = {
-      minReinvest: Infinity,
-      frontierOwner: 0,
-      frontierSlot: 0,
-      frontierLevel: 1,
-      directOwner: 0,
-      directSlot: 0,
-      directLevel: 1,
-      recyclePayOwner: 0,
-      recyclePaySlot: 0,
-      recyclePayLevel: 1,
-    };
     for (let level = 1; level <= LAST_LEVEL; level++) {
+      let targets = {
+        minReinvest: Infinity,
+        frontierOwner: 0,
+        frontierSlot: 0,
+        frontierLevel: level,
+        directOwner: 0,
+        directSlot: 0,
+        directLevel: level,
+        recyclePayOwner: 0,
+        recyclePaySlot: 0,
+        recyclePayLevel: level,
+      };
       targets = this._walkLevelPlacements(memberId, level, doPay, targets);
+      if (!doPay || level === 1) continue;
+      this._settleHigherLevelPayment(memberId, targets, level);
     }
-    if (!doPay) return;
-    this._settleRegistrationPayment(memberId, targets);
   }
 
   _placeMemberAtLevel(memberId, level, doPay) {

@@ -105,6 +105,7 @@ describe("LAEClubMatrix income verification (contract untouched)", function () {
           regNum,
           userId,
           receiverId: r.receiverId,
+          tokenPayments: r.tokenPayments,
           treasury: r.treasury,
           spotOn2,
           ownerReinvest: await getReinvestCount(matrix, 1),
@@ -126,29 +127,46 @@ describe("LAEClubMatrix income verification (contract untouched)", function () {
       const slot10 = afterOwnerRecycle.find((x) => x.spotOn2 === 10);
 
       expect(slot7, "must fill #2 slot 7 after owner recycle").to.exist;
-      expect(slot7.receiverId).to.equal(4, "slot 7 payment -> #4 (first direct of #2)");
-      expect(slot7.receiverId).to.not.equal(1, "slot 7 must NOT pay owner");
+      expect(slot7.tokenPayments.some((p) => p.receiverId === 4 && p.fromId === slot7.userId)).to.equal(
+        true,
+        "slot 7 payment -> #4 (first direct of #2)"
+      );
+      expect(slot7.tokenPayments.some((p) => p.receiverId === 1 && p.fromId === slot7.userId)).to.equal(
+        false,
+        "slot 7 must NOT pay owner"
+      );
 
       expect(slot8, "must fill #2 slot 8").to.exist;
-      expect(slot8.receiverId).to.equal(2, "slot 8 payment -> #2");
+      expect(slot8.tokenPayments.some((p) => p.receiverId === 2 && p.fromId === slot8.userId)).to.equal(
+        true,
+        "slot 8 payment -> #2"
+      );
 
       expect(slot9, "must fill #2 slot 9").to.exist;
-      expect(slot9.receiverId).to.equal(2, "slot 9 payment -> #2");
+      expect(slot9.tokenPayments.some((p) => p.receiverId === 2 && p.fromId === slot9.userId)).to.equal(
+        true,
+        "slot 9 payment -> #2"
+      );
 
       expect(slot10, "must fill #2 slot 10").to.exist;
-      expect(slot10.receiverId).to.equal(5, "slot 10 payment -> #5 (second direct of #2)");
+      expect(slot10.tokenPayments.some((p) => p.receiverId === 5 && p.fromId === slot10.userId)).to.equal(
+        true,
+        "slot 10 payment -> #5 (second direct of #2)"
+      );
 
       for (const row of [slot7, slot8, slot9, slot10]) {
-        if (row.receiverId === 1) {
+        const expectedBySlot = { 7: 4, 8: 2, 9: 2, 10: 5 };
+        const exp = expectedBySlot[row.spotOn2];
+        if (!row.tokenPayments.some((p) => p.receiverId === exp && p.fromId === row.userId)) {
           printFail({
             regNum: row.regNum,
             boardOwner: 2,
             slot: row.spotOn2,
-            expected: "not owner",
-            actual: "#1",
-            reason: "Owner leak after recycle on #2 board",
+            expected: `#${exp}`,
+            actual: `#${row.receiverId}`,
+            reason: `#2 board slot ${row.spotOn2} payment mismatch`,
           });
-          expect.fail("owner leak");
+          expect.fail("board #2 slot payment mismatch");
         }
       }
     });

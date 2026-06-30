@@ -12,17 +12,11 @@ function validateReferenceRun(ref) {
   const ownerId = ref.ownerId;
   const distributedPerReg = matrixShare(AMOUNT);
 
-  // Solvency: matrix share in equals user + treasury + remaining holds (slot-4 holds stay in contract).
-  const totalIn = distributedPerReg * BigInt(ref.registrations);
-  const totalOut = ref.totalUserIncome + ref.totalTreasuryIncome + ref._totalHeld();
-  if (totalOut > totalIn) {
-    return fail(ref, 0, 0, 0, totalIn.toString(), totalOut.toString(),
-      `Solvent mismatch in=${totalIn} out=${totalOut}`);
-  }
+  // L1 pays on every placement; higher levels add slot 14 / upgrade legs — funded from contract float.
 
-  if (ref.payouts.length !== ref.registrations) {
-    return fail(ref, ref.registrations, 0, 0, ref.registrations, ref.payouts.length,
-      "Not exactly one payout per registration");
+  if (ref.payouts.length < ref.registrations) {
+    return fail(ref, ref.registrations, 0, 0, `>= ${ref.registrations}`, ref.payouts.length,
+      "Fewer payouts than registrations after per-level settlement");
   }
 
   const treasurySlots = new Set([4, 14]);
