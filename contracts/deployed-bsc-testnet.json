@@ -2,11 +2,11 @@
   "chainId": 97,
   "network": "bsc-testnet",
   "contracts": {
-    "LAEClubMatrix": "0x0511371f6DbA7FB5E8feF1ddF0379e23c20A8e5c",
+    "LAEClubMatrix": "0x72F86683DEEfB68B728488f88A82FD55D31f0C6E",
     "LAECoin": "0xD6698E6a8Ee4712cC2E36C150f1C34e59884C45A",
     "TestPaymentToken": "0xb2bE66BE07E1AD04074B32B8b13DcdFaB6B57575"
   },
-  "deployBlock": 116355005,
+  "deployBlock": 116363747,
   "deployedAt": "2026-06-30",
   "codeVersion": "b1345e7",
   "owner": "0xef9594fC5145404BfC7B5640296C3864319e3d86",

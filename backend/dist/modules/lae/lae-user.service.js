@@ -1,6 +1,13 @@
 import { prisma } from "../../lib/prisma.js";
 import { serializeForJson } from "../../lib/serialize.js";
 import { laeUserIdForWallet } from "../blockchain/lae-user-lookup.js";
+import { Decimal } from "@prisma/client/runtime/library";
+function incomeRowKey(txHash, logIndex) {
+    return `${txHash}:${logIndex}`;
+}
+function toIncomeOutRow(row) {
+    return { ...row };
+}
 export async function getLaeUserByWallet(wallet) {
     const userId = await laeUserIdForWallet(wallet);
     if (!userId)
@@ -50,30 +57,50 @@ export async function getLaeUserIncome(wallet, kind, limit = 100) {
         orderBy: { blockNumber: "desc" },
         take: limit,
     });
-    if (rows.length > 0) {
-        let lapseTx = new Set();
-        if (kind === "matrix" || !kind) {
-            const lapseRows = await prisma.matrixCoreIncome.findMany({
-                where: { toUserId: userId, kind: "lapse" },
-                select: { txHash: true, toUserId: true, fromUserId: true },
-            });
-            lapseTx = new Set(lapseRows.map((r) => `${r.txHash}:${r.toUserId}:${r.fromUserId ?? ""}`));
-        }
-        const filtered = rows.filter((r) => r.kind !== "matrix" ||
-            !lapseTx.has(`${r.txHash}:${r.toUserId}:${r.fromUserId ?? ""}`));
-        const seenMatrixTx = new Set();
-        const deduped = filtered.filter((r) => {
-            if (r.kind !== "matrix")
-                return true;
-            const key = `${r.txHash}:${r.toUserId}`;
-            if (seenMatrixTx.has(key))
-                return false;
-            seenMatrixTx.add(key);
-            return true;
+    const wantMatrix = kind === "matrix" || kind === undefined;
+    const merged = rows.map(toIncomeOutRow);
+    if (wantMatrix) {
+        const uid = String(userId);
+        const chainEvents = await prisma.chainEvent.findMany({
+            where: {
+                eventName: "TokenReceived",
+                payload: { path: ["receiverId"], equals: uid },
+            },
+            orderBy: { blockNumber: "desc" },
+            take: Math.max(limit, 500),
         });
-        return serializeForJson(deduped);
+        const seen = new Set(merged.filter((r) => r.kind === "matrix").map((r) => incomeRowKey(r.txHash, r.logIndex)));
+        for (const e of chainEvents) {
+            if (seen.has(incomeRowKey(e.txHash, e.logIndex)))
+                continue;
+            const p = (e.payload ?? {});
+            merged.push({
+                id: `chain-${e.txHash}-${e.logIndex}`,
+                kind: "matrix",
+                fromUserId: p.fromId ? Number(p.fromId) : null,
+                toUserId: userId,
+                matrixOwnerId: null,
+                boardLevel: p.level ? Number(p.level) : null,
+                level: p.level ? Number(p.level) : null,
+                cycleId: null,
+                position: null,
+                amount: new Decimal(p.amount ?? "0"),
+                blockNumber: e.blockNumber ?? 0n,
+                txHash: e.txHash,
+                logIndex: e.logIndex,
+                createdAt: e.createdAt,
+            });
+            seen.add(incomeRowKey(e.txHash, e.logIndex));
+        }
     }
-    // Fallback: derive income rows from indexed chain events when mc_income projection missed
+    if (merged.length > 0) {
+        merged.sort((a, b) => {
+            const diff = Number(b.blockNumber - a.blockNumber);
+            return diff !== 0 ? diff : b.logIndex - a.logIndex;
+        });
+        return serializeForJson(merged.slice(0, limit));
+    }
+    // Fallback when mc_income is empty: derive from chain events only
     const eventNames = kind === "treasury"
         ? ["ClubPoolPayment"]
         : kind === "lapse"

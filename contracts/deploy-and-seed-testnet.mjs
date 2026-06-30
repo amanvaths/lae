@@ -126,7 +126,7 @@ async function ensureTokenFunding(wallet, matrixAddr, regCount) {
   const matrix = new ethers.Contract(matrixAddr, matrixAbi, wallet);
   const price = await matrix.levelTokenCost(1);
   const need = price * BigInt(regCount + 5);
-  const contractFloat = ethers.parseEther(String(Math.max(150, regCount * 5)));
+  const contractFloat = ethers.parseEther(String(Math.max(2500, regCount * 12)));
   const token = new ethers.Contract(PAYMENT_TOKEN, tokenAbi, wallet);
   const bal = await token.balanceOf(wallet.address);
   console.log("\n[2/4] Payment token — need", ethers.formatEther(need), "have", ethers.formatEther(bal));
@@ -300,7 +300,7 @@ function saveDeployJson(matrixAddr, deployBlock, wallet) {
   return addresses;
 }
 
-function updateEnvFiles(matrixAddr, deployBlock) {
+function updateEnvFiles(matrixAddr, deployBlock, prevDeploy = {}) {
   const d = {
     chainId: CHAIN_ID,
     matrixCore: matrixAddr,
@@ -344,13 +344,23 @@ function updateEnvFiles(matrixAddr, deployBlock) {
     CHAIN_ID: "97",
   });
 
-  patchRepoContractDefaults(matrixAddr, deployBlock);
+  patchRepoContractDefaults(matrixAddr, deployBlock, prevDeploy);
+}
+
+function readPrevDeployJson() {
+  const p = path.join(__dirname, "deployed-bsc-testnet.json");
+  if (!fs.existsSync(p)) return {};
+  try {
+    return JSON.parse(fs.readFileSync(p, "utf8"));
+  } catch {
+    return {};
+  }
 }
 
 /** Keep hardcoded fallbacks in repo aligned after fresh deploy. */
-function patchRepoContractDefaults(matrixAddr, deployBlock) {
-  const oldMatrix = /0x912623C0Dd9f0aeF626080438DA41322A7E93425/gi;
-  const oldBlock = /116339372/g;
+function patchRepoContractDefaults(matrixAddr, deployBlock, prevDeploy = {}) {
+  const prevMatrix = prevDeploy.contracts?.LAEClubMatrix;
+  const prevBlock = prevDeploy.deployBlock;
   const files = [
     path.join(ROOT, "lib", "lae-club", "contracts.ts"),
     path.join(ROOT, "backend", "src", "config", "chains.ts"),
@@ -362,7 +372,13 @@ function patchRepoContractDefaults(matrixAddr, deployBlock) {
   for (const fp of files) {
     if (!fs.existsSync(fp)) continue;
     let text = fs.readFileSync(fp, "utf8");
-    const next = text.replace(oldMatrix, matrixAddr).replace(oldBlock, String(deployBlock));
+    let next = text;
+    if (prevMatrix && prevMatrix.toLowerCase() !== matrixAddr.toLowerCase()) {
+      next = next.replaceAll(prevMatrix, matrixAddr);
+    }
+    if (prevBlock && String(prevBlock) !== String(deployBlock)) {
+      next = next.replaceAll(String(prevBlock), String(deployBlock));
+    }
     if (next !== text) {
       fs.writeFileSync(fp, next);
       console.log("      Patched", path.relative(ROOT, fp));
@@ -410,8 +426,9 @@ async function main() {
   const { allPayments, allRegs } = await seedUsers(matrixC, wallet, MAX_USERS);
 
   console.log("\n[4/4] Save config + payment log");
+  const prevDeploy = readPrevDeployJson();
   saveDeployJson(matrixAddr, deployBlock, wallet);
-  updateEnvFiles(matrixAddr, deployBlock);
+  updateEnvFiles(matrixAddr, deployBlock, prevDeploy);
 
   const logPath = path.join(__dirname, "seed-payments-testnet.json");
   fs.writeFileSync(

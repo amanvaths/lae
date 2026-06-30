@@ -887,7 +887,7 @@ model MatrixCoreIncome {
   level           Int?
   cycleId         Int?     @map("cycle_id")
   position        Int?
-  amount          Decimal  @db.Decimal(36, 18)
+  amount          Decimal  @db.Decimal(78, 0)
   blockNumber     BigInt   @map("block_number")
   txHash          String   @map("tx_hash")
   logIndex        Int      @map("log_index")
