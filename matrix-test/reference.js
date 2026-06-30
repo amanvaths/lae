@@ -7,6 +7,7 @@
 const LAST_LEVEL = 15;
 const MATRIX_SIZE = 14;
 const RECYCLE_MATRIX_SIZE = 6;
+const SUB_MATRIX_SIZE = 6;
 const BPS = 10000n;
 const MATRIX_BPS = 9000n;
 const AMOUNT = 1000000000000000n;
@@ -33,6 +34,7 @@ class Reference {
     this.violations = [];
     this.recycleMatrixQueue = [{ matrixOwner: 1, cycleId: 1, slots: [] }];
     this.recycleMatrixHead = 0;
+    this.lastMatrixId = 0;
     this._newUser(1, 0);
   }
 
@@ -42,11 +44,16 @@ class Reference {
     return { slots: [], reinvestCount: 0, totalFilled: 0, heldTokenForUpgrade: 0n, upgradeOpened: false };
   }
 
+  _emptySubBoard() {
+    return { slots: [], reinvestCount: 0, upgradeOpened: false, active: false, heldTokenForUpgrade: 0n, matrixId: 0 };
+  }
+
   _totalHeld() {
     let sum = 0n;
     for (const u of this.users.values()) {
       for (let lv = 1; lv <= LAST_LEVEL; lv++) {
         sum += u.boards[lv].heldTokenForUpgrade;
+        sum += u.upgradeBoard[lv].heldTokenForUpgrade;
       }
     }
     return sum;
@@ -54,7 +61,13 @@ class Reference {
 
   _newUser(id, referrerId) {
     const boards = {};
-    for (let lv = 1; lv <= LAST_LEVEL; lv++) boards[lv] = this._emptyBoard();
+    const upgradeBoard = {};
+    const thirdBoard = {};
+    for (let lv = 1; lv <= LAST_LEVEL; lv++) {
+      boards[lv] = this._emptyBoard();
+      upgradeBoard[lv] = this._emptySubBoard();
+      thirdBoard[lv] = this._emptySubBoard();
+    }
     const activeLevels = {};
     if (id === this.ownerId) {
       for (let lv = 1; lv <= LAST_LEVEL; lv++) activeLevels[lv] = true;
@@ -66,6 +79,8 @@ class Reference {
       referrerId,
       directReferrals: [],
       boards,
+      upgradeBoard,
+      thirdBoard,
       activeLevels,
       totalEarning: 0n,
       totalIncome: 0n,
@@ -85,6 +100,14 @@ class Reference {
 
   _board(id, level) {
     return this.users.get(id).boards[level];
+  }
+
+  _upgradeBoard(id, level) {
+    return this.users.get(id).upgradeBoard[level];
+  }
+
+  _thirdBoard(id, level) {
+    return this.users.get(id).thirdBoard[level];
   }
 
   _uplineOf(id, k) {
@@ -184,7 +207,7 @@ class Reference {
   }
 
   _payByRole(fromId, boardOwnerId, slot, boardLevel = 1, feeLevel = 1) {
-    const amount = levelCost(feeLevel);
+    const amount = levelCost(boardLevel);
     const recycledAtPay = this._board(boardOwnerId, boardLevel).reinvestCount > 0;
     const upgradeOpened = this._board(boardOwnerId, boardLevel).upgradeOpened;
 
@@ -245,31 +268,15 @@ class Reference {
   }
 
   _holdHalfAndFundUplineNextLevel(fromId, boardOwnerId, slot, boardLevel) {
-    if (boardLevel >= LAST_LEVEL) {
-      this._sendTreasury(levelCost(boardLevel), fromId, boardOwnerId, slot, "treasury-slot5max", false, new Map(), 0, boardLevel);
-      return;
-    }
-    const nextLevel = boardLevel + 1;
     const holdShare = matrixShare(levelCost(boardLevel));
     const b = this._board(boardOwnerId, boardLevel);
     b.heldTokenForUpgrade += holdShare;
-    const releaseNominal = levelCost(nextLevel);
-    const releaseShare = matrixShare(releaseNominal);
-    if (b.heldTokenForUpgrade < releaseShare) {
-      this.payouts.push({
-        fromId, boardOwnerId, slot, kind: "hold-slot5partial", receiverId: 0, amount: holdShare, treasury: false,
-        recycledAtPay: false, directSnap: new Map(), intendedTarget: 0, boardLevel, held: true,
-      });
-      return;
-    }
-    b.heldTokenForUpgrade -= releaseShare;
-    const upline1 = this._uplineOf(boardOwnerId, 1);
-    if (upline1 === 0) {
-      this._sendTreasury(releaseNominal, fromId, boardOwnerId, slot, "treasury-slot5c1", false, new Map(), 0, nextLevel);
-      return;
-    }
-    const snap = this._snapshotForTarget(upline1);
-    this._payResolved(upline1, fromId, boardOwnerId, slot, "fund-upline-next-level", releaseNominal, false, snap, nextLevel);
+    b.upgradeOpened = true;
+    this.payouts.push({
+      fromId, boardOwnerId, slot, kind: "hold-slot5", receiverId: 0, amount: holdShare, treasury: false,
+      recycledAtPay: false, directSnap: new Map(), intendedTarget: 0, boardLevel, held: true,
+    });
+    this._openUpgradeBoard(boardOwnerId, boardLevel);
   }
 
   _appendBoard(boardOwnerId, memberId, level) {
@@ -306,6 +313,118 @@ class Reference {
     }
   }
 
+  _openUpgradeBoard(userId, level) {
+    const sb = this._upgradeBoard(userId, level);
+    if (sb.active) return;
+    sb.active = true;
+    this.lastMatrixId += 1;
+    sb.matrixId = this.lastMatrixId;
+  }
+
+  _openThirdBoard(userId, level) {
+    const sb = this._thirdBoard(userId, level);
+    if (sb.active) return;
+    sb.active = true;
+    this.lastMatrixId += 1;
+    sb.matrixId = this.lastMatrixId;
+  }
+
+  _shouldPlaceOnSubBoard(boardOwnerId, memberId, sb) {
+    if (!sb.active) return false;
+    if (sb.reinvestCount === 0) return true;
+    return this.users.get(memberId).referrerId === boardOwnerId;
+  }
+
+  _appendSubBoard(boardOwnerId, memberId, level, kind) {
+    const sb = kind === "upgrade" ? this._upgradeBoard(boardOwnerId, level) : this._thirdBoard(boardOwnerId, level);
+    sb.slots.push(memberId);
+    return sb.slots.length;
+  }
+
+  _afterSubFill(boardOwnerId, slot, memberId, level, kind) {
+    const sb = kind === "upgrade" ? this._upgradeBoard(boardOwnerId, level) : this._thirdBoard(boardOwnerId, level);
+    if (kind === "upgrade" && slot === 5) sb.upgradeOpened = true;
+    if (slot === SUB_MATRIX_SIZE) {
+      sb.slots = [];
+      sb.reinvestCount += 1;
+    }
+  }
+
+  _payUpgradeSlot(fromId, boardOwnerId, slot, level) {
+    const sb = this._upgradeBoard(boardOwnerId, level);
+    const amount = levelCost(level);
+    const recycled = sb.reinvestCount > 0;
+    const kindPrefix = "upgrade";
+
+    if (slot === 4 && !recycled && !sb.upgradeOpened) {
+      const holdShare = matrixShare(amount);
+      sb.heldTokenForUpgrade += holdShare;
+      this.payouts.push({
+        fromId, boardOwnerId, slot, kind: `${kindPrefix}-hold-slot4`, receiverId: 0, amount: holdShare,
+        treasury: false, recycledAtPay: recycled, directSnap: new Map(), intendedTarget: 0, boardLevel: level, held: true,
+      });
+      return;
+    }
+    if (slot === 5 && !recycled && !sb.upgradeOpened) {
+      const holdShare = matrixShare(amount);
+      sb.heldTokenForUpgrade += holdShare;
+      sb.upgradeOpened = true;
+      this._openThirdBoard(boardOwnerId, level);
+      this.payouts.push({
+        fromId, boardOwnerId, slot, kind: `${kindPrefix}-hold-slot5`, receiverId: 0, amount: holdShare,
+        treasury: false, recycledAtPay: recycled, directSnap: new Map(), intendedTarget: 0, boardLevel: level, held: true,
+      });
+      return;
+    }
+
+    if (slot === 1 || slot === 2) {
+      this._payResolved(this.ownerId, fromId, boardOwnerId, slot, `${kindPrefix}-slot${slot}`, amount, recycled, new Map(), level);
+    } else if (slot === 3 || slot === 6) {
+      const snap = this._snapshotForTarget(boardOwnerId);
+      this._payResolved(boardOwnerId, fromId, boardOwnerId, slot, `${kindPrefix}-slot${slot}`, amount, recycled, snap, level);
+    } else if (slot === 4 || slot === 5) {
+      const snap = this._snapshotForTarget(boardOwnerId);
+      this._payResolved(boardOwnerId, fromId, boardOwnerId, slot, `${kindPrefix}-slot${slot}c2`, amount, recycled, snap, level);
+    }
+  }
+
+  _payThirdSlot(fromId, boardOwnerId, slot, level) {
+    const sb = this._thirdBoard(boardOwnerId, level);
+    const amount = levelCost(level);
+    const recycled = sb.reinvestCount > 0;
+    const kindPrefix = "third";
+
+    if (slot === 1) {
+      this._payResolved(this.ownerId, fromId, boardOwnerId, slot, `${kindPrefix}-slot1`, amount, recycled, new Map(), level);
+    } else if (slot === 2) {
+      let target = this._uplineOf(boardOwnerId, 1);
+      if (target === 0) target = this.ownerId;
+      const snap = this._snapshotForTarget(target);
+      this._payResolved(target, fromId, boardOwnerId, slot, `${kindPrefix}-slot2`, amount, recycled, snap, level);
+    } else if (slot === 3 || slot === 5 || slot === 6) {
+      const snap = this._snapshotForTarget(boardOwnerId);
+      this._payResolved(boardOwnerId, fromId, boardOwnerId, slot, `${kindPrefix}-slot${slot}`, amount, recycled, snap, level);
+    } else if (slot === 4) {
+      this._sendTreasury(amount, fromId, boardOwnerId, slot, `${kindPrefix}-slot4`, recycled, new Map(), 0, level);
+    }
+  }
+
+  _walkSubMatrixPlacements(memberId, level, kind, doPay) {
+    let cur = this.users.get(memberId).referrerId;
+    for (let hops = 0; cur !== 0 && hops < 60; hops++) {
+      const sb = kind === "upgrade" ? this._upgradeBoard(cur, level) : this._thirdBoard(cur, level);
+      if (this._shouldPlaceOnSubBoard(cur, memberId, sb)) {
+        const slot = this._appendSubBoard(cur, memberId, level, kind);
+        if (doPay) {
+          if (kind === "upgrade") this._payUpgradeSlot(memberId, cur, slot, level);
+          else this._payThirdSlot(memberId, cur, slot, level);
+        }
+        this._afterSubFill(cur, slot, memberId, level, kind);
+      }
+      cur = this.users.get(cur).referrerId;
+    }
+  }
+
   _unlockNextLevel(userId, nextLevel) {
     if (nextLevel > LAST_LEVEL) return;
     const u = this.users.get(userId);
@@ -315,9 +434,9 @@ class Reference {
   }
 
   _payRecycleMatrixSlot(fromId, matrixOwnerId, slot, level) {
-    const amount = levelCost(1);
+    const amount = levelCost(level);
     if (slot === 1) {
-      this._payResolved(this.ownerId, fromId, matrixOwnerId, slot, "recycle-slot1", amount, true, new Map(), 0, level);
+      this._payResolved(this.ownerId, fromId, matrixOwnerId, slot, "recycle-slot1", amount, true, new Map(), level);
     } else if (slot === 2) {
       let target = this._uplineOf(matrixOwnerId, 2);
       if (target === 0) target = this.ownerId;
@@ -346,7 +465,6 @@ class Reference {
 
   _afterFill(boardOwnerId, slot, memberId, level) {
     if (slot === 5) this._board(boardOwnerId, level).upgradeOpened = true;
-    if (slot === 5) this._unlockNextLevel(boardOwnerId, level + 1);
     if (slot === MATRIX_SIZE) {
       const b = this._board(boardOwnerId, level);
       b.slots = [];
@@ -447,6 +565,10 @@ class Reference {
         recyclePayLevel: level,
       };
       targets = this._walkLevelPlacements(memberId, level, doPay, targets);
+      if (doPay) {
+        this._walkSubMatrixPlacements(memberId, level, "upgrade", doPay);
+        this._walkSubMatrixPlacements(memberId, level, "third", doPay);
+      }
       if (!doPay || level === 1) continue;
       this._settleHigherLevelPayment(memberId, targets, level);
     }
@@ -482,4 +604,15 @@ class Reference {
   }
 }
 
-module.exports = { Reference, AMOUNT, levelCost, MATRIX_BPS, BPS, matrixShare, MATRIX_SIZE, LAST_LEVEL };
+module.exports = {
+  Reference,
+  AMOUNT,
+  levelCost,
+  MATRIX_BPS,
+  BPS,
+  matrixShare,
+  MATRIX_SIZE,
+  SUB_MATRIX_SIZE,
+  RECYCLE_MATRIX_SIZE,
+  LAST_LEVEL,
+};

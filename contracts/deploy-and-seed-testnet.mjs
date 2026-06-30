@@ -185,7 +185,7 @@ function parseReceiptEvents(iface, receipt) {
 async function seedUsers(matrixC, wallet, maxUsers) {
   console.log("\n[3/4] Seed binary tree — users #2.." + maxUsers);
 
-  const gas = { gasLimit: 10_000_000n };
+  const gasDefault = 10_000_000n;
   const iface = matrixC.interface;
   const allPayments = [];
   const allRegs = [];
@@ -196,7 +196,9 @@ async function seedUsers(matrixC, wallet, maxUsers) {
   const partnersDone = await matrixC.partnersInitialized();
   if (!partnersDone) {
     console.log("      initializePartners #2, #3...");
-    const tx = await matrixC.initializePartners(addrForUserId(2), addrForUserId(3), gas);
+    const tx = await matrixC.initializePartners(addrForUserId(2), addrForUserId(3), {
+      gasLimit: gasDefault,
+    });
     const rcpt = await tx.wait();
     const ev = parseReceiptEvents(iface, rcpt);
     allRegs.push({ step: "partners", tx: rcpt.hash, ...ev });
@@ -229,7 +231,14 @@ async function seedUsers(matrixC, wallet, maxUsers) {
     const expectedPay = ref.payouts[payoutsBefore] ?? null;
 
     process.stdout.write(`      reg #${userId} under #${sponsorId}... `);
-    const tx = await matrixC.registrationSys(sponsorId, userAddr, gas);
+    let gasLimit = gasDefault;
+    try {
+      const est = await matrixC.registrationSys.estimateGas(sponsorId, userAddr);
+      gasLimit = (est * 120n) / 100n + 50_000n;
+    } catch {
+      /* fallback */
+    }
+    const tx = await matrixC.registrationSys(sponsorId, userAddr, { gasLimit });
     const rcpt = await tx.wait();
     const ev = parseReceiptEvents(iface, rcpt);
     const pay = ev.payments[0];
@@ -401,6 +410,13 @@ async function main() {
   console.log("Deployer:", wallet.address);
   console.log("BNB:", ethers.formatEther(bal));
   console.log("MAX_USERS:", MAX_USERS);
+  const minBnb = ethers.parseEther(process.env.MIN_DEPLOY_BNB ?? "0.08");
+  if (bal < minBnb) {
+    console.error(`\nERROR: Need at least ${ethers.formatEther(minBnb)} tBNB on deployer.`);
+    console.error("Fund wallet:", wallet.address);
+    console.error("Faucet: https://testnet.bnbchain.org/faucet-smart");
+    process.exit(1);
+  }
   if (bal === 0n) process.exit(1);
 
   let matrixAddr = process.env.MATRIX_ADDRESS;

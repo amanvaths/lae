@@ -30,11 +30,10 @@ interface ILAECoin {
  *
  *  INCOME (money)
  *  --------------
- *  **L1:** every upline-board placement pays immediately by slot role (0.0009).
- *  **L2+:** separate settlement per level — slot 14 recycle, cycle-2+ direct,
- *  cycle-1 frontier — so L12 slot 14 never blocks L1 slot 3/6/8 to owner.
- *  **All slot payouts use the L1 registration share (0.0009)** — never level-doubled
- *  nominals on slot 14 / cycle-2+ legs.
+ *  **L1–L15:** every upline-board placement pays 90% of that board level's entry
+ *  cost (0.0009 at L1, 0.0018 at L2, 0.0036 at L3, …) by slot role.
+ *  **L2+ settlement:** slot 14 recycle, cycle-2+ direct, cycle-1 frontier — separate
+ *  from L1 immediate pays so higher boards never block L1 slot income.
  *  **Recycle matrix:** on main slot 14, user enters a global 6-slot FIFO board
  *  (top→bottom, left→right) with recycle income rules; cycle-2+ carry pays.
  *  **upgradeOpened:** after cycle-1 slot 5, slots 4/5 never hold again on that board.
@@ -729,7 +728,7 @@ contract LAEClubMatrix {
         uint8 slot,
         uint8 level
     ) private {
-        uint256 amount = levelTokenCost[1];
+        uint256 amount = levelTokenCost[level];
         if (slot == 1) {
             _payWithTrace(0, uint8(MatrixKind.RECYCLE), level, 0, slot, matrixOwner, member, owner, amount, false, false, false);
         } else if (slot == 2) {
@@ -827,7 +826,7 @@ contract LAEClubMatrix {
      */
     function _payUpgradeSlot(address member, address boardOwner, uint8 slot, uint8 level) private {
         SubBoard storage sb = users[boardOwner].upgradeBoard[level];
-        uint256 amount = levelTokenCost[1];
+        uint256 amount = levelTokenCost[level];
         bool recycled = sb.reinvestCount > 0;
         uint256 cycle = sb.reinvestCount + 1;
         uint256 matrixId = sb.matrixId;
@@ -863,7 +862,7 @@ contract LAEClubMatrix {
      */
     function _payThirdSlot(address member, address boardOwner, uint8 slot, uint8 level) private {
         SubBoard storage sb = users[boardOwner].thirdBoard[level];
-        uint256 amount = levelTokenCost[1];
+        uint256 amount = levelTokenCost[level];
         uint256 cycle = sb.reinvestCount + 1;
         uint256 matrixId = sb.matrixId;
         bool recycled = sb.reinvestCount > 0;
@@ -981,8 +980,8 @@ contract LAEClubMatrix {
         uint8 boardLevel,
         uint8 feeLevel
     ) private {
-        // Normal matrix slots: one L1 registration share (0.0009) — never board-level multiples.
-        uint256 amount = levelTokenCost[feeLevel];
+        // Each board pays 90% of its level entry cost (L1=0.0009, L2=0.0018, …).
+        uint256 amount = levelTokenCost[boardLevel];
         bool recycled = users[boardOwner].board[boardLevel].reinvestCount > 0;
         bool upgradeOpened = users[boardOwner].board[boardLevel].upgradeOpened;
 
@@ -1050,7 +1049,7 @@ contract LAEClubMatrix {
      */
     function _holdHalfForNextLevel(address boardOwner, address member, uint8 boardLevel, uint8 feeLevel) private {
         if (boardLevel >= LAST_LEVEL) {
-            _sendToPlatformTreasury(levelTokenCost[feeLevel]);
+            _sendToPlatformTreasury(levelTokenCost[boardLevel]);
             return;
         }
         uint256 holdShare = _matrixShare(levelTokenCost[boardLevel]);
@@ -1067,7 +1066,7 @@ contract LAEClubMatrix {
         uint8 boardLevel,
         uint8 feeLevel
     ) private {
-        uint256 holdShare = _matrixShare(levelTokenCost[feeLevel]);
+        uint256 holdShare = _matrixShare(levelTokenCost[boardLevel]);
         Board storage b = users[boardOwner].board[boardLevel];
         b.heldTokenForUpgrade += holdShare;
         emit UpgradeHold(users[boardOwner].id, users[member].id, boardLevel, holdShare);
