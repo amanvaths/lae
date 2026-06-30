@@ -117,7 +117,7 @@ export async function fetchLaeUserIncomeFromApi(
                 level: row.level ?? undefined,
                 matrixOwnerId: row.matrixOwnerId != null ? BigInt(row.matrixOwnerId) : undefined,
               },
-      } as MatrixUserEvent;
+      } as unknown as MatrixUserEvent;
     });
     return { events, records };
   } catch {
