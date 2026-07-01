@@ -46,7 +46,7 @@ export function splitIncomeEvents(events: MatrixUserEvent[], userId: bigint | un
   }
 
   const lapse = events.filter((e) => {
-    if (e.eventName !== "LapseIncome") return false;
+    if ((e.eventName as string) !== "LapseIncome") return false;
     const a = e.args as { receiverId?: bigint };
     return a.receiverId === userId;
   });
@@ -79,7 +79,7 @@ export function splitIncomeEvents(events: MatrixUserEvent[], userId: bigint | un
   });
 
   const treasury = events.filter((e) => {
-    if (e.eventName !== "ClubPoolPayment") return false;
+    if (e.eventName !== "TreasuryPool") return false;
     const a = e.args as { userId?: bigint };
     return a.userId === userId;
   });

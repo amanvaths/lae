@@ -424,12 +424,6 @@ export function useLaeStaking() {
 }
 
 export function useLaeRoyalPoolBalance(poolAddress?: Address) {
-  const treasury = useReadContract({
-    address: LAE_CONTRACTS.matrix,
-    abi: laeClubMatrixAbi,
-    functionName: "TREASURY_POOL_ADDRESS",
-    query: { staleTime: 60_000 },
-  });
   const token = useReadContract({
     address: LAE_CONTRACTS.matrix,
     abi: laeClubMatrixAbi,
@@ -437,7 +431,7 @@ export function useLaeRoyalPoolBalance(poolAddress?: Address) {
     query: { staleTime: 60_000 },
   });
 
-  const addr = poolAddress ?? (treasury.data as Address | undefined);
+  const addr = poolAddress;
   const payment = (token.data as Address | undefined) ?? LAE_CONTRACTS.payment;
 
   const balance = useReadContract({
@@ -455,7 +449,7 @@ export function useLaeRoyalPoolBalance(poolAddress?: Address) {
     poolAddress: addr,
     paymentToken: payment,
     balance: balance.data ?? 0n,
-    isLoading: treasury.isLoading || token.isLoading || balance.isLoading,
+    isLoading: token.isLoading || balance.isLoading,
   };
 }
 
@@ -558,9 +552,9 @@ export function useLaeRewardSummary() {
   const summary = useReadContract({
     address: LAE_CONTRACTS.matrix,
     abi: laeClubMatrixAbi,
-    functionName: "getLaeRewardSummary",
+    functionName: "getLaeRewardSummary" as never,
     args: address ? [address] : undefined,
-    query: { enabled: !!address && user.registered, staleTime: 15_000 },
+    query: { enabled: false, staleTime: 15_000 },
   });
 
   const s = summary.data as readonly [bigint, bigint, bigint, bigint, bigint] | undefined;
@@ -574,7 +568,7 @@ export function useLaeRewardSummary() {
     directCount: user.directCount ?? 0n,
     nextRelease: 0n,
     supported: MATRIX_SUPPORTS_LAE_REWARDS,
-    isLoading: user.isLoading || summary.isLoading,
+    isLoading: user.isLoading,
     refetch: () => void summary.refetch(),
   };
 }
@@ -596,7 +590,7 @@ export function useClaimLaeRewards() {
     return writeContractAsync({
       address: LAE_CONTRACTS.matrix,
       abi: laeClubMatrixAbi,
-      functionName: "claimLaeRewards",
+      functionName: "claimLaeRewards" as never,
     });
   }
 
@@ -754,9 +748,9 @@ export function useLaeRewardSummaryForAddress(userAddress: Address | undefined) 
   const summary = useReadContract({
     address: LAE_CONTRACTS.matrix,
     abi: laeClubMatrixAbi,
-    functionName: "getLaeRewardSummary",
+    functionName: "getLaeRewardSummary" as never,
     args: userAddress ? [userAddress] : undefined,
-    query: { enabled: !!userAddress, staleTime: 15_000 },
+    query: { enabled: false, staleTime: 15_000 },
   });
 
   const s = summary.data as readonly [bigint, bigint, bigint, bigint, bigint] | undefined;
