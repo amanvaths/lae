@@ -28,7 +28,7 @@ Example Value: `-----BEGIN OPENSSH PRIVATE KEY-----…`
 
 **NEXT_PUBLIC_API_URL**  
 Public URL of the backend API (must be reachable from browsers)  
-Example Value: `https://api.laeclub.com`
+Example Value: `https://api.laeclub.org`
 
 **NEXT_PUBLIC_WC_PROJECT_ID**  
 WalletConnect Cloud project ID — **required for WalletConnect on mobile browsers**. MetaMask/Trust deep links work without it; get a free id at [cloud.walletconnect.com](https://cloud.walletconnect.com).  
@@ -64,7 +64,7 @@ Example Value: `0xdb25Af21346aD358D5e52835934AF5f326169984`
 
 **BACKEND_PUBLIC_URL**  
 Public URL used for post-deploy health checks from GitHub Actions  
-Example Value: `https://api.laeclub.com`
+Example Value: `https://api.laeclub.org`
 
 **DATABASE_URL**  
 PostgreSQL connection string on VPS  
@@ -92,7 +92,7 @@ Example Value: `64-char-random-hex-string`
 
 **CORS_ORIGIN**  
 Allowed frontend origin for API CORS  
-Example Value: `https://laeclub.com`
+Example Value: `https://laeclub.org`
 
 **SENSO_CONTRACT_ADDRESS**  
 LAELimitless contract (env key kept for compatibility)  

@@ -162,7 +162,7 @@ jobs:
             printf '%s=%s\n' MATRIX_CORE_DEPLOY_BLOCK "$(sanitize "${MATRIX_CORE_DEPLOY_BLOCK:-116541851}")" >> "${ENV_FILE}"
             printf '%s=%s\n' INDEXER_ADMIN_API_KEY "$(sanitize "${INDEXER_ADMIN_API_KEY}")" >> "${ENV_FILE}"
             printf '%s=%s\n' JWT_SECRET "$(sanitize "${JWT_SECRET}")" >> "${ENV_FILE}"
-            printf '%s=%s\n' CORS_ORIGIN "$(sanitize "${CORS_ORIGIN}")" >> "${ENV_FILE}"
+            printf '%s=%s\n' CORS_ORIGIN "$(sanitize "${CORS_ORIGIN:-https://laeclub.org,http://laeclub.org,https://www.laeclub.org,http://www.laeclub.org}")" >> "${ENV_FILE}"
             printf '%s=%s\n' ADMIN_WALLET_ADDRESSES "$(sanitize "${ADMIN_WALLET_ADDRESSES:-0xef9594fC5145404BfC7B5640296C3864319e3d86}")" >> "${ENV_FILE}"
 
             printf '%s=%s\n' RESET_INDEXER_ON_DEPLOY "$(sanitize "${RESET_INDEXER_ON_DEPLOY:-}")" >> "${ENV_FILE}"

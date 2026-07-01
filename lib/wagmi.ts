@@ -41,7 +41,7 @@ const projectId = process.env.NEXT_PUBLIC_WC_PROJECT_ID?.trim() ?? "";
 
 const dappMetadata = {
   name: "LAE",
-  url: "https://laeclub.com",
+  url: "https://laeclub.org",
 };
 
 function buildWalletList() {

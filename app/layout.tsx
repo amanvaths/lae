@@ -14,14 +14,14 @@ const poppins = Poppins({
 export const metadata: Metadata = {
   title: "LAE Club — 12-Level Matrix Business",
   description:
-    "LAE Club MatrixCore on BNB Chain: 14-position matrix, on-chain income, and LAE reward layer. Build your team at laeclub.com.",
+    "LAE Club MatrixCore on BNB Chain: 14-position matrix, on-chain income, and LAE reward layer. Build your team at laeclub.org.",
   keywords: [
     "LAE Club",
     "matrix",
     "BNB Chain",
     "referral",
     "web3",
-    "laeclub.com",
+    "laeclub.org",
   ],
   icons: {
     icon: "/lae-club-logo.png",

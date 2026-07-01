@@ -29,6 +29,7 @@ jobs:
           NEXT_STATIC_EXPORT: "true"
           NEXT_PUBLIC_SITE_LIVE: "true"
           NEXT_PUBLIC_CHAIN_ID: "97"
+          NEXT_PUBLIC_SITE_URL: "https://laeclub.org"
           NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
           NEXT_PUBLIC_WC_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_WC_PROJECT_ID }}
           NEXT_PUBLIC_SENSO_CONTRACT: "0x6521619C38fe4be6B800263CC783d9524ED4F7BA"
@@ -56,6 +57,16 @@ jobs:
           source: site.tar.gz
           target: /tmp/
 
+      - name: Upload nginx site config
+        uses: appleboy/scp-action@v1.0.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          port: 22
+          source: deploy/nginx-vps-laeclub.org.conf
+          target: /tmp/
+
       - name: Extract and reload nginx
         uses: appleboy/ssh-action@v1.2.0
         with:
@@ -71,5 +82,8 @@ jobs:
             tar -xzf /tmp/site.tar.gz -C /var/www/lae
             rm -f /tmp/site.tar.gz
             chown -R www-data:www-data /var/www/lae
+            cp /tmp/nginx-vps-laeclub.org.conf /etc/nginx/sites-available/laeclub.org
+            ln -sf /etc/nginx/sites-available/laeclub.org /etc/nginx/sites-enabled/laeclub.org
+            rm -f /etc/nginx/sites-enabled/default 2>/dev/null || true
             nginx -t
             systemctl reload nginx

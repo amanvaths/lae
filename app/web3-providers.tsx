@@ -33,7 +33,7 @@ export function Web3Providers({ children }: { children: React.ReactNode }) {
               initialChain={bscTestnet}
               appInfo={{
                 appName: "LAE",
-                learnMoreUrl: "https://laeclub.com",
+                learnMoreUrl: "https://laeclub.org",
               }}
             >
               {children}

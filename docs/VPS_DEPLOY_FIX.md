@@ -35,7 +35,7 @@ VPS_PASSWORD   (ya VPS_SSH_KEY)
 | `VPS_USER` | `root` |
 | `VPS_PASSWORD` | SSH password **OR** use `VPS_SSH_KEY` instead |
 | `VPS_SSH_KEY` | Private key (optional if password use kar rahe ho) |
-| `NEXT_PUBLIC_API_URL` | `http://YOUR_VPS_IP:4000` ya `https://api.laeclub.com` |
+| `NEXT_PUBLIC_API_URL` | `http://YOUR_VPS_IP:4000` ya `https://api.laeclub.org` |
 
 3. **Actions** tab → **Deploy to VPS** → **Re-run all jobs**
 

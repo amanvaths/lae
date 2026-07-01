@@ -3,7 +3,7 @@ export const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
 /** Canonical site origin for SSR-safe referral links (matches server + client). */
 export const siteOrigin = (
-  process.env.NEXT_PUBLIC_SITE_URL ?? "https://laeclub.com"
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://laeclub.org"
 ).replace(/\/$/, "");
 
 /** Prefix a public asset or in-app path with the deployment base path. */

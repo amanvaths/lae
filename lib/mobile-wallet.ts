@@ -12,11 +12,11 @@ export function isInWalletBrowser(): boolean {
 }
 
 export function currentDappUrl(): string {
-  if (typeof window === "undefined") return "https://laeclub.com/login/";
+  if (typeof window === "undefined") return "https://laeclub.org/login/";
   return window.location.href;
 }
 
-/** Opens laeclub.com inside MetaMask's in-app browser (works from Chrome/Safari). */
+/** Opens laeclub.org inside MetaMask's in-app browser (works from Chrome/Safari). */
 export function metamaskDappUrl(url = currentDappUrl()): string {
   const hostPath = url.replace(/^https?:\/\//, "");
   return `https://metamask.app.link/dapp/${hostPath}`;

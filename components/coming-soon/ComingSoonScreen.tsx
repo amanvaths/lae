@@ -59,7 +59,7 @@ export function ComingSoonScreen() {
       </div>
 
       <p className="absolute bottom-4 left-0 right-0 px-4 text-center text-[0.65rem] text-slate-600 sm:bottom-6 sm:text-xs">
-        © {new Date().getFullYear()} LAE Protocol · laeclub.com
+        © {new Date().getFullYear()} LAE Protocol · laeclub.org
       </p>
     </main>
   );

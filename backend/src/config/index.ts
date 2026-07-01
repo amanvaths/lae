@@ -32,8 +32,18 @@ export const config = {
 
   minWithdrawDai: parseFloat(process.env.MIN_WITHDRAW_DAI ?? "1"),
   transactionFeePol: parseFloat(process.env.TRANSACTION_FEE_POL ?? "0.05"),
-  corsOrigin: process.env.CORS_ORIGIN ?? "http://localhost:3000",
+  corsOrigin:
+    process.env.CORS_ORIGIN ??
+    "http://localhost:3000,http://127.0.0.1:3000",
 } as const;
+
+/** Comma-separated list from CORS_ORIGIN (supports http + https during SSL rollout). */
+export function getCorsOrigins(): string[] {
+  return config.corsOrigin
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+}
 
 function assertConfig() {
   if (!process.env.DATABASE_URL) {
