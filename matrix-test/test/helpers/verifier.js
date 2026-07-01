@@ -70,6 +70,8 @@ function validateReferenceRun(ref) {
 
     if (p.held) continue;
 
+    if (p.cycleFundCredit) continue;
+
     if (p.receiverId !== expectedAfterLapse) {
       const expLabel = expectedAfterLapse === 0 ? TREASURY_LABEL : `#${expectedAfterLapse}`;
       const actualLabel = `#${p.receiverId}`;

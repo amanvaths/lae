@@ -8,7 +8,8 @@
     "sweep": "node run-sweep.js",
     "pretest": "node prepare-contracts.js",
     "exact": "node prepare-contracts.js && hardhat test",
-    "verify": "node prepare-contracts.js && hardhat test test/income-verification.test.js"
+    "verify": "node prepare-contracts.js && hardhat test test/income-verification.test.js",
+    "validate:funding": "node funding-source-validation.js"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-ethers": "^3.0.8",

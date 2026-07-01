@@ -34,11 +34,10 @@ interface ILAECoin {
  *      cycle-1 slots 1–3,6–13; slots 4 & 5 hold). Registration fee = 0.001.
  *      the board owner's 1st upline **next-level funding pool** (0.0009+0.0009=0.0018
  *      at L1→L2). No extra tokens are minted for L2+.
- *  **L2–L15:** payouts use the same slot role table but draw **only** from that board's
- *      `fundingBalance` (fed by downline slot 4+5 releases on level N−1). If unfunded,
- *      the payout is skipped — total distributed never exceeds collected registration fees.
- *  **L2+ settlement:** slot 14 recycle, cycle-2+ direct, cycle-1 frontier — one pay
- *      per level per registration, same priority as L1.
+ *  **L2–L15 cycle 1:** payouts draw only from that board's `fundingBalance` (fed by
+ *      the board owner's own slot 4+5 carry from level N−1). Registration never reused.
+ *  **Cycle 2+ (any level):** payouts draw only from that board's `cycleFundBalance`
+ *      (fed by slot 14 on the prior cycle). Registration never reused.
  *  **Recycle matrix:** on main slot 14, user enters a global 6-slot FIFO board
  *  (top→bottom, left→right) with recycle income rules; cycle-2+ carry pays.
  *  **upgradeOpened:** after cycle-1 slot 5, slots 4/5 never hold again on that board.
@@ -521,7 +520,7 @@ contract LAEClubMatrix {
                 uint256 rc = users[cur].board[level].reinvestCount;
                 uint8 slot = _appendBoard(cur, recycledMember, level);
                 _emitNewUserPlace(recycledMember, cur, level, rc + 1, slot);
-                _payByRole(recycledMember, cur, slot, level, 1, level == 1);
+                _payByRole(recycledMember, cur, slot, level, 1);
                 _afterFill(cur, slot, level, recycledMember);
             }
             cur = users[cur].referrer;
@@ -567,7 +566,7 @@ contract LAEClubMatrix {
         if (doPay) {
             // L1: pay each upline-board placement immediately (cycle-1 behaviour).
             if (level == 1) {
-                _payByRole(member, boardOwner, slot, level, feeLevel, false);
+                _payByRole(member, boardOwner, slot, level, feeLevel);
             } else if (rc > 0 && users[member].referrer == boardOwner && targets.directOwner == address(0)) {
                 targets.directOwner = boardOwner;
                 targets.directSlot = slot;
@@ -607,11 +606,11 @@ contract LAEClubMatrix {
 
     function _settleRegistrationPayment(address member, PaymentTargets memory targets, uint8 feeLevel) private {
         if (targets.recyclePayOwner != address(0)) {
-            _payByRole(member, targets.recyclePayOwner, targets.recyclePaySlot, targets.recyclePayLevel, feeLevel, false);
+            _payByRole(member, targets.recyclePayOwner, targets.recyclePaySlot, targets.recyclePayLevel, feeLevel);
         } else if (targets.directOwner != address(0)) {
-            _payByRole(member, targets.directOwner, targets.directSlot, targets.directLevel, feeLevel, false);
+            _payByRole(member, targets.directOwner, targets.directSlot, targets.directLevel, feeLevel);
         } else if (targets.frontierOwner != address(0)) {
-            _payByRole(member, targets.frontierOwner, targets.frontierSlot, targets.frontierLevel, feeLevel, false);
+            _payByRole(member, targets.frontierOwner, targets.frontierSlot, targets.frontierLevel, feeLevel);
         }
     }
 
@@ -626,17 +625,17 @@ contract LAEClubMatrix {
         uint8 feeLevel
     ) private {
         if (targets.recyclePayOwner != address(0)) {
-            _payByRole(member, targets.recyclePayOwner, targets.recyclePaySlot, targets.recyclePayLevel, feeLevel, false);
+            _payByRole(member, targets.recyclePayOwner, targets.recyclePaySlot, targets.recyclePayLevel, feeLevel);
             return;
         }
         if (targets.directOwner != address(0)) {
-            _payByRole(member, targets.directOwner, targets.directSlot, targets.directLevel, feeLevel, false);
+            _payByRole(member, targets.directOwner, targets.directSlot, targets.directLevel, feeLevel);
             return;
         }
         if (targets.frontierOwner == address(0)) return;
 
         if (users[targets.frontierOwner].board[level].reinvestCount == 0) {
-            _payByRole(member, targets.frontierOwner, targets.frontierSlot, targets.frontierLevel, feeLevel, false);
+            _payByRole(member, targets.frontierOwner, targets.frontierSlot, targets.frontierLevel, feeLevel);
         }
     }
 
@@ -958,8 +957,7 @@ contract LAEClubMatrix {
             upgradeOpenedFlag,
             recycledBoard
         );
-        bool fromFundingPool = matrixType == uint8(MatrixKind.RECYCLE) && level >= 2;
-        _payResolved(target, member, level, amount, boardOwner, level, fromFundingPool, false);
+        _payResolved(target, member, level, amount, boardOwner, level);
     }
 
     function _treasuryWithTrace(
@@ -999,8 +997,7 @@ contract LAEClubMatrix {
         address boardOwner,
         uint8 slot,
         uint8 boardLevel,
-        uint8 feeLevel,
-        bool fromL1CycleFund
+        uint8 feeLevel
     ) private {
         // Each board pays 90% of its level entry cost (L1=0.0009, L2=0.0018, …).
         uint256 amount = levelTokenCost[boardLevel];
@@ -1017,25 +1014,21 @@ contract LAEClubMatrix {
             return;
         }
 
-        // Slot 4 after upgrade / recycle → treasury at 009 share.
+        // Slot 4 after upgrade / recycle → treasury at board-level funding source.
         if (slot == 4 && (recycled || upgradeOpened)) {
-            _sendToPlatformTreasury(amount);
+            _payTreasuryFromBoard(boardOwner, boardLevel, amount);
             return;
         }
 
-        // Slot 14 → L1 credits next-cycle fund; L2+ pays upline from level pool.
+        // Slot 14 → credit next-cycle fund on this board (all levels).
         if (slot == 14) {
-            if (boardLevel == 1) {
-                users[boardOwner].board[1].cycleFundBalance += _matrixShare(amount);
-            } else {
-                _payTreasurySlotToUpline1(boardOwner, member, boardLevel, amount);
-            }
+            users[boardOwner].board[boardLevel].cycleFundBalance += _matrixShare(amount);
             return;
         }
 
         // Slot 5 cycle 2+ / post-upgrade: board-owner income at 009 share.
         if (slot == 5) {
-            _payResolved(boardOwner, member, boardLevel, amount, boardOwner, boardLevel, boardLevel >= 2, false);
+            _payResolved(boardOwner, member, boardLevel, amount, boardOwner, boardLevel);
             return;
         }
 
@@ -1055,7 +1048,7 @@ contract LAEClubMatrix {
         } else if (slot == 13) {
             target = _targetForPosition13(boardOwner);
             if (target == address(0)) {
-                _sendToPlatformTreasury(amount);
+                _payTreasuryFromBoard(boardOwner, boardLevel, amount);
                 return;
             }
         } else if (
@@ -1063,11 +1056,11 @@ contract LAEClubMatrix {
         ) {
             target = boardOwner;
         } else {
-            _sendToPlatformTreasury(amount);
+            _payTreasuryFromBoard(boardOwner, boardLevel, amount);
             return;
         }
 
-        _payResolved(target, member, boardLevel, amount, boardOwner, boardLevel, boardLevel >= 2, fromL1CycleFund);
+        _payResolved(target, member, boardLevel, amount, boardOwner, boardLevel);
     }
 
     /**
@@ -1100,14 +1093,13 @@ contract LAEClubMatrix {
         _openUpgradeBoard(boardOwner, boardLevel);
 
         if (boardLevel < LAST_LEVEL) {
-            address upline1 = _uplineOf(boardOwner, 1);
             uint256 release = b.heldTokenForUpgrade;
-            if (upline1 != address(0) && release > 0) {
+            if (release > 0) {
                 b.heldTokenForUpgrade = 0;
-                users[upline1].board[boardLevel + 1].fundingBalance += release;
+                users[boardOwner].board[boardLevel + 1].fundingBalance += release;
                 emit LevelFundingReleased(
                     users[boardOwner].id,
-                    users[upline1].id,
+                    users[boardOwner].id,
                     boardLevel,
                     boardLevel + 1,
                     release
@@ -1144,10 +1136,10 @@ contract LAEClubMatrix {
     ) private {
         address upline1 = _uplineOf(boardOwner, 1);
         if (upline1 == address(0)) {
-            _sendToPlatformTreasury(amount);
+            _payTreasuryFromBoard(boardOwner, boardLevel, amount);
             return;
         }
-        _payResolved(upline1, member, boardLevel, amount, boardOwner, boardLevel, boardLevel >= 2, false);
+        _payResolved(upline1, member, boardLevel, amount, boardOwner, boardLevel);
     }
 
     function _payResolved(
@@ -1156,19 +1148,45 @@ contract LAEClubMatrix {
         uint8 level,
         uint256 amount,
         address boardOwner,
-        uint8 boardLevel,
-        bool fromFundingPool,
-        bool fromL1CycleFund
+        uint8 boardLevel
     ) private {
         (address recipient, bool isTreasury) = _resolveRecipient(target, member, level);
         if (isTreasury) {
-            _sendToPlatformTreasury(amount);
-        } else if (fromL1CycleFund && boardLevel == 1 && users[boardOwner].board[1].reinvestCount > 0) {
-            _sendTokenDividendsFromCycleFund(recipient, member, level, amount, boardOwner);
-        } else if (fromFundingPool) {
+            _payTreasuryFromBoard(boardOwner, boardLevel, amount);
+            return;
+        }
+        if (_usesCycleFunding(boardOwner, boardLevel)) {
+            _sendTokenDividendsFromCycleFund(recipient, member, level, amount, boardOwner, boardLevel);
+        } else if (_usesLevelFunding(boardOwner, boardLevel)) {
             _sendTokenDividendsFromFunding(recipient, member, level, amount, boardOwner, boardLevel);
         } else {
             _sendTokenDividends(recipient, member, level, amount);
+        }
+    }
+
+    function _usesCycleFunding(address boardOwner, uint8 boardLevel) private view returns (bool) {
+        return users[boardOwner].board[boardLevel].reinvestCount > 0;
+    }
+
+    function _usesLevelFunding(address boardOwner, uint8 boardLevel) private view returns (bool) {
+        return boardLevel >= 2 && users[boardOwner].board[boardLevel].reinvestCount == 0;
+    }
+
+    function _payTreasuryFromBoard(address boardOwner, uint8 boardLevel, uint256 amount) private {
+        uint256 distributable = _matrixShare(amount);
+        if (_usesCycleFunding(boardOwner, boardLevel)) {
+            Board storage b = users[boardOwner].board[boardLevel];
+            if (b.cycleFundBalance < distributable) return;
+            b.cycleFundBalance -= distributable;
+        } else if (_usesLevelFunding(boardOwner, boardLevel)) {
+            Board storage b = users[boardOwner].board[boardLevel];
+            if (b.fundingBalance < distributable) return;
+            b.fundingBalance -= distributable;
+        }
+        bool success = IERC20(PAYMENT_TOKEN).transfer(TREASURY_POOL_ADDRESS, distributable);
+        if (!success) {
+            emit TokenTransferFailed(TREASURY_POOL_ADDRESS, distributable, "BTC transfer failed to Platform Treasury");
+            revert("LAEClubMatrix: Platform Treasury transfer failed");
         }
     }
 
@@ -1284,10 +1302,11 @@ contract LAEClubMatrix {
         address from,
         uint8 level,
         uint256 amount,
-        address boardOwner
+        address boardOwner,
+        uint8 boardLevel
     ) private {
         uint256 distributable = _matrixShare(amount);
-        Board storage b = users[boardOwner].board[1];
+        Board storage b = users[boardOwner].board[boardLevel];
         if (b.cycleFundBalance < distributable) {
             return;
         }
@@ -1295,7 +1314,7 @@ contract LAEClubMatrix {
         bool success = IERC20(PAYMENT_TOKEN).transfer(receiver, distributable);
         if (!success) {
             b.cycleFundBalance += distributable;
-            emit TokenTransferFailed(receiver, distributable, "BTC transfer failed from L1 cycle fund");
+            emit TokenTransferFailed(receiver, distributable, "BTC transfer failed from cycle fund");
             revert("LAEClubMatrix: token transfer failed to receiver");
         }
         users[receiver].totalIncome += distributable;
