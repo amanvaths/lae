@@ -39,7 +39,7 @@ const OWNER = process.env.OWNER_WALLET ?? "0xef9594fC5145404BfC7B5640296C3864319
 const CLUB_POOL = process.env.CLUB_POOL ?? OWNER;
 const TREASURY = process.env.TREASURY_WALLET ?? OWNER;
 const LIQUIDITY_POOL = process.env.LIQUIDITY_POOL ?? OWNER;
-const MAX_USERS = Number(process.env.MAX_USERS ?? "200");
+const MAX_USERS = Number(process.env.MAX_USERS ?? "250");
 const SKIP_DEPLOY = process.env.SKIP_DEPLOY === "1";
 
 function addrForUserId(userId) {

@@ -41,7 +41,7 @@ class Reference {
   _err(m) { this.violations.push(m); }
 
   _emptyBoard() {
-    return { slots: [], reinvestCount: 0, totalFilled: 0, heldTokenForUpgrade: 0n, fundingBalance: 0n, upgradeOpened: false };
+    return { slots: [], reinvestCount: 0, totalFilled: 0, heldTokenForUpgrade: 0n, fundingBalance: 0n, cycleFundBalance: 0n, upgradeOpened: false };
   }
 
   _emptySubBoard() {
@@ -195,16 +195,26 @@ class Reference {
     return { recipientId: 0, isTreasury: true, viaLapse: false };
   }
 
-  _payResolved(targetId, fromId, boardOwnerId, slot, kind, amount, recycledAtPay, directSnap, boardLevel = 1) {
+  _payResolved(targetId, fromId, boardOwnerId, slot, kind, amount, recycledAtPay, directSnap, boardLevel = 1, fromL1CycleFund = false) {
     const r = this._resolveRecipient(targetId, directSnap);
     const fromFundingPool = boardLevel >= 2;
     if (r.isTreasury) {
       this._sendTreasury(amount, fromId, boardOwnerId, slot, "lapse-treasury", recycledAtPay, directSnap, targetId, boardLevel);
+    } else if (fromL1CycleFund && boardLevel === 1 && this._board(boardOwnerId, 1).reinvestCount > 0) {
+      this._sendDividendsFromCycleFund(r.recipientId, amount, fromId, boardOwnerId, slot, kind, r.viaLapse, recycledAtPay, directSnap, targetId, boardLevel);
     } else if (fromFundingPool) {
       this._sendDividendsFromFunding(r.recipientId, amount, fromId, boardOwnerId, slot, kind, r.viaLapse, recycledAtPay, directSnap, targetId, boardLevel);
     } else {
       this._sendDividends(r.recipientId, amount, fromId, boardOwnerId, slot, kind, r.viaLapse, recycledAtPay, directSnap, targetId, boardLevel);
     }
+  }
+
+  _sendDividendsFromCycleFund(receiverId, amount, fromId, boardOwnerId, slot, kind, viaLapse, recycledAtPay, directSnap, intendedTarget, boardLevel = 1) {
+    const share = matrixShare(amount);
+    const b = this._board(boardOwnerId, 1);
+    if (b.cycleFundBalance < share) return;
+    b.cycleFundBalance -= share;
+    this._sendDividends(receiverId, amount, fromId, boardOwnerId, slot, kind, viaLapse, recycledAtPay, directSnap, intendedTarget, boardLevel);
   }
 
   _payTreasurySlotToUpline1(fromId, boardOwnerId, slot, kind, amount, recycledAtPay, boardLevel = 1) {
@@ -217,7 +227,7 @@ class Reference {
     this._payResolved(upline1, fromId, boardOwnerId, slot, kind, amount, recycledAtPay, snap, boardLevel);
   }
 
-  _payByRole(fromId, boardOwnerId, slot, boardLevel = 1, feeLevel = 1) {
+  _payByRole(fromId, boardOwnerId, slot, boardLevel = 1, feeLevel = 1, fromL1CycleFund = false) {
     const amount = levelCost(boardLevel);
     const recycledAtPay = this._board(boardOwnerId, boardLevel).reinvestCount > 0;
     const upgradeOpened = this._board(boardOwnerId, boardLevel).upgradeOpened;
@@ -235,12 +245,16 @@ class Reference {
       return;
     }
     if (slot === 14) {
-      this._payTreasurySlotToUpline1(fromId, boardOwnerId, slot, "treasury-slot14", amount, recycledAtPay, boardLevel);
+      if (boardLevel === 1) {
+        this._board(boardOwnerId, 1).cycleFundBalance += matrixShare(amount);
+      } else {
+        this._payTreasurySlotToUpline1(fromId, boardOwnerId, slot, "treasury-slot14", amount, recycledAtPay, boardLevel);
+      }
       return;
     }
     if (slot === 5) {
       const snap = this._snapshotForTarget(boardOwnerId);
-      this._payResolved(boardOwnerId, fromId, boardOwnerId, slot, "self-slot5c2", amount, recycledAtPay, snap, boardLevel);
+      this._payResolved(boardOwnerId, fromId, boardOwnerId, slot, "self-slot5c2", amount, recycledAtPay, snap, boardLevel, false);
       return;
     }
 
@@ -262,7 +276,7 @@ class Reference {
       return;
     }
     const snap = this._snapshotForTarget(target);
-    this._payResolved(target, fromId, boardOwnerId, slot, "role", amount, recycledAtPay, snap, boardLevel);
+    this._payResolved(target, fromId, boardOwnerId, slot, "role", amount, recycledAtPay, snap, boardLevel, fromL1CycleFund);
   }
 
   _holdHalfForNextLevel(fromId, boardOwnerId, slot, boardLevel) {
@@ -325,7 +339,7 @@ class Reference {
           cycle: rc + 1,
           recycleCarry: true,
         });
-        this._payByRole(recycledMemberId, cur, slot, level, 1);
+        this._payByRole(recycledMemberId, cur, slot, level, 1, level === 1);
         this._afterFill(cur, slot, recycledMemberId, level);
       }
       cur = u.referrerId;
