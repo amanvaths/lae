@@ -20,7 +20,7 @@ on:
 
 concurrency:
   group: vps-production-deploy
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 env:
   DEPLOY_ROOT: /opt/lae-backend
