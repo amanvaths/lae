@@ -3,8 +3,8 @@
 export const LAE_MATRIX_SIZE = 14;
 export const LAE_LAST_LEVEL = 12;
 
-/** On-chain matrix does not mint LAE rewards (separate LAECoin contract). */
-export const MATRIX_SUPPORTS_LAE_REWARDS = false;
+/** On-chain matrix mints vested LAE from 10% registration liquidity share. */
+export const MATRIX_SUPPORTS_LAE_REWARDS = true;
 
 export const MATRIX_SPOT_LABELS: Record<
   number,

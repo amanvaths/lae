@@ -6,6 +6,12 @@ interface IERC20 {
     function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
 }
 
+interface ILAECoin {
+    function recordRewardAllocation(uint256 amount) external;
+    function transfer(address to, uint256 amount) external returns (bool);
+    function rewardPoolRemaining() external view returns (uint256);
+}
+
 interface IRegistrationPassNFT {
     function mint(address to, uint256 tokenId) external;
 }
@@ -45,8 +51,19 @@ contract LAEClubMatrix {
         mapping(uint8 => XMatrix) xMatrix;
     }
 
+    struct LaeRewardSchedule {
+        uint256 allocated;
+        uint256 claimed;
+        uint256 startTime;
+        uint256 liquidityContribution;
+        uint8 level;
+    }
+
     uint8 public constant LAST_LEVEL = 12;
     uint8 public constant MATRIX_SIZE = 14;
+    uint256 public constant BPS = 10_000;
+    uint8 public constant VESTING_MONTHS = 20;
+    uint256 public constant MONTH_DURATION = 30 days;
 
     mapping(address => User) private users;
     mapping(uint => address) public idToAddress;
@@ -68,6 +85,18 @@ contract LAEClubMatrix {
 
     mapping(uint8 => uint256) public levelTokenCost;
 
+    address public LAE_COIN_ADDRESS;
+    address public LIQUIDITY_POOL_ADDRESS;
+    uint256 public matrixDistributionBps = 9000;
+    uint256 public liquidityAllocationBps = 1000;
+    uint256 public laePriceInPaymentToken = 1e12;
+    uint256 public totalLiquidityCollected;
+    uint256 public totalLaeAllocated;
+    uint256 public totalLaeClaimed;
+    uint256[20] public monthlyReleaseBps;
+    uint256[20] public directRequirementByMonth;
+    mapping(address => LaeRewardSchedule[]) private laeSchedules;
+
     event Registration(uint indexed userId, uint indexed referrerId, address indexed userAddress);
     event Reinvest(uint indexed userId, uint indexed newReferrerId, uint indexed callerId, uint8 level);
     event Upgrade(uint indexed userId, uint indexed newReferrerId, uint8 level);
@@ -82,6 +111,18 @@ contract LAEClubMatrix {
     event PoolAddressesUpdated(address indexed newRoyalPool, address indexed newTreasuryPool);
     event RegistrationPassNftAddressUpdated(address indexed newAddress);
     event RoyalNftAddressesUpdated(address newRank1, address newRank2, address newRank3, address newRank4);
+    event LaeCoinUpdated(address indexed laeCoin);
+    event LiquidityPoolUpdated(address indexed liquidityPool);
+    event SplitBpsUpdated(uint256 matrixDistributionBps, uint256 liquidityAllocationBps);
+    event LaePriceUpdated(uint256 laePriceInPaymentToken);
+    event LaeRewardAllocated(
+        address indexed user,
+        uint256 indexed scheduleIndex,
+        uint256 laeAmount,
+        uint256 liquidityContribution,
+        uint8 level
+    );
+    event LaeRewardClaimed(address indexed user, uint256 amount);
 
     modifier onlyOwner() {
         require(msg.sender == owner, "Only owner can call this function");
@@ -135,25 +176,38 @@ contract LAEClubMatrix {
         for (uint8 i = 1; i <= LAST_LEVEL; i++) {
             users[ownerAddress].activeLevels[i] = true;
         }
+
+        for (uint8 month = 0; month < VESTING_MONTHS; month++) {
+            monthlyReleaseBps[month] = 500;
+            directRequirementByMonth[month] = uint256(month) + 2;
+        }
     }
 
     function registrationExt(uint referrerId) external nonReentrant {
         address referrerAddress = idToAddress[referrerId];
         require(isUserExists(referrerAddress), "Referrer does not exist");
+        require(!isUserExists(msg.sender), "User exists");
+        uint256 amount = levelTokenCost[1];
         require(
-            IERC20(BTCB_TOKEN_ADDRESS).transferFrom(msg.sender, address(this), levelTokenCost[1]),
+            IERC20(BTCB_TOKEN_ADDRESS).transferFrom(msg.sender, address(this), amount),
             "BTC transfer failed for registration"
         );
+        _splitPaymentAndAllocateLae(msg.sender, 1, amount);
+        totalProjectInvestment += amount;
         _registration(msg.sender, referrerAddress);
     }
 
-    function registrationSys(uint referrerId, address userAddress) external onlyOwner {
+    function registrationSys(uint referrerId, address userAddress) external onlyOwner nonReentrant {
         address referrerAddress = idToAddress[referrerId];
         require(isUserExists(referrerAddress), "Referrer does not exist");
+        require(!isUserExists(userAddress), "User exists");
+        uint256 amount = levelTokenCost[1];
         require(
-            IERC20(BTCB_TOKEN_ADDRESS).transferFrom(msg.sender, address(this), levelTokenCost[1]),
+            IERC20(BTCB_TOKEN_ADDRESS).transferFrom(msg.sender, address(this), amount),
             "BTC transfer failed for registration"
         );
+        _splitPaymentAndAllocateLae(userAddress, 1, amount);
+        totalProjectInvestment += amount;
         _registration(userAddress, referrerAddress);
     }
 
@@ -260,10 +314,32 @@ contract LAEClubMatrix {
         emit RoyalNftAddressesUpdated(new1, new2, new3, new4);
     }
 
-    function _registration(address userAddress, address referrerAddress) private {
-        uint256 cost = levelTokenCost[1];
-        totalProjectInvestment += cost;
+    function setLaeCoin(address laeCoinAddress) external onlyOwner {
+        require(laeCoinAddress != address(0), "Invalid LAE address");
+        LAE_COIN_ADDRESS = laeCoinAddress;
+        emit LaeCoinUpdated(laeCoinAddress);
+    }
 
+    function setLiquidityPool(address liquidityPoolAddress) external onlyOwner {
+        require(liquidityPoolAddress != address(0), "Invalid liquidity pool");
+        LIQUIDITY_POOL_ADDRESS = liquidityPoolAddress;
+        emit LiquidityPoolUpdated(liquidityPoolAddress);
+    }
+
+    function setSplitBps(uint256 matrixBps, uint256 liquidityBps) external onlyOwner {
+        require(matrixBps + liquidityBps == BPS, "Invalid split");
+        matrixDistributionBps = matrixBps;
+        liquidityAllocationBps = liquidityBps;
+        emit SplitBpsUpdated(matrixBps, liquidityBps);
+    }
+
+    function setLaePriceInPaymentToken(uint256 price) external onlyOwner {
+        require(price > 0, "Invalid LAE price");
+        laePriceInPaymentToken = price;
+        emit LaePriceUpdated(price);
+    }
+
+    function _registration(address userAddress, address referrerAddress) private {
         require(!isUserExists(userAddress), "User exists");
         uint referrerId = users[referrerAddress].id;
 
@@ -332,7 +408,7 @@ contract LAEClubMatrix {
 
         if (spotIndex == 3) {
             if (isFirstCycle && !isLastLevel && !isOwner) {
-                matrix.heldTokenForUpgrade = amount;
+                matrix.heldTokenForUpgrade = _matrixShare(amount);
             } else {
                 _sendToRoyalPool(_referrer, _newUser, _level, amount);
             }
@@ -445,31 +521,197 @@ contract LAEClubMatrix {
 
     function _sendTokenDividends(address userAddress, address _from, uint8 level, uint256 amount) private {
         address receiver = userAddress;
-        bool success = IERC20(BTCB_TOKEN_ADDRESS).transfer(receiver, amount);
+        uint256 distributable = _matrixShare(amount);
+        bool success = IERC20(BTCB_TOKEN_ADDRESS).transfer(receiver, distributable);
         if (!success) {
-            emit TokenTransferFailed(receiver, amount, "BTC transfer failed from contract balance");
+            emit TokenTransferFailed(receiver, distributable, "BTC transfer failed from contract balance");
             revert("LAEClub: Token transfer failed to receiver.");
         }
-        users[receiver].totalIncome += amount;
-        users[receiver].xMatrix[level].totalEarning += amount;
-        emit TokenReceived(users[receiver].id, users[_from].id, _from, level, amount);
+        users[receiver].totalIncome += distributable;
+        users[receiver].xMatrix[level].totalEarning += distributable;
+        emit TokenReceived(users[receiver].id, users[_from].id, _from, level, distributable);
     }
 
     function _sendToRoyalPool(address _ref, address _user, uint8 _level, uint256 _amount) private {
-        bool success = IERC20(BTCB_TOKEN_ADDRESS).transfer(ROYAL_POOL_ADDRESS, _amount);
+        uint256 distributable = _matrixShare(_amount);
+        bool success = IERC20(BTCB_TOKEN_ADDRESS).transfer(ROYAL_POOL_ADDRESS, distributable);
         if (!success) {
-            emit TokenTransferFailed(ROYAL_POOL_ADDRESS, _amount, "BTC transfer failed to Royal Pool");
+            emit TokenTransferFailed(ROYAL_POOL_ADDRESS, distributable, "BTC transfer failed to Royal Pool");
             revert("LAEClub: Royal Pool transfer failed.");
         }
-        emit TreasuryPool(users[_ref].id, users[_user].id, _amount, _level);
+        emit TreasuryPool(users[_ref].id, users[_user].id, distributable, _level);
     }
 
     function _sendToPlatformTreasury(uint256 _amount) private {
-        bool success = IERC20(BTCB_TOKEN_ADDRESS).transfer(TREASURY_POOL_ADDRESS, _amount);
+        uint256 distributable = _matrixShare(_amount);
+        bool success = IERC20(BTCB_TOKEN_ADDRESS).transfer(TREASURY_POOL_ADDRESS, distributable);
         if (!success) {
-            emit TokenTransferFailed(TREASURY_POOL_ADDRESS, _amount, "BTC transfer failed to Platform Treasury");
+            emit TokenTransferFailed(TREASURY_POOL_ADDRESS, distributable, "BTC transfer failed to Platform Treasury");
             revert("LAEClub: Platform Treasury transfer failed.");
         }
+    }
+
+    function _matrixShare(uint256 amount) private view returns (uint256) {
+        return (amount * matrixDistributionBps) / BPS;
+    }
+
+    function _splitPaymentAndAllocateLae(address userAddress, uint8 level, uint256 totalAmount) private {
+        if (LAE_COIN_ADDRESS == address(0) || LIQUIDITY_POOL_ADDRESS == address(0)) {
+            return;
+        }
+
+        uint256 liquidityShare = (totalAmount * liquidityAllocationBps) / BPS;
+        if (liquidityShare == 0) {
+            return;
+        }
+
+        require(
+            IERC20(BTCB_TOKEN_ADDRESS).transfer(LIQUIDITY_POOL_ADDRESS, liquidityShare),
+            "LAEClub: liquidity transfer failed"
+        );
+        totalLiquidityCollected += liquidityShare;
+
+        uint256 laeAmount = _calculateLaeReward(liquidityShare);
+        if (laeAmount > 0) {
+            _allocateLaeReward(userAddress, laeAmount, liquidityShare, level);
+        }
+    }
+
+    function _calculateLaeReward(uint256 paymentTokenAmount) private view returns (uint256) {
+        if (paymentTokenAmount == 0 || laePriceInPaymentToken == 0 || LAE_COIN_ADDRESS == address(0)) {
+            return 0;
+        }
+        uint256 laeAmount = (paymentTokenAmount * 1e18) / laePriceInPaymentToken;
+        uint256 remaining = ILAECoin(LAE_COIN_ADDRESS).rewardPoolRemaining();
+        if (laeAmount > remaining) {
+            laeAmount = remaining;
+        }
+        return laeAmount;
+    }
+
+    function _allocateLaeReward(address userAddress, uint256 laeAmount, uint256 liquidityContribution, uint8 level) private {
+        ILAECoin(LAE_COIN_ADDRESS).recordRewardAllocation(laeAmount);
+        laeSchedules[userAddress].push(
+            LaeRewardSchedule({
+                allocated: laeAmount,
+                claimed: 0,
+                startTime: block.timestamp,
+                liquidityContribution: liquidityContribution,
+                level: level
+            })
+        );
+        totalLaeAllocated += laeAmount;
+        emit LaeRewardAllocated(userAddress, laeSchedules[userAddress].length - 1, laeAmount, liquidityContribution, level);
+    }
+
+    function claimLaeRewards() external nonReentrant returns (uint256 claimedAmount) {
+        require(LAE_COIN_ADDRESS != address(0), "LAEClub: lae not set");
+
+        LaeRewardSchedule[] storage schedules = laeSchedules[msg.sender];
+        for (uint256 i = 0; i < schedules.length; i++) {
+            uint256 claimable = _claimableForSchedule(msg.sender, schedules[i]);
+            if (claimable == 0) {
+                continue;
+            }
+            schedules[i].claimed += claimable;
+            claimedAmount += claimable;
+        }
+
+        require(claimedAmount > 0, "LAEClub: nothing claimable");
+        totalLaeClaimed += claimedAmount;
+        require(ILAECoin(LAE_COIN_ADDRESS).transfer(msg.sender, claimedAmount), "LAEClub: lae transfer failed");
+        emit LaeRewardClaimed(msg.sender, claimedAmount);
+    }
+
+    function _releasedForSchedule(LaeRewardSchedule storage schedule) private view returns (uint256) {
+        if (schedule.allocated == 0) {
+            return 0;
+        }
+
+        uint256 elapsed = block.timestamp > schedule.startTime ? block.timestamp - schedule.startTime : 0;
+        uint256 totalDuration = uint256(VESTING_MONTHS) * MONTH_DURATION;
+        if (elapsed >= totalDuration) {
+            return schedule.allocated;
+        }
+
+        uint256 released;
+        for (uint8 month = 0; month < VESTING_MONTHS; month++) {
+            uint256 tranche = (schedule.allocated * monthlyReleaseBps[month]) / BPS;
+            uint256 start = uint256(month) * MONTH_DURATION;
+            uint256 end = start + MONTH_DURATION;
+
+            if (elapsed >= end) {
+                released += tranche;
+            } else if (elapsed > start) {
+                released += (tranche * (elapsed - start)) / MONTH_DURATION;
+            }
+        }
+
+        if (released > schedule.allocated) {
+            return schedule.allocated;
+        }
+        return released;
+    }
+
+    function _claimableForSchedule(address userAddress, LaeRewardSchedule storage schedule) private view returns (uint256) {
+        if (schedule.allocated == 0 || schedule.claimed >= schedule.allocated) {
+            return 0;
+        }
+
+        uint256 elapsed = block.timestamp > schedule.startTime ? block.timestamp - schedule.startTime : 0;
+        uint256 totalDuration = uint256(VESTING_MONTHS) * MONTH_DURATION;
+        uint256 directs = users[userAddress].directReferrals.length;
+        uint256 qualifiedReleased;
+
+        if (elapsed >= totalDuration) {
+            for (uint8 monthFull = 0; monthFull < VESTING_MONTHS; monthFull++) {
+                if (directs < directRequirementByMonth[monthFull]) {
+                    continue;
+                }
+                qualifiedReleased += (schedule.allocated * monthlyReleaseBps[monthFull]) / BPS;
+            }
+        } else {
+            for (uint8 month = 0; month < VESTING_MONTHS; month++) {
+                if (directs < directRequirementByMonth[month]) {
+                    continue;
+                }
+
+                uint256 tranche = (schedule.allocated * monthlyReleaseBps[month]) / BPS;
+                uint256 start = uint256(month) * MONTH_DURATION;
+                uint256 end = start + MONTH_DURATION;
+
+                if (elapsed >= end) {
+                    qualifiedReleased += tranche;
+                } else if (elapsed > start) {
+                    qualifiedReleased += (tranche * (elapsed - start)) / MONTH_DURATION;
+                }
+            }
+        }
+
+        if (qualifiedReleased > schedule.allocated) {
+            qualifiedReleased = schedule.allocated;
+        }
+        if (qualifiedReleased <= schedule.claimed) {
+            return 0;
+        }
+        return qualifiedReleased - schedule.claimed;
+    }
+
+    function getLaeRewardSummary(address userAddress)
+        external
+        view
+        returns (uint256 allocated, uint256 released, uint256 claimable, uint256 claimed, uint256 locked)
+    {
+        LaeRewardSchedule[] storage schedules = laeSchedules[userAddress];
+        for (uint256 i = 0; i < schedules.length; i++) {
+            allocated += schedules[i].allocated;
+            released += _releasedForSchedule(schedules[i]);
+            claimable += _claimableForSchedule(userAddress, schedules[i]);
+            claimed += schedules[i].claimed;
+        }
+
+        uint256 unlocked = claimed + claimable;
+        locked = allocated > unlocked ? allocated - unlocked : 0;
     }
 
     function _findEligibleUplineTarget(address newUser, address referrer, uint uplineLevel, uint8 level) private returns (address uplineTarget) {

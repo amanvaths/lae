@@ -10,6 +10,11 @@ export const LAE_MATRIX_EVENTS = [
   "event MissedIncome(uint256 indexed receiverId, uint256 indexed userId, uint8 level)",
   "event TokenAddressesUpdated(address indexed newToken)",
   "event PoolAddressesUpdated(address indexed newRoyalPool, address indexed newTreasuryPool)",
+  "event LaeRewardAllocated(address indexed user, uint256 indexed scheduleIndex, uint256 laeAmount, uint256 liquidityContribution, uint8 level)",
+  "event LaeRewardClaimed(address indexed user, uint256 amount)",
+  "event LaeCoinUpdated(address indexed laeCoin)",
+  "event LiquidityPoolUpdated(address indexed liquidityPool)",
+  "event SplitBpsUpdated(uint256 matrixDistributionBps, uint256 liquidityAllocationBps)",
 ] as const;
 
 export const MATRIX_CORE_EVENTS = LAE_MATRIX_EVENTS;

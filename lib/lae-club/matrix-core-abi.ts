@@ -148,6 +148,26 @@ export const laeClubMatrixAbi = [
     ],
   },
   {
+    type: "function",
+    name: "getLaeRewardSummary",
+    inputs: [{ name: "userAddress", type: "address" }],
+    outputs: [
+      { name: "allocated", type: "uint256" },
+      { name: "released", type: "uint256" },
+      { name: "claimable", type: "uint256" },
+      { name: "claimed", type: "uint256" },
+      { name: "locked", type: "uint256" },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "claimLaeRewards",
+    inputs: [],
+    outputs: [{ name: "claimedAmount", type: "uint256" }],
+    stateMutability: "nonpayable",
+  },
+  {
     type: "event",
     name: "TreasuryPool",
     inputs: [
@@ -183,6 +203,25 @@ export const laeClubMatrixAbi = [
       { name: "receiverId", type: "uint256", indexed: true },
       { name: "userId", type: "uint256", indexed: true },
       { name: "level", type: "uint8", indexed: false },
+    ],
+  },
+  {
+    type: "event",
+    name: "LaeRewardAllocated",
+    inputs: [
+      { name: "user", type: "address", indexed: true },
+      { name: "scheduleIndex", type: "uint256", indexed: true },
+      { name: "laeAmount", type: "uint256", indexed: false },
+      { name: "liquidityContribution", type: "uint256", indexed: false },
+      { name: "level", type: "uint8", indexed: false },
+    ],
+  },
+  {
+    type: "event",
+    name: "LaeRewardClaimed",
+    inputs: [
+      { name: "user", type: "address", indexed: true },
+      { name: "amount", type: "uint256", indexed: false },
     ],
   },
 ] as const;

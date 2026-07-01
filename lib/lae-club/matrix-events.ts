@@ -25,6 +25,7 @@ function userEventQueries(userId: bigint): EventQuery[] {
     { eventName: "Reinvest", args: { userId: id } },
     { eventName: "Upgrade", args: { userId: id } },
     { eventName: "MissedIncome", args: { receiverId: id } },
+    { eventName: "LaeRewardAllocated", args: {} },
   ];
 }
 

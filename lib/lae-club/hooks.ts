@@ -552,9 +552,9 @@ export function useLaeRewardSummary() {
   const summary = useReadContract({
     address: LAE_CONTRACTS.matrix,
     abi: laeClubMatrixAbi,
-    functionName: "getLaeRewardSummary" as never,
+    functionName: "getLaeRewardSummary",
     args: address ? [address] : undefined,
-    query: { enabled: false, staleTime: 15_000 },
+    query: { enabled: !!address && user.registered && MATRIX_SUPPORTS_LAE_REWARDS, staleTime: 15_000 },
   });
 
   const s = summary.data as readonly [bigint, bigint, bigint, bigint, bigint] | undefined;
@@ -590,7 +590,7 @@ export function useClaimLaeRewards() {
     return writeContractAsync({
       address: LAE_CONTRACTS.matrix,
       abi: laeClubMatrixAbi,
-      functionName: "claimLaeRewards" as never,
+      functionName: "claimLaeRewards",
     });
   }
 
@@ -748,9 +748,9 @@ export function useLaeRewardSummaryForAddress(userAddress: Address | undefined) 
   const summary = useReadContract({
     address: LAE_CONTRACTS.matrix,
     abi: laeClubMatrixAbi,
-    functionName: "getLaeRewardSummary" as never,
+    functionName: "getLaeRewardSummary",
     args: userAddress ? [userAddress] : undefined,
-    query: { enabled: false, staleTime: 15_000 },
+    query: { enabled: !!userAddress && MATRIX_SUPPORTS_LAE_REWARDS, staleTime: 15_000 },
   });
 
   const s = summary.data as readonly [bigint, bigint, bigint, bigint, bigint] | undefined;

@@ -15,10 +15,13 @@ const CHAIN_ID = 97;
 
 const PAYMENT_TOKEN =
   process.env.PAYMENT_TOKEN ?? "0xb2bE66BE07E1AD04074B32B8b13DcdFaB6B57575";
+const LAE_COIN =
+  process.env.LAE_COIN_CONTRACT ?? "0xD6698E6a8Ee4712cC2E36C150f1C34e59884C45A";
 const OWNER =
   process.env.OWNER_WALLET ?? "0xef9594fC5145404BfC7B5640296C3864319e3d86";
 const ROYAL_POOL = process.env.ROYAL_POOL ?? OWNER;
 const PLATFORM_TREASURY = process.env.TREASURY_WALLET ?? OWNER;
+const LIQUIDITY_POOL = process.env.LIQUIDITY_POOL ?? OWNER;
 
 const DEPLOY_JSON = path.join(__dirname, "deployed-bsc-testnet.json");
 
@@ -185,7 +188,23 @@ async function main() {
     await (await new ethers.Contract(addr, nftAbi, wallet).setMatrix(matrixAddr)).wait();
   }
 
-  const deployBlock = (await wallet.provider.getBlock("latest")).number;
+  const matrixC = new ethers.Contract(matrixAddr, compiled.matrix.abi, wallet);
+  let tx = await matrixC.setLaeCoin(LAE_COIN);
+  await tx.wait();
+  tx = await matrixC.setLiquidityPool(LIQUIDITY_POOL);
+  await tx.wait();
+
+  const laeCoinAbi = [
+    "function setMatrixContract(address) external",
+    "function setTaxExempt(address,bool) external",
+  ];
+  const coinC = new ethers.Contract(LAE_COIN, laeCoinAbi, wallet);
+  tx = await coinC.setMatrixContract(matrixAddr);
+  await tx.wait();
+  tx = await coinC.setTaxExempt(matrixAddr, true);
+  await tx.wait();
+
+  const deployBlock = (await tx.wait()).blockNumber;
   console.log("deployBlock:", deployBlock);
 
   const addresses = {
