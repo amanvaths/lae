@@ -1,10 +1,10 @@
-/** LAE Club — LAEClubMatrix 15 slots × 14 positions */
+/** LAE Club — LAEClubMatrix 12 levels × 14 spots (BTitan-style) */
 
 export const LAE_MATRIX_SIZE = 14;
-export const LAE_LAST_LEVEL = 15;
+export const LAE_LAST_LEVEL = 12;
 
-/** MatrixCore uses cycle-based matrices (not multi-level slots). */
-export const MATRIX_SUPPORTS_LAE_REWARDS = true;
+/** On-chain matrix does not mint LAE rewards (separate LAECoin contract). */
+export const MATRIX_SUPPORTS_LAE_REWARDS = false;
 
 export const MATRIX_SPOT_LABELS: Record<
   number,
@@ -43,10 +43,10 @@ export const LAE_COIN_TOKENOMICS = {
   monthlyReleaseBps: 500,
 } as const;
 
-/** MatrixCore slot progression milestones (not NFT-specific). */
+/** Royal rank NFT milestones (levels 3, 6, 9, 12). */
 export const ROYAL_NFT_MILESTONES = [
-  { rank: 1, level: 2, label: "Slot 2 Open" },
-  { rank: 2, level: 3, label: "Slot 3 Open" },
-  { rank: 3, level: 4, label: "Slot 4 Open" },
-  { rank: 4, level: 5, label: "Slot 5 Open" },
+  { rank: 1, level: 3, label: "Royal Rank 1" },
+  { rank: 2, level: 6, label: "Royal Rank 2" },
+  { rank: 3, level: 9, label: "Royal Rank 3" },
+  { rank: 4, level: 12, label: "Royal Rank 4" },
 ] as const;

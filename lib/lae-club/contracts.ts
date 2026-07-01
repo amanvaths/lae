@@ -3,10 +3,10 @@
 export const CHAIN_ID = Number(process.env.NEXT_PUBLIC_CHAIN_ID ?? "97");
 
 export const LAE_CONTRACTS = {
-  /** LAEClubMatrix — 15 slots × 14 positions */
+  /** LAEClubMatrix — 12 levels × 14 spots (BTitan-style) */
   matrix: (process.env.NEXT_PUBLIC_LAE_MATRIX_CONTRACT ??
     process.env.NEXT_PUBLIC_MATRIX_CORE_CONTRACT ??
-    "0x485eCa78Cb995bD026c9838b983761FDe329293F") as `0x${string}`,
+    "0x66F321f0AE993f1F956a85A29C5896cDe53276A3") as `0x${string}`,
   payment: (process.env.NEXT_PUBLIC_PAYMENT_TOKEN ??
     "0xb2bE66BE07E1AD04074B32B8b13DcdFaB6B57575") as `0x${string}`,
   laeCoin: (process.env.NEXT_PUBLIC_LAE_COIN_CONTRACT ??

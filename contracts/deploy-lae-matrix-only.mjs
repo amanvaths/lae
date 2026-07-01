@@ -1,12 +1,6 @@
 #!/usr/bin/env node
 /**
- * Redeploy LAEClubMatrix only (keep existing LAECoin + payment token).
- * Updates repo env defaults + workflow fallbacks. Does NOT seed users.
- *
- * Required: DEPLOYER_PRIVATE_KEY=0x...
- *
- * Usage:
- *   DEPLOYER_PRIVATE_KEY=0x... node contracts/deploy-lae-matrix-only.mjs
+ * Redeploy LAEClubMatrix only (BTitan-style, mock NFTs). Does NOT seed users.
  */
 import fs from "fs";
 import path from "path";
@@ -19,23 +13,24 @@ const ROOT = path.join(__dirname, "..");
 const RPC = process.env.BSC_RPC_URL ?? "https://bsc-testnet.bnbchain.org";
 const CHAIN_ID = 97;
 
-const LAE_COIN =
-  process.env.LAE_COIN_CONTRACT ?? "0xD6698E6a8Ee4712cC2E36C150f1C34e59884C45A";
 const PAYMENT_TOKEN =
   process.env.PAYMENT_TOKEN ?? "0xb2bE66BE07E1AD04074B32B8b13DcdFaB6B57575";
 const OWNER =
   process.env.OWNER_WALLET ?? "0xef9594fC5145404BfC7B5640296C3864319e3d86";
-const CLUB_POOL = process.env.CLUB_POOL ?? OWNER;
-const TREASURY = process.env.TREASURY_WALLET ?? OWNER;
-const LIQUIDITY_POOL = process.env.LIQUIDITY_POOL ?? OWNER;
+const ROYAL_POOL = process.env.ROYAL_POOL ?? OWNER;
+const PLATFORM_TREASURY = process.env.TREASURY_WALLET ?? OWNER;
 
 const DEPLOY_JSON = path.join(__dirname, "deployed-bsc-testnet.json");
 
-function compileMatrix() {
-  const source = fs.readFileSync(path.join(__dirname, "LAEClubMatrix.sol"), "utf8");
+function compileContracts() {
+  const matrixSource = fs.readFileSync(path.join(__dirname, "LAEClubMatrix.sol"), "utf8");
+  const nftSource = fs.readFileSync(path.join(__dirname, "MockMatrixNfts.sol"), "utf8");
   const input = {
     language: "Solidity",
-    sources: { "LAEClubMatrix.sol": { content: source } },
+    sources: {
+      "LAEClubMatrix.sol": { content: matrixSource },
+      "MockMatrixNfts.sol": { content: nftSource },
+    },
     settings: {
       optimizer: { enabled: true, runs: 200 },
       viaIR: true,
@@ -49,8 +44,20 @@ function compileMatrix() {
       process.exit(1);
     }
   }
-  const c = output.contracts["LAEClubMatrix.sol"].LAEClubMatrix;
-  return { abi: c.abi, bytecode: c.evm.bytecode.object };
+  return {
+    matrix: {
+      abi: output.contracts["LAEClubMatrix.sol"].LAEClubMatrix.abi,
+      bytecode: output.contracts["LAEClubMatrix.sol"].LAEClubMatrix.evm.bytecode.object,
+    },
+    regPass: {
+      abi: output.contracts["MockMatrixNfts.sol"].MockRegistrationPassNFT.abi,
+      bytecode: output.contracts["MockMatrixNfts.sol"].MockRegistrationPassNFT.evm.bytecode.object,
+    },
+    royal: {
+      abi: output.contracts["MockMatrixNfts.sol"].MockRoyaltyCardNFT.abi,
+      bytecode: output.contracts["MockMatrixNfts.sol"].MockRoyaltyCardNFT.evm.bytecode.object,
+    },
+  };
 }
 
 function readPrevDeploy() {
@@ -85,7 +92,6 @@ function patchRepoContractDefaults(prevMatrix, prevBlock, matrixAddr, deployBloc
     let text = fs.readFileSync(fp, "utf8");
     let next = text;
     if (prevMatrix) next = next.replaceAll(prevMatrix, matrixAddr);
-    next = next.replaceAll(String(matrixAddr), matrixAddr);
     if (prevBlock) next = next.replaceAll(String(prevBlock), String(deployBlock));
     if (next !== text) {
       fs.writeFileSync(fp, next);
@@ -102,7 +108,6 @@ function updateEnvFiles(matrixAddr, deployBlock) {
     NEXT_PUBLIC_MATRIX_CORE_DEPLOY_BLOCK: String(deployBlock),
     NEXT_PUBLIC_LAE_MATRIX_DEPLOY_BLOCK: String(deployBlock),
     NEXT_PUBLIC_PAYMENT_TOKEN: PAYMENT_TOKEN,
-    NEXT_PUBLIC_LAE_COIN_CONTRACT: LAE_COIN,
   });
   upsertEnv(path.join(ROOT, "backend", ".env"), {
     LAE_MATRIX_CONTRACT_ADDRESS: matrixAddr,
@@ -111,7 +116,6 @@ function updateEnvFiles(matrixAddr, deployBlock) {
     MATRIX_CORE_DEPLOY_BLOCK: String(deployBlock),
     INDEXER_START_BLOCK: String(deployBlock),
     PAYMENT_TOKEN_ADDRESS: PAYMENT_TOKEN,
-    LAE_COIN_CONTRACT_ADDRESS: LAE_COIN,
     CHAIN_ID: "97",
   });
 }
@@ -127,39 +131,61 @@ async function main() {
   const prevMatrix = prev.contracts?.LAEClubMatrix ?? "";
   const prevBlock = prev.deployBlock ?? 0;
 
-  const compiled = compileMatrix();
+  const compiled = compileContracts();
   const provider = new ethers.JsonRpcProvider(RPC, CHAIN_ID, { staticNetwork: true });
   const wallet = new ethers.Wallet(pk, provider);
   const bal = await provider.getBalance(wallet.address);
-  console.log("BSC Testnet — matrix deploy only (no seed)");
+  console.log("BSC Testnet — BTitan-style LAEClubMatrix deploy");
   console.log("Deployer:", wallet.address);
   console.log("BNB:", ethers.formatEther(bal));
   if (bal === 0n) process.exit(1);
 
-  const gas = { gasLimit: 8_000_000n };
-  const factory = new ethers.ContractFactory(compiled.abi, compiled.bytecode, wallet);
-  const matrix = await factory.deploy(OWNER, PAYMENT_TOKEN, CLUB_POOL, TREASURY, gas);
+  const royalFactory = new ethers.ContractFactory(compiled.royal.abi, compiled.royal.bytecode, wallet);
+  const royal1 = await royalFactory.deploy({ gasLimit: 2_000_000n });
+  await royal1.waitForDeployment();
+  const royal2 = await royalFactory.deploy({ gasLimit: 2_000_000n });
+  await royal2.waitForDeployment();
+  const royal3 = await royalFactory.deploy({ gasLimit: 2_000_000n });
+  await royal3.waitForDeployment();
+  const royal4 = await royalFactory.deploy({ gasLimit: 2_000_000n });
+  await royal4.waitForDeployment();
+
+  const regFactory = new ethers.ContractFactory(compiled.regPass.abi, compiled.regPass.bytecode, wallet);
+  const regPass = await regFactory.deploy({ gasLimit: 2_000_000n });
+  await regPass.waitForDeployment();
+
+  const regPassAddr = await regPass.getAddress();
+  const royalAddrs = [
+    await royal1.getAddress(),
+    await royal2.getAddress(),
+    await royal3.getAddress(),
+    await royal4.getAddress(),
+  ];
+
+  const factory = new ethers.ContractFactory(compiled.matrix.abi, compiled.matrix.bytecode, wallet);
+  const matrix = await factory.deploy(
+    OWNER,
+    PAYMENT_TOKEN,
+    ROYAL_POOL,
+    PLATFORM_TREASURY,
+    regPassAddr,
+    royalAddrs[0],
+    royalAddrs[1],
+    royalAddrs[2],
+    royalAddrs[3],
+    { gasLimit: 8_000_000n }
+  );
   await matrix.waitForDeployment();
   const matrixAddr = await matrix.getAddress();
   console.log("LAEClubMatrix:", matrixAddr);
 
-  const matrixC = new ethers.Contract(matrixAddr, compiled.abi, wallet);
-  let tx = await matrixC.setLaeCoin(LAE_COIN);
-  await tx.wait();
-  tx = await matrixC.setLiquidityPool(LIQUIDITY_POOL);
-  await tx.wait();
+  const nftAbi = ["function setMatrix(address) external"];
+  await (await new ethers.Contract(regPassAddr, nftAbi, wallet).setMatrix(matrixAddr)).wait();
+  for (const addr of royalAddrs) {
+    await (await new ethers.Contract(addr, nftAbi, wallet).setMatrix(matrixAddr)).wait();
+  }
 
-  const laeCoinAbi = [
-    "function setMatrixContract(address) external",
-    "function setTaxExempt(address,bool) external",
-  ];
-  const coinC = new ethers.Contract(LAE_COIN, laeCoinAbi, wallet);
-  tx = await coinC.setMatrixContract(matrixAddr);
-  await tx.wait();
-  tx = await coinC.setTaxExempt(matrixAddr, true);
-  await tx.wait();
-
-  const deployBlock = (await tx.wait()).blockNumber;
+  const deployBlock = (await wallet.provider.getBlock("latest")).number;
   console.log("deployBlock:", deployBlock);
 
   const addresses = {
@@ -169,13 +195,14 @@ async function main() {
     contracts: {
       ...(prev.contracts ?? {}),
       LAEClubMatrix: matrixAddr,
-      LAECoin: LAE_COIN,
       TestPaymentToken: PAYMENT_TOKEN,
+      RegistrationPassNFT: regPassAddr,
     },
     deployBlock,
     deployedAt: new Date().toISOString().slice(0, 10),
     owner: OWNER,
     seededUsers: 0,
+    contractType: "btitan-style",
   };
   fs.writeFileSync(DEPLOY_JSON, JSON.stringify(addresses, null, 2));
 
@@ -183,10 +210,7 @@ async function main() {
   updateEnvFiles(matrixAddr, deployBlock);
   patchRepoContractDefaults(prevMatrix, prevBlock, matrixAddr, deployBlock);
 
-  console.log("\n✓ Done — seed locally when ready:");
-  console.log(
-    `DEPLOYER_PRIVATE_KEY=0x... SKIP_DEPLOY=1 MATRIX_ADDRESS=${matrixAddr} MAX_USERS=200 node contracts/deploy-and-seed-testnet.mjs`
-  );
+  console.log("\n✓ Done");
   console.log("BSCScan:", `https://testnet.bscscan.com/address/${matrixAddr}`);
 }
 

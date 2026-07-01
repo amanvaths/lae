@@ -24,9 +24,6 @@ import path from "path";
 import { fileURLToPath } from "url";
 import solc from "solc";
 import { ethers } from "../backend/node_modules/ethers/lib.esm/index.js";
-import { createRequire } from "module";
-const require = createRequire(import.meta.url);
-const { Reference, matrixShare } = require("../matrix-test/reference.js");
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, "..");
@@ -63,11 +60,15 @@ function buildBinaryTreeSponsors(maxId) {
   return sponsors;
 }
 
-function compileMatrix() {
-  const source = fs.readFileSync(path.join(__dirname, "LAEClubMatrix.sol"), "utf8");
+function compileContracts() {
+  const matrixSource = fs.readFileSync(path.join(__dirname, "LAEClubMatrix.sol"), "utf8");
+  const nftSource = fs.readFileSync(path.join(__dirname, "MockMatrixNfts.sol"), "utf8");
   const input = {
     language: "Solidity",
-    sources: { "LAEClubMatrix.sol": { content: source } },
+    sources: {
+      "LAEClubMatrix.sol": { content: matrixSource },
+      "MockMatrixNfts.sol": { content: nftSource },
+    },
     settings: {
       optimizer: { enabled: true, runs: 200 },
       viaIR: true,
@@ -81,37 +82,76 @@ function compileMatrix() {
       process.exit(1);
     }
   }
-  const c = output.contracts["LAEClubMatrix.sol"].LAEClubMatrix;
-  return { abi: c.abi, bytecode: c.evm.bytecode.object };
+  return {
+    matrix: {
+      abi: output.contracts["LAEClubMatrix.sol"].LAEClubMatrix.abi,
+      bytecode: output.contracts["LAEClubMatrix.sol"].LAEClubMatrix.evm.bytecode.object,
+    },
+    regPass: {
+      abi: output.contracts["MockMatrixNfts.sol"].MockRegistrationPassNFT.abi,
+      bytecode: output.contracts["MockMatrixNfts.sol"].MockRegistrationPassNFT.evm.bytecode.object,
+    },
+    royal: {
+      abi: output.contracts["MockMatrixNfts.sol"].MockRoyaltyCardNFT.abi,
+      bytecode: output.contracts["MockMatrixNfts.sol"].MockRoyaltyCardNFT.evm.bytecode.object,
+    },
+  };
 }
 
 async function deployMatrix(wallet) {
-  console.log("\n[1/4] Deploy LAEClubMatrix...");
-  const compiled = compileMatrix();
-  const factory = new ethers.ContractFactory(compiled.abi, compiled.bytecode, wallet);
-  const matrix = await factory.deploy(OWNER, PAYMENT_TOKEN, CLUB_POOL, TREASURY, { gasLimit: 8_000_000n });
+  console.log("\n[1/4] Deploy mock NFTs + LAEClubMatrix (BTitan-style)...");
+  const compiled = compileContracts();
+
+  const royalFactory = new ethers.ContractFactory(compiled.royal.abi, compiled.royal.bytecode, wallet);
+  const royal1 = await royalFactory.deploy({ gasLimit: 2_000_000n });
+  await royal1.waitForDeployment();
+  const royal2 = await royalFactory.deploy({ gasLimit: 2_000_000n });
+  await royal2.waitForDeployment();
+  const royal3 = await royalFactory.deploy({ gasLimit: 2_000_000n });
+  await royal3.waitForDeployment();
+  const royal4 = await royalFactory.deploy({ gasLimit: 2_000_000n });
+  await royal4.waitForDeployment();
+
+  const regFactory = new ethers.ContractFactory(compiled.regPass.abi, compiled.regPass.bytecode, wallet);
+  const regPass = await regFactory.deploy({ gasLimit: 2_000_000n });
+  await regPass.waitForDeployment();
+
+  const regPassAddr = await regPass.getAddress();
+  const royalAddrs = [
+    await royal1.getAddress(),
+    await royal2.getAddress(),
+    await royal3.getAddress(),
+    await royal4.getAddress(),
+  ];
+  console.log("      RegPass NFT:", regPassAddr);
+  console.log("      Royal NFTs:", royalAddrs.join(", "));
+
+  const factory = new ethers.ContractFactory(compiled.matrix.abi, compiled.matrix.bytecode, wallet);
+  const matrix = await factory.deploy(
+    OWNER,
+    PAYMENT_TOKEN,
+    CLUB_POOL,
+    TREASURY,
+    regPassAddr,
+    royalAddrs[0],
+    royalAddrs[1],
+    royalAddrs[2],
+    royalAddrs[3],
+    { gasLimit: 8_000_000n }
+  );
   await matrix.waitForDeployment();
   const matrixAddr = await matrix.getAddress();
   console.log("      Matrix:", matrixAddr);
 
-  const matrixC = new ethers.Contract(matrixAddr, compiled.abi, wallet);
-  let tx = await matrixC.setLaeCoin(LAE_COIN);
-  await tx.wait();
-  tx = await matrixC.setLiquidityPool(LIQUIDITY_POOL);
-  await tx.wait();
+  const nftAbi = ["function setMatrix(address) external"];
+  await (await new ethers.Contract(regPassAddr, nftAbi, wallet).setMatrix(matrixAddr)).wait();
+  for (const addr of royalAddrs) {
+    await (await new ethers.Contract(addr, nftAbi, wallet).setMatrix(matrixAddr)).wait();
+  }
 
-  const laeCoinAbi = [
-    "function setMatrixContract(address) external",
-    "function setTaxExempt(address,bool) external",
-  ];
-  const coinC = new ethers.Contract(LAE_COIN, laeCoinAbi, wallet);
-  tx = await coinC.setMatrixContract(matrixAddr);
-  await tx.wait();
-  tx = await coinC.setTaxExempt(matrixAddr, true);
-  await tx.wait();
-
+  const matrixC = new ethers.Contract(matrixAddr, compiled.matrix.abi, wallet);
   const deployBlock = await wallet.provider.getBlockNumber();
-  return { matrixAddr, abi: compiled.abi, deployBlock, matrixC };
+  return { matrixAddr, abi: compiled.matrix.abi, deployBlock, matrixC };
 }
 
 async function ensureTokenFunding(wallet, matrixAddr, regCount) {
@@ -189,9 +229,6 @@ async function seedUsers(matrixC, wallet, maxUsers) {
   const iface = matrixC.interface;
   const allPayments = [];
   const allRegs = [];
-  const ref = new Reference();
-  let verifyOk = 0;
-  let verifyFail = 0;
 
   const partnersDone = await matrixC.partnersInitialized();
   if (!partnersDone) {
@@ -203,12 +240,8 @@ async function seedUsers(matrixC, wallet, maxUsers) {
     const ev = parseReceiptEvents(iface, rcpt);
     allRegs.push({ step: "partners", tx: rcpt.hash, ...ev });
     console.log("      partners tx:", rcpt.hash);
-    ref.register(1); // #2 under owner
-    ref.register(1); // #3 under owner
   } else {
     console.log("      partners already initialized — skip");
-    ref.register(1);
-    ref.register(1);
   }
 
   const sponsors = buildBinaryTreeSponsors(maxUsers);
@@ -221,14 +254,6 @@ async function seedUsers(matrixC, wallet, maxUsers) {
       console.log(`      reg #${userId} — already registered, skip`);
       continue;
     }
-
-    const payoutsBefore = ref.payouts.length;
-    const expectedId = ref.register(sponsorId);
-    if (expectedId !== userId) {
-      console.error(`      REF mismatch: expected id ${expectedId} got ${userId}`);
-      verifyFail++;
-    }
-    const expectedPay = ref.payouts[payoutsBefore] ?? null;
 
     process.stdout.write(`      reg #${userId} under #${sponsorId}... `);
     let gasLimit = gasDefault;
@@ -243,47 +268,20 @@ async function seedUsers(matrixC, wallet, maxUsers) {
     const ev = parseReceiptEvents(iface, rcpt);
     const pay = ev.payments[0];
     const recv = pay ? `#${pay.receiverId}` : "none";
-
-    let match = true;
-    if (expectedPay && !expectedPay.held && !expectedPay.treasury) {
-      if (!pay || pay.receiverId !== expectedPay.receiverId) match = false;
-    } else if (expectedPay?.held && pay) {
-      match = false; // hold expected, got token transfer
-    } else if (!expectedPay?.held && !expectedPay?.treasury && !pay && expectedPay) {
-      match = false;
-    }
-
-    if (match) {
-      verifyOk++;
-      console.log(`ok → pay ${recv} (L${pay?.level ?? "-"} amt ${pay?.amount ?? "hold"}) ✓`);
-    } else {
-      verifyFail++;
-      const exp = expectedPay
-        ? expectedPay.held
-          ? "hold"
-          : `#${expectedPay.receiverId}`
-        : "none";
-      console.log(`MISMATCH on-chain ${recv} expected ${exp} (L${pay?.level ?? "-"}) ✗`);
-    }
+    console.log(`ok → pay ${recv} (L${pay?.level ?? "-"})`);
 
     allPayments.push({
       userId,
       sponsorId,
       tx: rcpt.hash,
       payment: pay ?? null,
-      expectedReceiver: expectedPay?.held ? "hold" : expectedPay?.receiverId ?? null,
-      verified: match,
       placementCount: ev.placements.length,
     });
     allRegs.push({ userId, sponsorId, tx: rcpt.hash, events: ev });
     done++;
   }
   console.log("      registered", done, "users");
-  console.log("      payment verify:", verifyOk, "ok,", verifyFail, "mismatch");
-  if (verifyFail > 0) {
-    console.warn("      ⚠ Some payments did not match reference — review seed-payments-testnet.json");
-  }
-  return { allPayments, allRegs, verifyOk, verifyFail };
+  return { allPayments, allRegs };
 }
 
 function saveDeployJson(matrixAddr, deployBlock, wallet) {
@@ -425,8 +423,8 @@ async function main() {
 
   if (SKIP_DEPLOY && matrixAddr) {
     console.log("\nSKIP_DEPLOY — using", matrixAddr);
-    const compiled = compileMatrix();
-    abi = compiled.abi;
+    const compiled = compileContracts();
+    abi = compiled.matrix.abi;
     deployBlock = Number(process.env.DEPLOY_BLOCK ?? "0");
   } else {
     const d = await deployMatrix(wallet);

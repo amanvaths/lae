@@ -1,4 +1,4 @@
-/** LAEClubMatrix — 15-slot × 14-position matrix contract ABI (frontend) */
+/** LAEClubMatrix — 12-level × 14-spot matrix (BTitan-style, frontend ABI) */
 export const laeClubMatrixAbi = [
   {
     type: "function",
@@ -37,23 +37,16 @@ export const laeClubMatrixAbi = [
   },
   {
     type: "function",
-    name: "PAYMENT_TOKEN",
+    name: "BTCB_TOKEN_ADDRESS",
     inputs: [],
     outputs: [{ type: "address" }],
     stateMutability: "view",
   },
   {
     type: "function",
-    name: "TREASURY_POOL_ADDRESS",
+    name: "LAST_LEVEL",
     inputs: [],
-    outputs: [{ type: "address" }],
-    stateMutability: "view",
-  },
-  {
-    type: "function",
-    name: "CLUB_POOL_ADDRESS",
-    inputs: [],
-    outputs: [{ type: "address" }],
+    outputs: [{ type: "uint8" }],
     stateMutability: "view",
   },
   {
@@ -124,26 +117,6 @@ export const laeClubMatrixAbi = [
     stateMutability: "view",
   },
   {
-    type: "function",
-    name: "getLaeRewardSummary",
-    inputs: [{ name: "userAddress", type: "address" }],
-    outputs: [
-      { name: "allocated", type: "uint256" },
-      { name: "released", type: "uint256" },
-      { name: "claimable", type: "uint256" },
-      { name: "claimed", type: "uint256" },
-      { name: "locked", type: "uint256" },
-    ],
-    stateMutability: "view",
-  },
-  {
-    type: "function",
-    name: "claimLaeRewards",
-    inputs: [],
-    outputs: [{ name: "claimedAmount", type: "uint256" }],
-    stateMutability: "nonpayable",
-  },
-  {
     type: "event",
     name: "Registration",
     inputs: [
@@ -176,7 +149,7 @@ export const laeClubMatrixAbi = [
   },
   {
     type: "event",
-    name: "ClubPoolPayment",
+    name: "TreasuryPool",
     inputs: [
       { name: "refId", type: "uint256", indexed: true },
       { name: "userId", type: "uint256", indexed: true },
@@ -210,35 +183,6 @@ export const laeClubMatrixAbi = [
       { name: "receiverId", type: "uint256", indexed: true },
       { name: "userId", type: "uint256", indexed: true },
       { name: "level", type: "uint8", indexed: false },
-    ],
-  },
-  {
-    type: "event",
-    name: "LapseIncome",
-    inputs: [
-      { name: "receiverId", type: "uint256", indexed: true },
-      { name: "fromId", type: "uint256", indexed: true },
-      { name: "level", type: "uint8", indexed: false },
-      { name: "amount", type: "uint256", indexed: false },
-    ],
-  },
-  {
-    type: "event",
-    name: "LaeRewardAllocated",
-    inputs: [
-      { name: "user", type: "address", indexed: true },
-      { name: "scheduleIndex", type: "uint256", indexed: true },
-      { name: "laeAmount", type: "uint256", indexed: false },
-      { name: "liquidityContribution", type: "uint256", indexed: false },
-      { name: "level", type: "uint8", indexed: false },
-    ],
-  },
-  {
-    type: "event",
-    name: "LaeRewardClaimed",
-    inputs: [
-      { name: "user", type: "address", indexed: true },
-      { name: "amount", type: "uint256", indexed: false },
     ],
   },
 ] as const;

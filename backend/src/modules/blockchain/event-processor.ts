@@ -336,6 +336,7 @@ export async function processIndexedLog(log: ParsedLog): Promise<void> {
       break;
     }
 
+    case "TreasuryPool":
     case "ClubPoolPayment": {
       await prisma.matrixCoreIncome.upsert({
         where: { txHash_logIndex: { txHash, logIndex } },

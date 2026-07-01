@@ -341,7 +341,7 @@ export function useLaeProtocolStats() {
     contracts: [
       { address: LAE_CONTRACTS.matrix, abi: laeClubMatrixAbi, functionName: "lastUserId" },
       { address: LAE_CONTRACTS.matrix, abi: laeClubMatrixAbi, functionName: "levelTokenCost", args: [1] },
-      { address: LAE_CONTRACTS.matrix, abi: laeClubMatrixAbi, functionName: "PAYMENT_TOKEN" },
+      { address: LAE_CONTRACTS.matrix, abi: laeClubMatrixAbi, functionName: "BTCB_TOKEN_ADDRESS" },
     ],
     query: { staleTime: 30_000 },
   });
@@ -433,7 +433,7 @@ export function useLaeRoyalPoolBalance(poolAddress?: Address) {
   const token = useReadContract({
     address: LAE_CONTRACTS.matrix,
     abi: laeClubMatrixAbi,
-    functionName: "PAYMENT_TOKEN",
+    functionName: "BTCB_TOKEN_ADDRESS",
     query: { staleTime: 60_000 },
   });
 
