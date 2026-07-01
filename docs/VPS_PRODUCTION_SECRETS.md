@@ -27,8 +27,8 @@ Example Value: `-----BEGIN OPENSSH PRIVATE KEY-----…`
 ## Frontend (Deploy to VPS workflow)
 
 **NEXT_PUBLIC_API_URL**  
-Public URL of the backend API (must be reachable from browsers)  
-Example Value: `https://api.laeclub.org`
+Public URL of the backend API (must be reachable from browsers). Use same-origin proxy on production VPS:  
+Example Value: `https://laeclub.org`
 
 **NEXT_PUBLIC_WC_PROJECT_ID**  
 WalletConnect Cloud project ID — **required for WalletConnect on mobile browsers**. MetaMask/Trust deep links work without it; get a free id at [cloud.walletconnect.com](https://cloud.walletconnect.com).  
@@ -63,8 +63,8 @@ Example Value: `0xdb25Af21346aD358D5e52835934AF5f326169984`
 ## Backend (Deploy Backend to VPS workflow)
 
 **BACKEND_PUBLIC_URL**  
-Public URL used for post-deploy health checks from GitHub Actions  
-Example Value: `https://api.laeclub.org`
+Public URL used for post-deploy health checks from GitHub Actions (same as nginx `/health` proxy)  
+Example Value: `https://laeclub.org`
 
 **DATABASE_URL**  
 PostgreSQL connection string on VPS  

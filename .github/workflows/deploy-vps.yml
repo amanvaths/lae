@@ -30,7 +30,7 @@ jobs:
           NEXT_PUBLIC_SITE_LIVE: "true"
           NEXT_PUBLIC_CHAIN_ID: "97"
           NEXT_PUBLIC_SITE_URL: "https://laeclub.org"
-          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL != '' && secrets.NEXT_PUBLIC_API_URL || 'https://laeclub.org' }}
           NEXT_PUBLIC_WC_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_WC_PROJECT_ID }}
           NEXT_PUBLIC_SENSO_CONTRACT: "0x6521619C38fe4be6B800263CC783d9524ED4F7BA"
           NEXT_PUBLIC_DAI_CONTRACT: "0xb2bE66BE07E1AD04074B32B8b13DcdFaB6B57575"
@@ -66,6 +66,7 @@ jobs:
           port: 22
           source: deploy/nginx-vps-laeclub.org.conf
           target: /tmp/
+          strip_components: 1
 
       - name: Extract and reload nginx
         uses: appleboy/ssh-action@v1.2.0
@@ -76,14 +77,29 @@ jobs:
           port: 22
           script_stop: true
           script: |
-            set -e
+            set -euo pipefail
             mkdir -p /var/www/lae
             find /var/www/lae -mindepth 1 -delete
             tar -xzf /tmp/site.tar.gz -C /var/www/lae
             rm -f /tmp/site.tar.gz
             chown -R www-data:www-data /var/www/lae
-            cp /tmp/nginx-vps-laeclub.org.conf /etc/nginx/sites-available/laeclub.org
+
+            NGINX_SRC="$(find /tmp -maxdepth 3 -name 'nginx-vps-laeclub.org.conf' -print -quit 2>/dev/null || true)"
+            if [ -z "${NGINX_SRC}" ] || [ ! -f "${NGINX_SRC}" ]; then
+              echo "ERROR: nginx config not found under /tmp (scp may have failed)"
+              ls -laR /tmp || true
+              exit 1
+            fi
+            cp "${NGINX_SRC}" /etc/nginx/sites-available/laeclub.org
             ln -sf /etc/nginx/sites-available/laeclub.org /etc/nginx/sites-enabled/laeclub.org
-            rm -f /etc/nginx/sites-enabled/default 2>/dev/null || true
+            rm -f /etc/nginx/sites-enabled/default /etc/nginx/sites-enabled/lae 2>/dev/null || true
+
+            if [ -d /etc/letsencrypt/live/laeclub.org ]; then
+              certbot install --cert-name laeclub.org --nginx --redirect --non-interactive || true
+            elif command -v certbot >/dev/null 2>&1; then
+              certbot --nginx -d laeclub.org --non-interactive --agree-tos --register-unsafely-without-email --redirect || true
+            fi
+
             nginx -t
             systemctl reload nginx
+            echo "Frontend deployed to https://laeclub.org"
