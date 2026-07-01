@@ -61,12 +61,22 @@ async function idForAddress(address: string): Promise<number | null> {
   }
 }
 
-function addrAt(rawRefs: ethers.Result | string[], i: number): string {
-  const raw =
-    typeof (rawRefs as ethers.Result)?.getItem === "function"
-      ? (rawRefs as ethers.Result).getItem(i)
-      : (rawRefs as string[])?.[i] ?? ethers.ZeroAddress;
-  return String(raw).toLowerCase();
+function referralsList(rawRefs: ethers.Result | string[]): string[] {
+  if (Array.isArray(rawRefs)) return rawRefs.map((a) => String(a).toLowerCase());
+  try {
+    const n = Number((rawRefs as ethers.Result).length ?? 0);
+    const out: string[] = [];
+    for (let i = 0; i < n; i++) {
+      out.push(String((rawRefs as ethers.Result).getItem(i)).toLowerCase());
+    }
+    return out;
+  } catch {
+    return [];
+  }
+}
+
+function addrAt(refs: string[], i: number): string {
+  return refs[i] ?? ethers.ZeroAddress.toLowerCase();
 }
 
 /** On-chain 14-slot genealogy board (usersXMatrixReferrals). */
@@ -76,13 +86,14 @@ async function readGenealogyBoard(
 ): Promise<{ filled: number; completed: boolean; slots: MatrixSlotDTO[] }> {
   const m = matrixContract();
   const rawRefs = await m.usersXMatrixReferrals(wallet, level);
+  const refs = referralsList(rawRefs as ethers.Result | string[]);
 
   let filled = 0;
   let firstEmpty = 0;
   const slots: MatrixSlotDTO[] = [];
 
   for (let p = 1; p <= MATRIX_SIZE; p++) {
-    const addr = addrAt(rawRefs, p - 1);
+    const addr = addrAt(refs, p - 1);
     const occupied = Boolean(addr) && addr !== ethers.ZeroAddress.toLowerCase();
     if (occupied) {
       filled += 1;
