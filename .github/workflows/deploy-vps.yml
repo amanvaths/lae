@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: vps-deploy
+  group: vps-production-deploy
   cancel-in-progress: true
 
 jobs:
@@ -85,7 +85,6 @@ jobs:
             chown -R www-data:www-data /var/www/lae
 
             rm -rf /tmp/deploy 2>/dev/null || true
-            rm -f /tmp/nginx-vps-laeclub.org.conf 2>/dev/null || true
             NGINX_SRC="/tmp/nginx-vps-laeclub.org.conf"
             if [ ! -f "${NGINX_SRC}" ]; then
               echo "ERROR: ${NGINX_SRC} missing (scp may have failed)"
@@ -106,8 +105,16 @@ jobs:
             systemctl reload nginx
 
             curl -sf http://127.0.0.1:4000/health >/dev/null || echo "WARN: backend not on :4000 yet"
-            curl -sfk https://laeclub.org/health | grep -q '"status":"ok"' || {
-              echo "ERROR: https://laeclub.org/health did not return API JSON"
-              exit 1
-            }
+            for i in 1 2 3 4 5 6 7 8 9 10; do
+              if curl -sfk https://laeclub.org/health | grep -q '"status":"ok"'; then
+                echo "HTTPS health OK (attempt ${i})"
+                break
+              fi
+              if [ "${i}" -eq 10 ]; then
+                echo "ERROR: https://laeclub.org/health did not return API JSON"
+                exit 1
+              fi
+              echo "Waiting for HTTPS health… attempt ${i}/10"
+              sleep 3
+            done
             echo "Frontend deployed to https://laeclub.org"

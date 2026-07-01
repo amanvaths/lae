@@ -19,7 +19,7 @@ on:
           - "true"
 
 concurrency:
-  group: backend-vps-deploy
+  group: vps-production-deploy
   cancel-in-progress: true
 
 env:
@@ -184,7 +184,7 @@ jobs:
       - name: Verify public health endpoint
         run: |
           BASE="${{ secrets.BACKEND_PUBLIC_URL }}"
-          if [ -z "${BASE}" ]; then
+          if [ -z "${BASE}" ] || [[ "${BASE}" == *"laeclub.com"* ]] || [[ "${BASE}" == *"api.laeclub.org"* ]]; then
             BASE="https://laeclub.org"
           fi
           BASE="${BASE%/}"
