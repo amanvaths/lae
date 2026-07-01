@@ -188,8 +188,17 @@ jobs:
             BASE="https://laeclub.org"
           fi
           BASE="${BASE%/}"
+
+          check_public() {
+            health="$(curl -sfk "${BASE}/health")" || return 1
+            echo "${health}" | grep -q '"status":"ok"' || return 1
+            status="$(curl -sfk "${BASE}/api/indexer/status")" || return 1
+            echo "${status}" | grep -q '"mode":"indexer-only"' || return 1
+            return 0
+          }
+
           for i in 1 2 3 4 5 6 7 8 9 10; do
-            if curl -sfk "${BASE}/health" >/dev/null && curl -sfk "${BASE}/api/indexer/status" >/dev/null; then
+            if check_public; then
               echo "Public backend endpoints OK (attempt ${i})"
               curl -sfk "${BASE}/health"
               echo ""
@@ -200,5 +209,5 @@ jobs:
             sleep 6
           done
           echo "ERROR: public health check failed for ${BASE}"
-          echo "Set GitHub secret BACKEND_PUBLIC_URL=https://laeclub.org (same-origin /api/ proxy)"
+          echo "Ensure nginx proxies /health and /api/ on ${BASE} (not static index.html)"
           exit 1

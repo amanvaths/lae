@@ -84,22 +84,30 @@ jobs:
             rm -f /tmp/site.tar.gz
             chown -R www-data:www-data /var/www/lae
 
-            NGINX_SRC="$(find /tmp -maxdepth 3 -name 'nginx-vps-laeclub.org.conf' -print -quit 2>/dev/null || true)"
-            if [ -z "${NGINX_SRC}" ] || [ ! -f "${NGINX_SRC}" ]; then
-              echo "ERROR: nginx config not found under /tmp (scp may have failed)"
-              ls -laR /tmp || true
+            rm -rf /tmp/deploy 2>/dev/null || true
+            rm -f /tmp/nginx-vps-laeclub.org.conf 2>/dev/null || true
+            NGINX_SRC="/tmp/nginx-vps-laeclub.org.conf"
+            if [ ! -f "${NGINX_SRC}" ]; then
+              echo "ERROR: ${NGINX_SRC} missing (scp may have failed)"
+              ls -la /tmp || true
               exit 1
             fi
+
+            if [ ! -f /etc/letsencrypt/live/laeclub.org/fullchain.pem ]; then
+              echo "ERROR: SSL cert missing. On VPS run: bash deploy/setup-ssl-laeclub.org.sh"
+              exit 1
+            fi
+
             cp "${NGINX_SRC}" /etc/nginx/sites-available/laeclub.org
             ln -sf /etc/nginx/sites-available/laeclub.org /etc/nginx/sites-enabled/laeclub.org
             rm -f /etc/nginx/sites-enabled/default /etc/nginx/sites-enabled/lae 2>/dev/null || true
 
-            if [ -d /etc/letsencrypt/live/laeclub.org ]; then
-              certbot install --cert-name laeclub.org --nginx --redirect --non-interactive || true
-            elif command -v certbot >/dev/null 2>&1; then
-              certbot --nginx -d laeclub.org --non-interactive --agree-tos --register-unsafely-without-email --redirect || true
-            fi
-
             nginx -t
             systemctl reload nginx
+
+            curl -sf http://127.0.0.1:4000/health >/dev/null || echo "WARN: backend not on :4000 yet"
+            curl -sfk https://laeclub.org/health | grep -q '"status":"ok"' || {
+              echo "ERROR: https://laeclub.org/health did not return API JSON"
+              exit 1
+            }
             echo "Frontend deployed to https://laeclub.org"
