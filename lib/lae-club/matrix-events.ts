@@ -21,7 +21,8 @@ function userEventQueries(userId: bigint): EventQuery[] {
     { eventName: "NewUserPlace", args: { referrer: id } },
     { eventName: "NewUserPlace", args: { user: id } },
     { eventName: "TokenReceived", args: { receiverId: id } },
-    { eventName: "TreasuryPool", args: { userId: id } },
+    { eventName: "ClubPoolPayment", args: { userId: id } },
+    { eventName: "LapseIncome", args: { receiverId: id } },
     { eventName: "Reinvest", args: { userId: id } },
     { eventName: "Upgrade", args: { userId: id } },
     { eventName: "MissedIncome", args: { receiverId: id } },
@@ -33,7 +34,7 @@ export function incomeEventQueries(userId: bigint): EventQuery[] {
   const id = userId;
   return [
     { eventName: "TokenReceived", args: { receiverId: id } },
-    { eventName: "TreasuryPool", args: { userId: id } },
+    { eventName: "ClubPoolPayment", args: { userId: id } },
   ];
 }
 

@@ -62,12 +62,10 @@ function buildBinaryTreeSponsors(maxId) {
 
 function compileContracts() {
   const matrixSource = fs.readFileSync(path.join(__dirname, "LAEClubMatrix.sol"), "utf8");
-  const nftSource = fs.readFileSync(path.join(__dirname, "MockMatrixNfts.sol"), "utf8");
   const input = {
     language: "Solidity",
     sources: {
       "LAEClubMatrix.sol": { content: matrixSource },
-      "MockMatrixNfts.sol": { content: nftSource },
     },
     settings: {
       optimizer: { enabled: true, runs: 200 },
@@ -87,69 +85,40 @@ function compileContracts() {
       abi: output.contracts["LAEClubMatrix.sol"].LAEClubMatrix.abi,
       bytecode: output.contracts["LAEClubMatrix.sol"].LAEClubMatrix.evm.bytecode.object,
     },
-    regPass: {
-      abi: output.contracts["MockMatrixNfts.sol"].MockRegistrationPassNFT.abi,
-      bytecode: output.contracts["MockMatrixNfts.sol"].MockRegistrationPassNFT.evm.bytecode.object,
-    },
-    royal: {
-      abi: output.contracts["MockMatrixNfts.sol"].MockRoyaltyCardNFT.abi,
-      bytecode: output.contracts["MockMatrixNfts.sol"].MockRoyaltyCardNFT.evm.bytecode.object,
-    },
   };
 }
 
 async function deployMatrix(wallet) {
-  console.log("\n[1/4] Deploy mock NFTs + LAEClubMatrix (BTitan-style)...");
+  console.log("\n[1/4] Deploy LAEClubMatrix (closed-loop, no NFTs)...");
   const compiled = compileContracts();
 
-  const royalFactory = new ethers.ContractFactory(compiled.royal.abi, compiled.royal.bytecode, wallet);
-  const royal1 = await royalFactory.deploy({ gasLimit: 2_000_000n });
-  await royal1.waitForDeployment();
-  const royal2 = await royalFactory.deploy({ gasLimit: 2_000_000n });
-  await royal2.waitForDeployment();
-  const royal3 = await royalFactory.deploy({ gasLimit: 2_000_000n });
-  await royal3.waitForDeployment();
-  const royal4 = await royalFactory.deploy({ gasLimit: 2_000_000n });
-  await royal4.waitForDeployment();
-
-  const regFactory = new ethers.ContractFactory(compiled.regPass.abi, compiled.regPass.bytecode, wallet);
-  const regPass = await regFactory.deploy({ gasLimit: 2_000_000n });
-  await regPass.waitForDeployment();
-
-  const regPassAddr = await regPass.getAddress();
-  const royalAddrs = [
-    await royal1.getAddress(),
-    await royal2.getAddress(),
-    await royal3.getAddress(),
-    await royal4.getAddress(),
-  ];
-  console.log("      RegPass NFT:", regPassAddr);
-  console.log("      Royal NFTs:", royalAddrs.join(", "));
-
   const factory = new ethers.ContractFactory(compiled.matrix.abi, compiled.matrix.bytecode, wallet);
-  const matrix = await factory.deploy(
-    OWNER,
-    PAYMENT_TOKEN,
-    CLUB_POOL,
-    TREASURY,
-    regPassAddr,
-    royalAddrs[0],
-    royalAddrs[1],
-    royalAddrs[2],
-    royalAddrs[3],
-    { gasLimit: 8_000_000n }
-  );
+  const matrix = await factory.deploy(OWNER, PAYMENT_TOKEN, CLUB_POOL, TREASURY, { gasLimit: 6_000_000n });
   await matrix.waitForDeployment();
   const matrixAddr = await matrix.getAddress();
   console.log("      Matrix:", matrixAddr);
 
-  const nftAbi = ["function setMatrix(address) external"];
-  await (await new ethers.Contract(regPassAddr, nftAbi, wallet).setMatrix(matrixAddr)).wait();
-  for (const addr of royalAddrs) {
-    await (await new ethers.Contract(addr, nftAbi, wallet).setMatrix(matrixAddr)).wait();
+  const matrixC = new ethers.Contract(matrixAddr, compiled.matrix.abi, wallet);
+
+  // Wire LAE reward layer: 10% liquidity -> vested LAE.
+  console.log("      setLaeCoin + setLiquidityPool...");
+  await (await matrixC.setLaeCoin(LAE_COIN)).wait();
+  await (await matrixC.setLiquidityPool(LIQUIDITY_POOL)).wait();
+
+  // Point LAECoin at the new matrix (best effort — needs deployer to own LAECoin).
+  try {
+    const laeAbi = [
+      "function setMatrixContract(address) external",
+      "function setTaxExempt(address,bool) external",
+    ];
+    const coin = new ethers.Contract(LAE_COIN, laeAbi, wallet);
+    await (await coin.setMatrixContract(matrixAddr)).wait();
+    await (await coin.setTaxExempt(matrixAddr, true)).wait();
+    console.log("      LAECoin.setMatrixContract done");
+  } catch (e) {
+    console.log("      LAECoin wiring skipped:", e.shortMessage ?? e.message);
   }
 
-  const matrixC = new ethers.Contract(matrixAddr, compiled.matrix.abi, wallet);
   const deployBlock = await wallet.provider.getBlockNumber();
   return { matrixAddr, abi: compiled.matrix.abi, deployBlock, matrixC };
 }
@@ -166,7 +135,8 @@ async function ensureTokenFunding(wallet, matrixAddr, regCount) {
   const matrix = new ethers.Contract(matrixAddr, matrixAbi, wallet);
   const price = await matrix.levelTokenCost(1);
   const need = price * BigInt(regCount + 5);
-  const contractFloat = ethers.parseEther(String(Math.max(2500, regCount * 12)));
+  // Model is self-funding (each reg deposits before it pays out); keep a tiny buffer.
+  const contractFloat = ethers.parseEther("1");
   const token = new ethers.Contract(PAYMENT_TOKEN, tokenAbi, wallet);
   const bal = await token.balanceOf(wallet.address);
   console.log("\n[2/4] Payment token — need", ethers.formatEther(need), "have", ethers.formatEther(bal));

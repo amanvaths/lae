@@ -1,7 +1,7 @@
 /** LAE Club — LAEClubMatrix 12 levels × 14 spots (BTitan-style) */
 
 export const LAE_MATRIX_SIZE = 14;
-export const LAE_LAST_LEVEL = 12;
+export const LAE_LAST_LEVEL = 15;
 
 /** On-chain matrix mints vested LAE from 10% registration liquidity share. */
 export const MATRIX_SUPPORTS_LAE_REWARDS = true;

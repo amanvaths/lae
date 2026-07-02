@@ -2,15 +2,15 @@
   "chainId": 97,
   "network": "bsc-testnet",
   "contracts": {
-    "LAEClubMatrix": "0xbED951596f1dA97539bB3B41274Fc793A7b20E13",
+    "LAEClubMatrix": "0x4Dfd4818D8dc226Add24C29Fe21C11857ECCc49D",
     "LAECoin": "0xD6698E6a8Ee4712cC2E36C150f1C34e59884C45A",
     "TestPaymentToken": "0xb2bE66BE07E1AD04074B32B8b13DcdFaB6B57575",
     "RegistrationPassNFT": "0x6486fc174134e65Fe33bfef31Fa91D5C71c3d07f"
   },
-  "deployBlock": 116593663,
-  "deployedAt": "2026-07-01",
+  "deployBlock": 116760448,
+  "deployedAt": "2026-07-02",
   "owner": "0xef9594fC5145404BfC7B5640296C3864319e3d86",
-  "seededUsers": 0,
+  "seededUsers": 250,
   "seedNote": "BTitan-style LAEClubMatrix — owner only, no seed",
   "contractType": "btitan-style"
 }

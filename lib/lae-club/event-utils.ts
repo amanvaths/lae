@@ -79,7 +79,7 @@ export function splitIncomeEvents(events: MatrixUserEvent[], userId: bigint | un
   });
 
   const treasury = events.filter((e) => {
-    if (e.eventName !== "TreasuryPool") return false;
+    if (e.eventName !== "ClubPoolPayment") return false;
     const a = e.args as { userId?: bigint };
     return a.userId === userId;
   });

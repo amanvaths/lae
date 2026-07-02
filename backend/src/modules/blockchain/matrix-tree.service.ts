@@ -5,7 +5,7 @@ import { getIndexerProvider } from "./rpc-providers.js";
 import { LAE_MATRIX_READ_ABI } from "./matrix-core-abi.js";
 
 export const MATRIX_SIZE = 14;
-export const LAST_LEVEL = 12;
+export const LAST_LEVEL = 15;
 
 const matrixIface = new ethers.Interface([...LAE_MATRIX_READ_ABI]);
 

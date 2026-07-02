@@ -37,7 +37,7 @@ export const laeClubMatrixAbi = [
   },
   {
     type: "function",
-    name: "BTCB_TOKEN_ADDRESS",
+    name: "PAYMENT_TOKEN",
     inputs: [],
     outputs: [{ type: "address" }],
     stateMutability: "view",
@@ -169,12 +169,22 @@ export const laeClubMatrixAbi = [
   },
   {
     type: "event",
-    name: "TreasuryPool",
+    name: "ClubPoolPayment",
     inputs: [
       { name: "refId", type: "uint256", indexed: true },
       { name: "userId", type: "uint256", indexed: true },
       { name: "amount", type: "uint256", indexed: false },
       { name: "level", type: "uint8", indexed: false },
+    ],
+  },
+  {
+    type: "event",
+    name: "LapseIncome",
+    inputs: [
+      { name: "receiverId", type: "uint256", indexed: true },
+      { name: "fromId", type: "uint256", indexed: true },
+      { name: "level", type: "uint8", indexed: false },
+      { name: "amount", type: "uint256", indexed: false },
     ],
   },
   {

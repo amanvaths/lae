@@ -1,54 +1,80 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
+// Standard ERC-20 / BEP-20 interface for the BTC payment token.
 interface IERC20 {
     function transfer(address recipient, uint256 amount) external returns (bool);
     function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
+    function balanceOf(address account) external view returns (uint256);
 }
 
+// LAE reward token (the only token minted by this project).
 interface ILAECoin {
     function recordRewardAllocation(uint256 amount) external;
     function transfer(address to, uint256 amount) external returns (bool);
     function rewardPoolRemaining() external view returns (uint256);
 }
 
-interface IRegistrationPassNFT {
-    function mint(address to, uint256 tokenId) external;
-}
-
-interface IRoyaltyCardNFT {
-    function mint(address to) external;
-}
-
+/**
+ * @title LAEClubMatrix
+ * @notice Closed-loop 15-level x 14-slot smart matrix with per-level ascension
+ *         gating. 90% of every registration flows through the matrix, 10% funds
+ *         the liquidity pool and mints a vested LAE reward (20 months).
+ *
+ *  PLACEMENT (global forced-matrix frontier)
+ *  -----------------------------------------
+ *  Each user owns one 14-slot board per level. New members fill the current
+ *  "frontier" board of a level (owner's board first, then its members' boards in
+ *  fill order). Every member that enters a level also becomes a future board
+ *  owner (appended to that level's fill queue). When a board completes slot 14 it
+ *  recycles (empties, cycle++) and re-enters the queue for its next cycle.
+ *
+ *  INCOME (closed loop, exact doubling)
+ *  ------------------------------------
+ *  Every slot on a level-N board carries exactly matrixShare(cost[N]) =
+ *  0.0009 * 2^(N-1). Slots 1,2 pay the board owner's uplines; 3,6,8,9,11,12 pay
+ *  the board owner; 7,10 pay its directs; 13 pays its 2nd-level; 14 pays upline-1.
+ *  Slots 4 & 5 are HELD (2 * slot = matrixShare(cost[N+1])). When slot 5 fills the
+ *  board owner ASCENDS to level N+1 carrying the held funds, which pay one slot on
+ *  the level N+1 board. Level-1 slots are funded by registration fees; level N>=2
+ *  slots are funded by the held funds carried up from level N-1 — so total paid
+ *  never exceeds fees collected. A user only reaches level N+1 after its own
+ *  level-N board fills slots 4 & 5, so high levels need very deep teams.
+ *
+ *  ELIGIBILITY + LAPSE
+ *  -------------------
+ *  A recipient needs >= 2 directs to receive matrix income (owner is always
+ *  eligible). Otherwise the income lapses to the 1st upline, then the 2nd upline;
+ *  if neither qualifies it goes to the treasury. Search never exceeds 2 uplines.
+ */
 contract LAEClubMatrix {
-    bool private locked;
-    modifier nonReentrant() {
-        require(!locked, "LAEClub: Reentrant call detected");
-        locked = true;
-        _;
-        locked = false;
-    }
+    // --- Constants ---
+    uint8 public constant LAST_LEVEL = 15;
+    uint8 public constant MATRIX_SIZE = 14;
+    uint256 public constant BPS = 10_000;
+    uint8 public constant VESTING_MONTHS = 20;
+    uint256 public constant MONTH_DURATION = 30 days;
+    uint256 public constant MAX_UPLINE = 60;
 
-    struct XMatrix {
-        address currentReferrer;
-        address[] referrals;
-        uint reinvestCount;
-        uint heldTokenForUpgrade;
-        uint lastSpillUnderReceiverIndex;
-        uint totalTeamSize;
-        uint256 totalEarning;
+    // --- Structs ---
+    struct Board {
+        address[] slots;             // current-cycle occupants (0..14)
+        uint256 reinvestCount;       // completed cycles (0 = first cycle)
+        uint256 totalFilled;         // lifetime placements across all cycles
+        uint256 totalEarning;        // BTC earned by this board's owner at this level
+        uint256 heldForUpgrade;      // slot 4 + 5 shares held toward the next-level ascension
     }
 
     struct User {
-        uint id;
-        address referrer;
-        uint referrerId;
+        uint256 id;
+        address referrer;            // genealogy sponsor
+        uint256 referrerId;
         address[] directReferrals;
-        uint teamSize;
-        uint registrationTimestamp;
+        uint256 teamSize;
+        uint256 registrationTimestamp;
         uint256 totalIncome;
         mapping(uint8 => bool) activeLevels;
-        mapping(uint8 => XMatrix) xMatrix;
+        mapping(uint8 => Board) board;
     }
 
     struct LaeRewardSchedule {
@@ -59,62 +85,65 @@ contract LAEClubMatrix {
         uint8 level;
     }
 
-    uint8 public constant LAST_LEVEL = 12;
-    uint8 public constant MATRIX_SIZE = 14;
-    uint256 public constant BPS = 10_000;
-    uint8 public constant VESTING_MONTHS = 20;
-    uint256 public constant MONTH_DURATION = 30 days;
+    // --- Core state ---
+    address public owner;
+    address public PAYMENT_TOKEN;            // BTC (BEP-20) used for registration & income
+    address public CLUB_POOL_ADDRESS;        // legacy pool (kept for ABI compatibility)
+    address public TREASURY_POOL_ADDRESS;    // platform treasury (lapse / slot 13,14 fallback)
 
     mapping(address => User) private users;
-    mapping(uint => address) public idToAddress;
-    mapping(address => uint) public addressToId;
-    uint public lastUserId = 2;
-    uint256 public totalProjectInvestment;
-    bool public partnersInitialized = false;
-
-    address public BTCB_TOKEN_ADDRESS;
-    address public owner;
-    address private ROYAL_POOL_ADDRESS;
-    address private TREASURY_POOL_ADDRESS;
-
-    address public REGISTRATION_PASS_NFT_CONTRACT;
-    address public ROYAL_RANK1_NFT_CONTRACT;
-    address public ROYAL_RANK2_NFT_CONTRACT;
-    address public ROYAL_RANK3_NFT_CONTRACT;
-    address public ROYAL_RANK4_NFT_CONTRACT;
-
+    mapping(uint256 => address) public idToAddress;
+    mapping(address => uint256) public addressToId;
     mapping(uint8 => uint256) public levelTokenCost;
 
+    // Global forced-matrix frontier per level.
+    mapping(uint8 => address[]) private levelBoardOrder; // board owners in fill order (with recycle re-entries)
+    mapping(uint8 => uint256) public levelFrontier;      // index of the currently-filling board
+
+    uint256 public lastUserId = 2;           // Owner is ID 1
+    bool public partnersInitialized;
+    uint256 public totalProjectInvestment;
+
+    // --- LAE reward layer ---
     address public LAE_COIN_ADDRESS;
     address public LIQUIDITY_POOL_ADDRESS;
-    uint256 public matrixDistributionBps = 9000;
-    uint256 public liquidityAllocationBps = 1000;
-    uint256 public laePriceInPaymentToken = 1e12;
+    uint256 public matrixDistributionBps = 9000; // 90% distributed in matrix
+    uint256 public liquidityAllocationBps = 1000; // 10% to liquidity / LAE reward
+    uint256 public laePriceInPaymentToken = 1e12; // LAE price denominated in payment token
+
     uint256 public totalLiquidityCollected;
     uint256 public totalLaeAllocated;
     uint256 public totalLaeClaimed;
+
     uint256[20] public monthlyReleaseBps;
     uint256[20] public directRequirementByMonth;
+
     mapping(address => LaeRewardSchedule[]) private laeSchedules;
 
-    event Registration(uint indexed userId, uint indexed referrerId, address indexed userAddress);
-    event Reinvest(uint indexed userId, uint indexed newReferrerId, uint indexed callerId, uint8 level);
-    event Upgrade(uint indexed userId, uint indexed newReferrerId, uint8 level);
-    event NewUserPlace(uint indexed user, uint indexed referrer, uint8 level, uint cycle, uint8 spot);
-    event Spillover(uint indexed referrerId, uint indexed receiverId, uint8 level, uint cycle, uint8 virtualSpot);
-    event TreasuryPool(uint indexed refId, uint indexed userId, uint256 amount, uint8 level);
-    event MissedIncome(uint indexed receiverId, uint indexed userId, uint8 level);
-    event TokenReceived(uint indexed receiverId, uint indexed fromId, address indexed from, uint8 level, uint256 amount);
+    bool private entered;
+
+    // --- Events ---
+    event Registration(uint256 indexed userId, uint256 indexed referrerId, address indexed userAddress);
+    event NewUserPlace(uint256 indexed user, uint256 indexed referrer, uint8 level, uint256 cycle, uint8 spot);
+    event TokenReceived(uint256 indexed receiverId, uint256 indexed fromId, address indexed from, uint8 level, uint256 amount);
+    event ClubPoolPayment(uint256 indexed refId, uint256 indexed userId, uint256 amount, uint8 level);
+    event Reinvest(uint256 indexed userId, uint256 indexed newReferrerId, uint256 indexed callerId, uint8 level);
+    event Upgrade(uint256 indexed userId, uint256 indexed newReferrerId, uint8 level);
+    event MissedIncome(uint256 indexed receiverId, uint256 indexed userId, uint8 level);
+    event LapseIncome(uint256 indexed receiverId, uint256 indexed fromId, uint8 level, uint256 amount);
+    event UpgradeHold(uint256 indexed boardOwnerId, uint256 indexed fromUserId, uint8 boardLevel, uint256 amount);
     event TokenTransferFailed(address indexed recipient, uint256 amount, string reason);
+    event PoolAddressesUpdated(address indexed newClubPool, address indexed newTreasuryPool);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-    event TokenAddressesUpdated(address indexed newToken);
-    event PoolAddressesUpdated(address indexed newRoyalPool, address indexed newTreasuryPool);
-    event RegistrationPassNftAddressUpdated(address indexed newAddress);
-    event RoyalNftAddressesUpdated(address newRank1, address newRank2, address newRank3, address newRank4);
+    event TokenAddressUpdated(address indexed newToken);
+    event LevelTokenCostUpdated(uint8 indexed level, uint256 tokenCost);
+
     event LaeCoinUpdated(address indexed laeCoin);
     event LiquidityPoolUpdated(address indexed liquidityPool);
     event SplitBpsUpdated(uint256 matrixDistributionBps, uint256 liquidityAllocationBps);
     event LaePriceUpdated(uint256 laePriceInPaymentToken);
+    event MonthlyReleaseBpsUpdated(uint8 indexed month, uint256 bps);
+    event DirectRequirementUpdated(uint8 indexed month, uint256 requiredDirects);
     event LaeRewardAllocated(
         address indexed user,
         uint256 indexed scheduleIndex,
@@ -125,435 +154,444 @@ contract LAEClubMatrix {
     event LaeRewardClaimed(address indexed user, uint256 amount);
 
     modifier onlyOwner() {
-        require(msg.sender == owner, "Only owner can call this function");
+        require(msg.sender == owner, "LAEClubMatrix: only owner");
         _;
+    }
+
+    modifier nonReentrant() {
+        require(!entered, "LAEClubMatrix: reentrant");
+        entered = true;
+        _;
+        entered = false;
     }
 
     constructor(
         address ownerAddress,
-        address btcTokenAddress,
-        address treasuryPoolAddress,
-        address platformAddress,
-        address registrationPassNftAddress,
-        address royalRank1NftAddress,
-        address royalRank2NftAddress,
-        address royalRank3NftAddress,
-        address royalRank4NftAddress
+        address paymentTokenAddress,
+        address clubPoolAddress,
+        address platformTreasuryAddress
     ) {
-        require(btcTokenAddress != address(0), "Invalid BTC address");
-        require(treasuryPoolAddress != address(0), "Invalid Loyalty Pool address");
-        require(platformAddress != address(0), "Invalid Platform Treasury address");
-        require(registrationPassNftAddress != address(0), "Invalid Reg Pass NFT address");
-        require(royalRank1NftAddress != address(0), "Invalid Rank 1 NFT address");
-        require(royalRank2NftAddress != address(0), "Invalid Rank 2 NFT address");
-        require(royalRank3NftAddress != address(0), "Invalid Rank 3 NFT address");
-        require(royalRank4NftAddress != address(0), "Invalid Rank 4 NFT address");
+        require(ownerAddress != address(0), "Invalid owner address");
+        require(paymentTokenAddress != address(0), "Invalid payment token address");
+        require(clubPoolAddress != address(0), "Invalid Club Pool address");
+        require(platformTreasuryAddress != address(0), "Invalid Platform Treasury address");
 
         owner = ownerAddress;
-        BTCB_TOKEN_ADDRESS = btcTokenAddress;
-        ROYAL_POOL_ADDRESS = treasuryPoolAddress;
-        TREASURY_POOL_ADDRESS = platformAddress;
+        PAYMENT_TOKEN = paymentTokenAddress;
+        CLUB_POOL_ADDRESS = clubPoolAddress;
+        TREASURY_POOL_ADDRESS = platformTreasuryAddress;
 
-        REGISTRATION_PASS_NFT_CONTRACT = registrationPassNftAddress;
-        ROYAL_RANK1_NFT_CONTRACT = royalRank1NftAddress;
-        ROYAL_RANK2_NFT_CONTRACT = royalRank2NftAddress;
-        ROYAL_RANK3_NFT_CONTRACT = royalRank3NftAddress;
-        ROYAL_RANK4_NFT_CONTRACT = royalRank4NftAddress;
-
-        uint256 L1_COST = 1 * 10 ** 15;
-        levelTokenCost[1] = L1_COST;
+        // Level 1 = 0.001 BTC; each level doubles up to level 15 (16.384 BTC).
+        levelTokenCost[1] = 1e15;
         for (uint8 i = 2; i <= LAST_LEVEL; i++) {
             levelTokenCost[i] = levelTokenCost[i - 1] * 2;
         }
 
-        users[ownerAddress].id = 1;
-        users[ownerAddress].referrer = address(0);
-        users[ownerAddress].referrerId = 0;
-        users[ownerAddress].registrationTimestamp = block.timestamp;
+        User storage o = users[ownerAddress];
+        o.id = 1;
+        o.referrer = address(0);
+        o.referrerId = 0;
+        o.registrationTimestamp = block.timestamp;
         idToAddress[1] = ownerAddress;
         addressToId[ownerAddress] = 1;
-
-        for (uint8 i = 1; i <= LAST_LEVEL; i++) {
-            users[ownerAddress].activeLevels[i] = true;
+        for (uint8 level = 1; level <= LAST_LEVEL; level++) {
+            o.activeLevels[level] = true;
+            levelBoardOrder[level].push(ownerAddress); // owner is the root board at every level
         }
 
+        // 20-month release: 5%/month; month M (1..20) requires M+1 direct referrals.
         for (uint8 month = 0; month < VESTING_MONTHS; month++) {
             monthlyReleaseBps[month] = 500;
             directRequirementByMonth[month] = uint256(month) + 2;
         }
     }
 
-    function registrationExt(uint referrerId) external nonReentrant {
+    // --- PUBLIC ENTRY POINTS ---
+
+    function registrationExt(uint256 referrerId) external nonReentrant {
         address referrerAddress = idToAddress[referrerId];
-        require(isUserExists(referrerAddress), "Referrer does not exist");
-        require(!isUserExists(msg.sender), "User exists");
+        require(isUserExists(referrerAddress), "LAEClubMatrix: invalid referrer");
+        require(!isUserExists(msg.sender), "LAEClubMatrix: user exists");
+
         uint256 amount = levelTokenCost[1];
-        require(
-            IERC20(BTCB_TOKEN_ADDRESS).transferFrom(msg.sender, address(this), amount),
-            "BTC transfer failed for registration"
-        );
+        require(IERC20(PAYMENT_TOKEN).transferFrom(msg.sender, address(this), amount), "BTC transfer failed for registration");
+
         _splitPaymentAndAllocateLae(msg.sender, 1, amount);
         totalProjectInvestment += amount;
         _registration(msg.sender, referrerAddress);
     }
 
-    function registrationSys(uint referrerId, address userAddress) external onlyOwner nonReentrant {
+    function registrationSys(uint256 referrerId, address userAddress) external onlyOwner nonReentrant {
         address referrerAddress = idToAddress[referrerId];
-        require(isUserExists(referrerAddress), "Referrer does not exist");
-        require(!isUserExists(userAddress), "User exists");
+        require(isUserExists(referrerAddress), "LAEClubMatrix: invalid referrer");
+        require(userAddress != address(0), "LAEClubMatrix: zero user");
+        require(!isUserExists(userAddress), "LAEClubMatrix: user exists");
+
         uint256 amount = levelTokenCost[1];
-        require(
-            IERC20(BTCB_TOKEN_ADDRESS).transferFrom(msg.sender, address(this), amount),
-            "BTC transfer failed for registration"
-        );
+        require(IERC20(PAYMENT_TOKEN).transferFrom(msg.sender, address(this), amount), "BTC transfer failed for registration");
+
         _splitPaymentAndAllocateLae(userAddress, 1, amount);
         totalProjectInvestment += amount;
         _registration(userAddress, referrerAddress);
     }
 
     function initializePartners(address partner2, address partner3) external onlyOwner {
-        require(!partnersInitialized, "Partners already initialized.");
-        require(!isUserExists(partner2), "Partner 2 exists.");
-        require(!isUserExists(partner3), "Partner 3 exists.");
-        require(partner2 != address(0) && partner3 != address(0) && partner2 != partner3, "Invalid partner addresses.");
+        require(!partnersInitialized, "LAEClubMatrix: already initialized");
+        require(partner2 != address(0) && partner3 != address(0), "LAEClubMatrix: zero partner");
+        require(partner2 != partner3, "LAEClubMatrix: duplicate partner");
+        require(!isUserExists(partner2) && !isUserExists(partner3), "LAEClubMatrix: partner exists");
 
         _registerPartner(partner2, 2);
         _registerPartner(partner3, 3);
-
         lastUserId = 4;
         partnersInitialized = true;
     }
 
-    function _registerPartner(address userAddress, uint partnerId) private {
-        address referrerAddress = owner;
-        uint referrerId = 1;
-        uint currentUserId = partnerId;
-
-        users[userAddress].id = currentUserId;
-        users[userAddress].referrer = referrerAddress;
-        users[userAddress].referrerId = referrerId;
-        idToAddress[currentUserId] = userAddress;
-        addressToId[userAddress] = currentUserId;
-        users[userAddress].activeLevels[1] = true;
-        users[userAddress].registrationTimestamp = block.timestamp;
-
-        users[referrerAddress].directReferrals.push(userAddress);
-        emit Registration(currentUserId, referrerId, userAddress);
-
-        IRegistrationPassNFT(REGISTRATION_PASS_NFT_CONTRACT).mint(userAddress, currentUserId);
-
-        address newReferrer = _findFreeReferrer(userAddress, 1);
-        require(newReferrer == owner, "Owner must be the L1 referrer for initial partners.");
-
-        users[userAddress].xMatrix[1].currentReferrer = newReferrer;
-        _processNewPlacement(userAddress, newReferrer, 1);
-    }
-
-    function transferOwnership(address newOwner) external onlyOwner {
-        require(newOwner != address(0), "New owner is the zero address");
-        require(!isUserExists(newOwner), "New owner must not be a registered user");
-
-        address oldOwner = owner;
-        User storage oldUser = users[oldOwner];
-        User storage newUser = users[newOwner];
-
-        newUser.id = oldUser.id;
-        newUser.referrer = oldUser.referrer;
-        newUser.referrerId = oldUser.referrerId;
-        newUser.teamSize = oldUser.teamSize;
-        newUser.registrationTimestamp = oldUser.registrationTimestamp;
-        newUser.totalIncome = oldUser.totalIncome;
-        newUser.directReferrals = oldUser.directReferrals;
-
-        for (uint8 level = 1; level <= LAST_LEVEL; level++) {
-            newUser.activeLevels[level] = oldUser.activeLevels[level];
-            XMatrix storage oldMatrix = oldUser.xMatrix[level];
-            XMatrix storage newMatrix = newUser.xMatrix[level];
-            newMatrix.currentReferrer = oldMatrix.currentReferrer;
-            newMatrix.reinvestCount = oldMatrix.reinvestCount;
-            newMatrix.heldTokenForUpgrade = oldMatrix.heldTokenForUpgrade;
-            newMatrix.lastSpillUnderReceiverIndex = oldMatrix.lastSpillUnderReceiverIndex;
-            newMatrix.totalTeamSize = oldMatrix.totalTeamSize;
-            newMatrix.totalEarning = oldMatrix.totalEarning;
-            newMatrix.referrals = oldMatrix.referrals;
-        }
-
-        delete users[oldOwner];
-        idToAddress[1] = newOwner;
-        addressToId[newOwner] = 1;
-        addressToId[oldOwner] = 0;
-        owner = newOwner;
-
-        emit OwnershipTransferred(oldOwner, newOwner);
-    }
+    // --- ADMIN SETTERS ---
 
     function updateTokenAddress(address newToken) external onlyOwner {
         require(newToken != address(0), "Invalid token address");
-        BTCB_TOKEN_ADDRESS = newToken;
-        emit TokenAddressesUpdated(newToken);
+        PAYMENT_TOKEN = newToken;
+        emit TokenAddressUpdated(newToken);
     }
 
-    function updatePoolAddresses(address newRoyalPool, address newTreasuryPool) external onlyOwner {
-        require(newRoyalPool != address(0), "Invalid Royal Pool address");
+    function updatePoolAddresses(address newClubPool, address newTreasuryPool) external onlyOwner {
+        require(newClubPool != address(0), "Invalid Club Pool address");
         require(newTreasuryPool != address(0), "Invalid Treasury Pool address");
-        ROYAL_POOL_ADDRESS = newRoyalPool;
+        CLUB_POOL_ADDRESS = newClubPool;
         TREASURY_POOL_ADDRESS = newTreasuryPool;
-        emit PoolAddressesUpdated(newRoyalPool, newTreasuryPool);
+        emit PoolAddressesUpdated(newClubPool, newTreasuryPool);
     }
 
-    function ChangeTitanPassNftaddress(address new1) external onlyOwner {
-        REGISTRATION_PASS_NFT_CONTRACT = new1;
-        emit RegistrationPassNftAddressUpdated(new1);
-    }
-
-    function ChangeRoyalNftaddresses(address new1, address new2, address new3, address new4) external onlyOwner {
-        ROYAL_RANK1_NFT_CONTRACT = new1;
-        ROYAL_RANK2_NFT_CONTRACT = new2;
-        ROYAL_RANK3_NFT_CONTRACT = new3;
-        ROYAL_RANK4_NFT_CONTRACT = new4;
-        emit RoyalNftAddressesUpdated(new1, new2, new3, new4);
+    function setLevelTokenCost(uint8 level, uint256 tokenCost) external onlyOwner {
+        require(level >= 1 && level <= LAST_LEVEL, "LAEClubMatrix: invalid level");
+        require(tokenCost > 0, "LAEClubMatrix: zero cost");
+        levelTokenCost[level] = tokenCost;
+        emit LevelTokenCostUpdated(level, tokenCost);
     }
 
     function setLaeCoin(address laeCoinAddress) external onlyOwner {
-        require(laeCoinAddress != address(0), "Invalid LAE address");
+        require(laeCoinAddress != address(0), "LAEClubMatrix: zero lae");
         LAE_COIN_ADDRESS = laeCoinAddress;
         emit LaeCoinUpdated(laeCoinAddress);
     }
 
     function setLiquidityPool(address liquidityPoolAddress) external onlyOwner {
-        require(liquidityPoolAddress != address(0), "Invalid liquidity pool");
+        require(liquidityPoolAddress != address(0), "LAEClubMatrix: zero pool");
         LIQUIDITY_POOL_ADDRESS = liquidityPoolAddress;
         emit LiquidityPoolUpdated(liquidityPoolAddress);
     }
 
     function setSplitBps(uint256 matrixBps, uint256 liquidityBps) external onlyOwner {
-        require(matrixBps + liquidityBps == BPS, "Invalid split");
+        require(matrixBps + liquidityBps == BPS, "LAEClubMatrix: invalid split");
         matrixDistributionBps = matrixBps;
         liquidityAllocationBps = liquidityBps;
         emit SplitBpsUpdated(matrixBps, liquidityBps);
     }
 
     function setLaePriceInPaymentToken(uint256 price) external onlyOwner {
-        require(price > 0, "Invalid LAE price");
+        require(price > 0, "LAEClubMatrix: zero price");
         laePriceInPaymentToken = price;
         emit LaePriceUpdated(price);
     }
 
-    function _registration(address userAddress, address referrerAddress) private {
-        require(!isUserExists(userAddress), "User exists");
-        uint referrerId = users[referrerAddress].id;
+    function setMonthlyReleaseBps(uint8 month, uint256 bps) external onlyOwner {
+        require(month >= 1 && month <= VESTING_MONTHS, "LAEClubMatrix: invalid month");
+        require(bps <= BPS, "LAEClubMatrix: invalid bps");
+        monthlyReleaseBps[month - 1] = bps;
+        emit MonthlyReleaseBpsUpdated(month, bps);
+    }
 
-        uint currentUserId = lastUserId;
-        users[userAddress].id = currentUserId;
-        users[userAddress].referrer = referrerAddress;
-        users[userAddress].referrerId = referrerId;
+    function setDirectRequirement(uint8 month, uint256 requiredDirects) external onlyOwner {
+        require(month >= 1 && month <= VESTING_MONTHS, "LAEClubMatrix: invalid month");
+        directRequirementByMonth[month - 1] = requiredDirects;
+        emit DirectRequirementUpdated(month, requiredDirects);
+    }
+
+    function transferOwnership(address newOwner) external onlyOwner {
+        require(newOwner != address(0), "LAEClubMatrix: zero owner");
+        emit OwnershipTransferred(owner, newOwner);
+        owner = newOwner;
+    }
+
+    // --- CORE REGISTRATION / PLACEMENT ---
+
+    function _registration(address userAddress, address referrerAddress) private {
+        uint256 referrerId = users[referrerAddress].id;
+        uint256 currentUserId = lastUserId;
+
+        User storage u = users[userAddress];
+        u.id = currentUserId;
+        u.referrer = referrerAddress;
+        u.referrerId = referrerId;
+        u.activeLevels[1] = true;
+        u.registrationTimestamp = block.timestamp;
+
         idToAddress[currentUserId] = userAddress;
         addressToId[userAddress] = currentUserId;
-        users[userAddress].activeLevels[1] = true;
-        users[userAddress].registrationTimestamp = block.timestamp;
         lastUserId++;
 
-        IRegistrationPassNFT(REGISTRATION_PASS_NFT_CONTRACT).mint(userAddress, currentUserId);
-
         if (referrerAddress == owner) {
-            require(!partnersInitialized, "Owner's direct referrals are locked after initialization.");
+            require(!partnersInitialized, "LAEClubMatrix: owner locked");
         }
+
         users[referrerAddress].directReferrals.push(userAddress);
         emit Registration(currentUserId, referrerId, userAddress);
 
-        address newReferrer = _findFreeReferrer(userAddress, 1);
-        users[userAddress].xMatrix[1].currentReferrer = newReferrer;
-        _processNewPlacement(userAddress, newReferrer, 1);
+        _bumpTeamSize(referrerAddress);
+        _enterLevel(userAddress, 1, _matrixShare(levelTokenCost[1]));
     }
 
-    function _processNewPlacement(address _newUser, address _referrer, uint8 _level) private {
-        XMatrix storage matrix = users[_referrer].xMatrix[_level];
-        uint spotIndex = matrix.referrals.length;
-        bool isOwner = _referrer == owner;
-        uint256 amount = levelTokenCost[_level];
-        uint referrerId = users[_referrer].id;
+    function _registerPartner(address userAddress, uint256 partnerId) private {
+        User storage u = users[userAddress];
+        u.id = partnerId;
+        u.referrer = owner;
+        u.referrerId = 1;
+        u.activeLevels[1] = true;
+        u.registrationTimestamp = block.timestamp;
 
-        require(spotIndex < MATRIX_SIZE, "LAEClub: Matrix is full, should have recycled.");
+        idToAddress[partnerId] = userAddress;
+        addressToId[userAddress] = partnerId;
+        users[owner].directReferrals.push(userAddress);
+        emit Registration(partnerId, 1, userAddress);
 
-        matrix.referrals.push(_newUser);
-        users[_referrer].teamSize++;
-        matrix.totalTeamSize++;
+        _bumpTeamSize(owner);
+        _enterLevel(userAddress, 1, _matrixShare(levelTokenCost[1]));
+    }
 
-        emit NewUserPlace(users[_newUser].id, referrerId, _level, (matrix.reinvestCount + 1), uint8(spotIndex + 1));
+    function _bumpTeamSize(address sponsor) private {
+        address cur = sponsor;
+        for (uint256 i = 0; i < MAX_UPLINE && cur != address(0); i++) {
+            users[cur].teamSize++;
+            cur = users[cur].referrer;
+        }
+    }
 
-        if (spotIndex == 0) {
-            if (isOwner) {
-                _sendToPlatformTreasury(amount);
+    /**
+     * @dev Return the current frontier board owner at `level`, advancing past any
+     *      already-full boards. Returns address(0) if the level has no board yet.
+     */
+    function _frontierOwner(uint8 level) private returns (address) {
+        uint256 len = levelBoardOrder[level].length;
+        while (levelFrontier[level] < len) {
+            address candidate = levelBoardOrder[level][levelFrontier[level]];
+            if (users[candidate].board[level].slots.length >= MATRIX_SIZE) {
+                levelFrontier[level] += 1;
+                continue;
+            }
+            return candidate;
+        }
+        return address(0);
+    }
+
+    /**
+     * @dev Place `member` on the current frontier board of `level`, register the
+     *      member as a future board owner at that level, pay the slot role from the
+     *      carried funds, and run slot-5 (ascension) / slot-14 (recycle) hooks.
+     */
+    function _enterLevel(address member, uint8 level, uint256 carried) private {
+        address boardOwner = _frontierOwner(level);
+
+        if (!users[member].activeLevels[level]) {
+            users[member].activeLevels[level] = true;
+        }
+        levelBoardOrder[level].push(member); // member gets its own board at this level
+
+        if (boardOwner == address(0) || boardOwner == member) {
+            // First entrant at this level is the root — no board to place into.
+            // Carried funds (if any) stay in the contract balance.
+            return;
+        }
+
+        Board storage b = users[boardOwner].board[level];
+        b.slots.push(member);
+        uint8 spot = uint8(b.slots.length);
+        b.totalFilled += 1;
+        emit NewUserPlace(users[member].id, users[boardOwner].id, level, b.reinvestCount + 1, spot);
+
+        _payByRole(member, boardOwner, spot, level, carried);
+        _afterFill(boardOwner, spot, level);
+    }
+
+    function _afterFill(address boardOwner, uint8 spot, uint8 level) private {
+        if (spot == 5) {
+            _ascend(boardOwner, level);
+        }
+        if (spot == MATRIX_SIZE) {
+            Board storage b = users[boardOwner].board[level];
+            delete b.slots;
+            b.reinvestCount += 1;
+            emit Reinvest(users[boardOwner].id, users[boardOwner].id, users[boardOwner].id, level);
+            levelBoardOrder[level].push(boardOwner); // re-enter for the next cycle
+            levelFrontier[level] += 1;               // move on to the next board
+        }
+    }
+
+    /**
+     * @dev Board owner ascends from `fromLevel` to fromLevel+1, carrying the held
+     *      (slot 4 + slot 5) funds which pay one slot on the next-level board.
+     */
+    function _ascend(address boardOwner, uint8 fromLevel) private {
+        Board storage fb = users[boardOwner].board[fromLevel];
+        uint256 carried = fb.heldForUpgrade;
+        fb.heldForUpgrade = 0;
+
+        uint8 nextLevel = fromLevel + 1;
+        if (nextLevel > LAST_LEVEL) {
+            if (carried > 0) _rawTransfer(TREASURY_POOL_ADDRESS, carried);
+            return;
+        }
+
+        emit Upgrade(users[boardOwner].id, users[boardOwner].referrerId, nextLevel);
+        _enterLevel(boardOwner, nextLevel, carried);
+    }
+
+    // --- INCOME (single payout per slot, role table + eligibility/lapse) ---
+
+    function _payByRole(
+        address member,
+        address boardOwner,
+        uint8 spot,
+        uint8 level,
+        uint256 amount
+    ) private {
+        // Slots 4 & 5 hold toward the board owner's ascension (funds stay in contract).
+        if (spot == 4 || spot == 5) {
+            users[boardOwner].board[level].heldForUpgrade += amount;
+            emit UpgradeHold(users[boardOwner].id, users[member].id, level, amount);
+            return;
+        }
+
+        address target;
+        if (spot == 1) {
+            target = _uplineOf(boardOwner, 1);
+            if (target == address(0)) target = owner;
+        } else if (spot == 2) {
+            target = _uplineOf(boardOwner, 2);
+            if (target == address(0)) target = owner;
+        } else if (spot == 7) {
+            target = _directDownline(boardOwner, 0);
+            if (target == address(0)) target = boardOwner;
+        } else if (spot == 10) {
+            target = _directDownline(boardOwner, 1);
+            if (target == address(0)) target = boardOwner;
+        } else if (spot == 13) {
+            target = _targetForPosition13(boardOwner);
+            if (target == address(0)) {
+                _sendToTreasuryAmount(member, level, amount);
                 return;
             }
-            address uplineTarget = _findEligibleUplineTarget(_newUser, _referrer, 1, _level);
-            emit Spillover(referrerId, users[uplineTarget].id, _level, (matrix.reinvestCount + 1), 15);
-            _processNewPlacement(_newUser, uplineTarget, _level);
-            return;
-        }
-
-        if (spotIndex == 1) {
-            if (isOwner) {
-                _sendToPlatformTreasury(amount);
+        } else if (spot == 14) {
+            target = _uplineOf(boardOwner, 1);
+            if (target == address(0)) {
+                _sendToTreasuryAmount(member, level, amount);
                 return;
             }
-            address uplineTarget = _findEligibleUplineTarget(_newUser, _referrer, 2, _level);
-            emit Spillover(referrerId, users[uplineTarget].id, _level, (matrix.reinvestCount + 1), 16);
-            _processNewPlacement(_newUser, uplineTarget, _level);
-            return;
+        } else {
+            // 3, 6, 8, 9, 11, 12 -> board owner (self income)
+            target = boardOwner;
         }
 
-        bool isFirstCycle = matrix.reinvestCount == 0;
-        bool isLastLevel = _level == LAST_LEVEL;
+        _payResolved(target, member, level, amount);
+    }
 
-        if (spotIndex == 3) {
-            if (isFirstCycle && !isLastLevel && !isOwner) {
-                matrix.heldTokenForUpgrade = _matrixShare(amount);
-            } else {
-                _sendToRoyalPool(_referrer, _newUser, _level, amount);
-            }
-            return;
-        }
-
-        if (spotIndex == 4) {
-            if (isFirstCycle && !isLastLevel && !isOwner) {
-                matrix.heldTokenForUpgrade = 0;
-                _upgradeLevel(_referrer, _level + 1);
-            } else {
-                _sendTokenDividends(_referrer, _newUser, _level, amount);
-            }
-            return;
-        }
-
-        if (spotIndex == 2 || spotIndex == 5 || spotIndex == 7 || spotIndex == 8 || spotIndex == 10 || spotIndex == 11) {
-            _sendTokenDividends(_referrer, _newUser, _level, amount);
-            return;
-        }
-
-        if (spotIndex == 6) {
-            address downlineTarget = _findEligibleDownlineUser(_newUser, _referrer, 1, _level);
-            emit Spillover(referrerId, users[downlineTarget].id, _level, (matrix.reinvestCount + 1), 17);
-            if (downlineTarget == owner) {
-                _sendToPlatformTreasury(amount);
-            } else {
-                _processNewPlacement(_newUser, downlineTarget, _level);
-            }
-            return;
-        }
-        if (spotIndex == 9) {
-            address downlineTarget = _findEligibleDownlineUser(_newUser, _referrer, 1, _level);
-            emit Spillover(referrerId, users[downlineTarget].id, _level, (matrix.reinvestCount + 1), 18);
-            if (downlineTarget == owner) {
-                _sendToPlatformTreasury(amount);
-            } else {
-                _processNewPlacement(_newUser, downlineTarget, _level);
-            }
-            return;
-        }
-        if (spotIndex == 12) {
-            address downlineTarget = _findEligibleDownlineUser(_newUser, _referrer, 2, _level);
-            emit Spillover(referrerId, users[downlineTarget].id, _level, (matrix.reinvestCount + 1), 19);
-            if (downlineTarget == owner) {
-                _sendToPlatformTreasury(amount);
-            } else {
-                _processNewPlacement(_newUser, downlineTarget, _level);
-            }
-            return;
-        }
-
-        if (spotIndex == 13) {
-            _recycleCurrentLevel(_referrer, _level, _newUser);
-            return;
+    function _payResolved(address target, address member, uint8 level, uint256 amount) private {
+        (address recipient, bool isTreasury) = _resolveRecipient(target, member, level);
+        if (isTreasury) {
+            _sendToTreasuryAmount(member, level, amount);
+        } else {
+            _sendTokenDividends(recipient, member, level, amount);
         }
     }
 
-    function _isEligibleForSelfPayment(address user) private view returns (bool) {
-        if (user == owner) return true;
-        return users[user].directReferrals.length >= 2;
-    }
-
-    function _upgradeLevel(address userAddress, uint8 nextLevel) private {
-        users[userAddress].activeLevels[nextLevel] = true;
-        address newReferrer = _findFreeReferrer(userAddress, nextLevel);
-        users[userAddress].xMatrix[nextLevel].currentReferrer = newReferrer;
-        _checkForRoyalCardMint(userAddress, nextLevel);
-        _processNewPlacement(userAddress, newReferrer, nextLevel);
-        emit Upgrade(users[userAddress].id, users[newReferrer].id, nextLevel);
-    }
-
-    function _checkForRoyalCardMint(address userAddress, uint8 level) private {
-        if (level == 3) {
-            IRoyaltyCardNFT(ROYAL_RANK1_NFT_CONTRACT).mint(userAddress);
-        } else if (level == 6) {
-            IRoyaltyCardNFT(ROYAL_RANK2_NFT_CONTRACT).mint(userAddress);
-        } else if (level == 9) {
-            IRoyaltyCardNFT(ROYAL_RANK3_NFT_CONTRACT).mint(userAddress);
-        } else if (level == 12) {
-            IRoyaltyCardNFT(ROYAL_RANK4_NFT_CONTRACT).mint(userAddress);
-        }
-    }
-
-    function _recycleCurrentLevel(address userAddress, uint8 level, address caller) private {
-        XMatrix storage matrix = users[userAddress].xMatrix[level];
-        matrix.referrals = new address[](0);
-        matrix.reinvestCount++;
-        matrix.heldTokenForUpgrade = 0;
-        matrix.lastSpillUnderReceiverIndex = 0;
-
-        address freeReferrerAddress = _findFreeReferrer(userAddress, level);
-        users[userAddress].xMatrix[level].currentReferrer = freeReferrerAddress;
-
-        emit Reinvest(users[userAddress].id, users[freeReferrerAddress].id, users[caller].id, level);
-        _processNewPlacement(userAddress, freeReferrerAddress, level);
-    }
-
-    function _findFreeReferrer(address userAddress, uint8 level) public view returns (address referrer) {
-        uint currentReferrerId = users[userAddress].referrerId;
-        while (true) {
-            if (currentReferrerId == 0) return owner;
-            address currentAddress = idToAddress[currentReferrerId];
-            if (users[currentAddress].activeLevels[level] && users[currentAddress].xMatrix[level].referrals.length < MATRIX_SIZE) {
-                return currentAddress;
+    /**
+     * @dev Eligibility + lapse: a recipient needs >= 2 directs (owner exempt). If
+     *      not eligible, lapse to the 1st upline, then the 2nd upline; otherwise
+     *      treasury. Never searches beyond 2 uplines.
+     */
+    function _resolveRecipient(address target, address member, uint8 level)
+        private
+        returns (address recipient, bool isTreasury)
+    {
+        address cur = target;
+        for (uint256 i = 0; i < 3; i++) {
+            if (cur == address(0)) break;
+            if (_isEligible(cur)) {
+                if (i > 0) {
+                    emit LapseIncome(users[cur].id, users[member].id, level, _matrixShare(levelTokenCost[level]));
+                }
+                return (cur, false);
             }
-            currentReferrerId = users[currentAddress].referrerId;
+            emit MissedIncome(users[cur].id, users[member].id, level);
+            cur = users[cur].referrer;
         }
+        return (TREASURY_POOL_ADDRESS, true);
     }
 
-    function _sendTokenDividends(address userAddress, address _from, uint8 level, uint256 amount) private {
-        address receiver = userAddress;
-        uint256 distributable = _matrixShare(amount);
-        bool success = IERC20(BTCB_TOKEN_ADDRESS).transfer(receiver, distributable);
+    function _isEligible(address user) private view returns (bool) {
+        return user == owner || users[user].directReferrals.length >= 2;
+    }
+
+    function _uplineOf(address boardOwner, uint256 k) private view returns (address) {
+        address cur = boardOwner;
+        for (uint256 i = 0; i < k; i++) {
+            cur = users[cur].referrer;
+            if (cur == address(0)) return address(0);
+        }
+        return cur;
+    }
+
+    function _directDownline(address boardOwner, uint256 index) private view returns (address) {
+        address[] storage directs = users[boardOwner].directReferrals;
+        if (index >= directs.length) return address(0);
+        return directs[index];
+    }
+
+    function _targetForPosition13(address boardOwner) private view returns (address) {
+        address[] storage directs = users[boardOwner].directReferrals;
+        address firstAny = address(0);
+        for (uint256 i = 0; i < directs.length; i++) {
+            address[] storage children = users[directs[i]].directReferrals;
+            for (uint256 j = 0; j < children.length; j++) {
+                if (firstAny == address(0)) firstAny = children[j];
+                if (_isEligible(children[j])) return children[j];
+            }
+        }
+        return firstAny;
+    }
+
+    // --- BTC PAYOUTS ---
+
+    function _sendTokenDividends(address receiver, address from, uint8 level, uint256 amount) private {
+        bool success = IERC20(PAYMENT_TOKEN).transfer(receiver, amount);
         if (!success) {
-            emit TokenTransferFailed(receiver, distributable, "BTC transfer failed from contract balance");
-            revert("LAEClub: Token transfer failed to receiver.");
+            emit TokenTransferFailed(receiver, amount, "BTC transfer failed from contract balance");
+            revert("LAEClubMatrix: token transfer failed to receiver");
         }
-        users[receiver].totalIncome += distributable;
-        users[receiver].xMatrix[level].totalEarning += distributable;
-        emit TokenReceived(users[receiver].id, users[_from].id, _from, level, distributable);
+        users[receiver].totalIncome += amount;
+        users[receiver].board[level].totalEarning += amount;
+        emit TokenReceived(users[receiver].id, users[from].id, from, level, amount);
     }
 
-    function _sendToRoyalPool(address _ref, address _user, uint8 _level, uint256 _amount) private {
-        uint256 distributable = _matrixShare(_amount);
-        bool success = IERC20(BTCB_TOKEN_ADDRESS).transfer(ROYAL_POOL_ADDRESS, distributable);
-        if (!success) {
-            emit TokenTransferFailed(ROYAL_POOL_ADDRESS, distributable, "BTC transfer failed to Royal Pool");
-            revert("LAEClub: Royal Pool transfer failed.");
-        }
-        emit TreasuryPool(users[_ref].id, users[_user].id, distributable, _level);
+    function _sendToTreasuryAmount(address from, uint8 level, uint256 amount) private {
+        _rawTransfer(TREASURY_POOL_ADDRESS, amount);
+        emit ClubPoolPayment(0, users[from].id, amount, level);
     }
 
-    function _sendToPlatformTreasury(uint256 _amount) private {
-        uint256 distributable = _matrixShare(_amount);
-        bool success = IERC20(BTCB_TOKEN_ADDRESS).transfer(TREASURY_POOL_ADDRESS, distributable);
+    function _rawTransfer(address to, uint256 amount) private {
+        if (amount == 0) return;
+        bool success = IERC20(PAYMENT_TOKEN).transfer(to, amount);
         if (!success) {
-            emit TokenTransferFailed(TREASURY_POOL_ADDRESS, distributable, "BTC transfer failed to Platform Treasury");
-            revert("LAEClub: Platform Treasury transfer failed.");
+            emit TokenTransferFailed(to, amount, "BTC transfer failed");
+            revert("LAEClubMatrix: token transfer failed");
         }
     }
 
     function _matrixShare(uint256 amount) private view returns (uint256) {
         return (amount * matrixDistributionBps) / BPS;
     }
+
+    // --- LAE REWARD LAYER (10% liquidity -> vested LAE) ---
 
     function _splitPaymentAndAllocateLae(address userAddress, uint8 level, uint256 totalAmount) private {
         if (LAE_COIN_ADDRESS == address(0) || LIQUIDITY_POOL_ADDRESS == address(0)) {
@@ -566,8 +604,8 @@ contract LAEClubMatrix {
         }
 
         require(
-            IERC20(BTCB_TOKEN_ADDRESS).transfer(LIQUIDITY_POOL_ADDRESS, liquidityShare),
-            "LAEClub: liquidity transfer failed"
+            IERC20(PAYMENT_TOKEN).transfer(LIQUIDITY_POOL_ADDRESS, liquidityShare),
+            "LAEClubMatrix: liquidity transfer failed"
         );
         totalLiquidityCollected += liquidityShare;
 
@@ -605,7 +643,7 @@ contract LAEClubMatrix {
     }
 
     function claimLaeRewards() external nonReentrant returns (uint256 claimedAmount) {
-        require(LAE_COIN_ADDRESS != address(0), "LAEClub: lae not set");
+        require(LAE_COIN_ADDRESS != address(0), "LAEClubMatrix: lae not set");
 
         LaeRewardSchedule[] storage schedules = laeSchedules[msg.sender];
         for (uint256 i = 0; i < schedules.length; i++) {
@@ -617,9 +655,9 @@ contract LAEClubMatrix {
             claimedAmount += claimable;
         }
 
-        require(claimedAmount > 0, "LAEClub: nothing claimable");
+        require(claimedAmount > 0, "LAEClubMatrix: nothing claimable");
         totalLaeClaimed += claimedAmount;
-        require(ILAECoin(LAE_COIN_ADDRESS).transfer(msg.sender, claimedAmount), "LAEClub: lae transfer failed");
+        require(ILAECoin(LAE_COIN_ADDRESS).transfer(msg.sender, claimedAmount), "LAEClubMatrix: lae transfer failed");
         emit LaeRewardClaimed(msg.sender, claimedAmount);
     }
 
@@ -697,6 +735,8 @@ contract LAEClubMatrix {
         return qualifiedReleased - schedule.claimed;
     }
 
+    // --- VIEW FUNCTIONS ---
+
     function getLaeRewardSummary(address userAddress)
         external
         view
@@ -714,136 +754,135 @@ contract LAEClubMatrix {
         locked = allocated > unlocked ? allocated - unlocked : 0;
     }
 
-    function _findEligibleUplineTarget(address newUser, address referrer, uint uplineLevel, uint8 level) private returns (address uplineTarget) {
-        address current = referrer;
-        for (uint i = 0; i < uplineLevel; i++) {
-            current = users[current].xMatrix[level].currentReferrer;
-            if (current == address(0)) return owner;
-        }
-        while (true) {
-            if (current == owner || current == address(0)) return owner;
-            if (_isEligibleForSelfPayment(current) && users[current].xMatrix[level].referrals.length < MATRIX_SIZE) {
-                return current;
-            }
-            emit MissedIncome(users[current].id, users[newUser].id, level);
-            current = users[current].xMatrix[level].currentReferrer;
-        }
+    function getGlobalLaeStats()
+        external
+        view
+        returns (uint256 allocated, uint256 claimed, uint256 liquidityCollected, uint256 pendingLocked)
+    {
+        allocated = totalLaeAllocated;
+        claimed = totalLaeClaimed;
+        liquidityCollected = totalLiquidityCollected;
+        pendingLocked = allocated > claimed ? allocated - claimed : 0;
     }
 
-    function _findEligibleDownlineUser(address newUser, address referrer, uint downlineLevel, uint8 level) private returns (address) {
-        if (downlineLevel == 1) {
-            XMatrix storage matrix = users[referrer].xMatrix[level];
-            address[] memory directs = users[referrer].directReferrals;
-            if (directs.length == 0) return owner;
+    function getLaeScheduleCount(address userAddress) external view returns (uint256) {
+        return laeSchedules[userAddress].length;
+    }
 
-            uint startIdx = matrix.lastSpillUnderReceiverIndex;
-            for (uint i = 0; i < directs.length; i++) {
-                uint idx = (startIdx + i) % directs.length;
-                address downline = directs[idx];
-                if (_isEligibleForSelfPayment(downline) && users[downline].xMatrix[level].referrals.length < MATRIX_SIZE) {
-                    matrix.lastSpillUnderReceiverIndex = (idx + 1) % directs.length;
-                    return downline;
-                }
-                emit MissedIncome(users[downline].id, users[newUser].id, level);
-            }
-            return owner;
-        }
-
-        if (downlineLevel == 2) {
-            address[] memory level1Downlines = users[referrer].directReferrals;
-            if (level1Downlines.length == 0) return owner;
-
-            for (uint i = 0; i < level1Downlines.length; i++) {
-                address level2Candidate = level1Downlines[i];
-                address[] memory level2Downlines = users[level2Candidate].directReferrals;
-                for (uint j = 0; j < level2Downlines.length; j++) {
-                    address candidate = level2Downlines[j];
-                    if (_isEligibleForSelfPayment(candidate) && users[candidate].xMatrix[level].referrals.length < MATRIX_SIZE) {
-                        return candidate;
-                    }
-                    emit MissedIncome(users[candidate].id, users[newUser].id, level);
-                }
-            }
-        }
-        return owner;
+    function isUserExists(address userAddress) public view returns (bool) {
+        return users[userAddress].id != 0;
     }
 
     function getActiveLevelsCount(address userAddress) public view returns (uint8 count) {
-        for (uint8 i = 1; i <= LAST_LEVEL; i++) {
-            if (users[userAddress].activeLevels[i]) count++;
+        for (uint8 level = 1; level <= LAST_LEVEL; level++) {
+            if (users[userAddress].activeLevels[level]) {
+                count++;
+            }
         }
     }
 
-    function getUserDetails(uint userId) public view returns (
-        address userAddress,
-        address referrerAddress,
-        uint referrerId,
-        uint partnersCount,
-        uint8 activeSlotsCount,
-        uint teamSize,
-        uint registrationTimestamp,
-        uint256 totalIncome
-    ) {
-        address userAdd = idToAddress[userId];
-        require(isUserExists(userAdd), "User does not exist");
-        User storage user = users[userAdd];
-        return (
-            userAdd,
-            user.referrer,
-            user.referrerId,
-            user.directReferrals.length,
-            getActiveLevelsCount(userAdd),
-            user.teamSize,
-            user.registrationTimestamp,
-            user.totalIncome
-        );
+    function getUserDetails(uint256 userId)
+        external
+        view
+        returns (
+            address userAddress,
+            address referrerAddress,
+            uint256 referrerId,
+            uint256 partnersCount,
+            uint8 activeSlotsCount,
+            uint256 teamSize,
+            uint256 registrationTimestamp,
+            uint256 totalIncome
+        )
+    {
+        userAddress = idToAddress[userId];
+        require(isUserExists(userAddress), "LAEClubMatrix: user not found");
+
+        User storage user = users[userAddress];
+        referrerAddress = user.referrer;
+        referrerId = user.referrerId;
+        partnersCount = user.directReferrals.length;
+        activeSlotsCount = getActiveLevelsCount(userAddress);
+        teamSize = user.teamSize;
+        registrationTimestamp = user.registrationTimestamp;
+        totalIncome = user.totalIncome;
     }
 
-    function getDirectPartnerAddresses(uint userId) public view returns (address[] memory) {
+    function getDirectPartnerAddresses(uint256 userId) external view returns (address[] memory) {
         address userAddress = idToAddress[userId];
-        require(isUserExists(userAddress), "User does not exist");
+        require(isUserExists(userAddress), "LAEClubMatrix: user not found");
         return users[userAddress].directReferrals;
     }
 
-    function getDirectPartnerIds(uint userId) public view returns (uint[] memory) {
+    function getDirectPartnerIds(uint256 userId) external view returns (uint256[] memory ids) {
         address userAddress = idToAddress[userId];
-        require(isUserExists(userAddress), "User does not exist");
-        address[] memory directAddresses = users[userAddress].directReferrals;
-        uint[] memory directIds = new uint[](directAddresses.length);
-        for (uint i = 0; i < directAddresses.length; i++) {
-            directIds[i] = addressToId[directAddresses[i]];
+        require(isUserExists(userAddress), "LAEClubMatrix: user not found");
+
+        address[] storage directs = users[userAddress].directReferrals;
+        ids = new uint256[](directs.length);
+        for (uint256 i = 0; i < directs.length; i++) {
+            ids[i] = addressToId[directs[i]];
         }
-        return directIds;
     }
 
-    function isUserExists(address user) public view returns (bool) {
-        return (users[user].id != 0);
+    function getDirectPartnerCount(address userAddress) external view returns (uint256) {
+        require(isUserExists(userAddress), "LAEClubMatrix: user not found");
+        return users[userAddress].directReferrals.length;
     }
 
-    function isUserSlotActive(uint256 userId, uint8 slot) public view returns (bool) {
+    function isUserSlotActive(uint256 userId, uint8 slot) external view returns (bool) {
+        return users[idToAddress[userId]].activeLevels[slot];
+    }
+
+    function usersXMatrix(address userAddress, uint8 level)
+        external
+        view
+        returns (
+            address currentReferrer,
+            uint256 reinvestCount,
+            uint256 heldTokenForUpgrade,
+            uint256 lastSpillUnderReceiverIndex,
+            uint256 totalTeamSize,
+            uint256 totalEarning
+        )
+    {
+        User storage u = users[userAddress];
+        Board storage b = u.board[level];
+        return (u.referrer, b.reinvestCount, b.heldForUpgrade, 0, b.totalFilled, b.totalEarning);
+    }
+
+    /**
+     * @notice Returns the 14-slot current-cycle board for `userAddress` at `level`.
+     */
+    function usersXMatrixReferrals(address userAddress, uint8 level) external view returns (address[] memory) {
+        address[] memory out = new address[](MATRIX_SIZE);
+        address[] storage s = users[userAddress].board[level].slots;
+        uint256 n = s.length;
+        for (uint256 i = 0; i < n && i < MATRIX_SIZE; i++) {
+            out[i] = s[i];
+        }
+        return out;
+    }
+
+    function genealogyOf(uint256 userId, uint8 level)
+        external
+        view
+        returns (uint256 parentId, uint256 leftChildId, uint256 rightChildId)
+    {
+        level;
         address userAddress = idToAddress[userId];
-        return users[userAddress].activeLevels[slot];
+        parentId = users[userAddress].referrerId;
+
+        address[] storage directs = users[userAddress].directReferrals;
+        if (directs.length > 0) leftChildId = addressToId[directs[0]];
+        if (directs.length > 1) rightChildId = addressToId[directs[1]];
     }
 
-    function usersXMatrix(address userAddress, uint8 level) public view returns (
-        address currentReferrer,
-        uint reinvestCount,
-        uint heldTokenForUpgrade,
-        uint lastSpillUnderReceiverIndex,
-        uint totalTeamSize,
-        uint256 totalEarning
-    ) {
-        return (
-            users[userAddress].xMatrix[level].currentReferrer,
-            users[userAddress].xMatrix[level].reinvestCount,
-            users[userAddress].xMatrix[level].heldTokenForUpgrade,
-            users[userAddress].xMatrix[level].lastSpillUnderReceiverIndex,
-            users[userAddress].xMatrix[level].totalTeamSize,
-            users[userAddress].xMatrix[level].totalEarning
-        );
+    function getBoardLength(uint256 userId, uint8 level) external view returns (uint256) {
+        return users[idToAddress[userId]].board[level].slots.length;
     }
 
-    function usersXMatrixReferrals(address userAddress, uint8 level) public view returns (address[] memory referrals) {
-        return (users[userAddress].xMatrix[level].referrals);
+    function contractTokenBalance() external view returns (uint256) {
+        return IERC20(PAYMENT_TOKEN).balanceOf(address(this));
     }
 }
