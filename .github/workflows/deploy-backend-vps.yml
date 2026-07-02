@@ -128,7 +128,7 @@ jobs:
           STAKING_CONTRACT_ADDRESS: ${{ secrets.STAKING_CONTRACT_ADDRESS }}
           DAI_CONTRACT_ADDRESS: ${{ secrets.DAI_CONTRACT_ADDRESS }}
           LAE_COIN_CONTRACT_ADDRESS: ${{ secrets.LAE_COIN_CONTRACT_ADDRESS }}
-          RESET_INDEXER_ON_DEPLOY: "true"
+          RESET_INDEXER_ON_DEPLOY: "${{ github.event_name == 'workflow_dispatch' && inputs.reset_indexer || 'false' }}"
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
