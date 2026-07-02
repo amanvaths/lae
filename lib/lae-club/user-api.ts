@@ -14,6 +14,7 @@ export type LaeIncomeRecord = {
   blockNumber: string | number;
   txHash: string;
   logIndex: number;
+  createdAt?: string;
 };
 
 type ApiEventRow = {
@@ -24,6 +25,7 @@ type ApiEventRow = {
   blockNumber?: string;
   args?: Record<string, unknown>;
   payload?: Record<string, unknown>;
+  createdAt?: string;
 };
 
 function normalizeApiEvent(row: ApiEventRow): MatrixUserEvent {
@@ -44,7 +46,8 @@ function normalizeApiEvent(row: ApiEventRow): MatrixUserEvent {
     eventName: row.eventName,
     blockNumber,
     args,
-  } as MatrixUserEvent;
+    createdAt: row.createdAt,
+  } as unknown as MatrixUserEvent;
 }
 
 /** Indexed income rows from backend (matrix + lapse + club pool). */
@@ -95,6 +98,7 @@ export async function fetchLaeUserIncomeFromApi(
         logIndex: row.logIndex,
         eventName,
         blockNumber: BigInt(row.blockNumber),
+        createdAt: row.createdAt,
         args: isMatrix
           ? {
               amount,

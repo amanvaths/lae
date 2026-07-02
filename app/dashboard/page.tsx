@@ -14,6 +14,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { StatCard, Panel, Pill } from "@/components/dashboard/ui";
+import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
 import { QueryLoading } from "@/components/dashboard/QueryState";
 import { MatrixVisualizer } from "@/components/lae-club/MatrixVisualizer";
 import {
@@ -34,7 +35,6 @@ import {
   useDashboardViewUserId,
   withDashboardHref,
 } from "@/lib/lae-club/dashboard-view-context";
-import { txUrl } from "@/lib/lae-club/contracts";
 import { cn } from "@/lib/utils";
 import { LAE_MATRIX_SIZE } from "@/lib/lae-club/constants";
 
@@ -268,34 +268,7 @@ export default function DashboardHome() {
                 : "No indexed events yet — new activity will appear after backend sync."}
             </p>
           ) : (
-            <div className="divide-y divide-white/[0.06]">
-              {recentEvents.map((e, i) => {
-                const row = e as {
-                  transactionHash: string;
-                  eventName?: string;
-                  args?: Record<string, unknown>;
-                };
-                const amount = row.args?.amount;
-                return (
-                  <div key={`${row.transactionHash}-${i}`} className="flex items-center justify-between gap-3 py-3 text-sm">
-                    <div className="min-w-0">
-                      <Pill tone="gold">{row.eventName}</Pill>
-                      <a
-                        href={txUrl(row.transactionHash)}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="mt-1 block truncate text-xs text-[#D4AF37]/70 hover:text-[#D4AF37] hover:underline transition-colors"
-                      >
-                        {truncateAddress(row.transactionHash ?? (row as { txHash?: string }).txHash)}
-                      </a>
-                    </div>
-                    {typeof amount === "bigint" && (
-                      <span className="font-semibold text-emerald-400">+{fmtEther(amount)}</span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+            <ActivityFeed events={recentEvents} compact />
           )}
         </Panel>
       </motion.div>

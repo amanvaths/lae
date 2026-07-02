@@ -11,8 +11,9 @@ import { addressUrl } from "@/lib/lae-club/contracts";
 import { truncateAddress } from "@/lib/format";
 
 type IncomeRow = {
-  receiverUserId: number;
-  level: number;
+  toUserId: number | null;
+  level: number | null;
+  boardLevel: number | null;
   amount: string;
   txHash: string;
 };
@@ -24,7 +25,7 @@ export default function AdminRoyalPoolPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all([fetchLaeAdminStats(), fetchLaeAdminIncome("royal")]).then(
+    Promise.all([fetchLaeAdminStats(), fetchLaeAdminIncome("treasury")]).then(
       ([statsResult, incomeResult]) => {
         if (!statsResult.ok) {
           setError(statsResult.error);
@@ -34,7 +35,7 @@ export default function AdminRoyalPoolPage() {
           setError(incomeResult.error);
           return;
         }
-        setStats(statsResult.data.royalPool ?? null);
+        setStats(statsResult.data.treasuryPool ?? null);
         setRows(incomeResult.data.incomes as IncomeRow[]);
         setError(null);
       }
@@ -81,7 +82,9 @@ export default function AdminRoyalPoolPage() {
         ) : (
           rows.map((r, i) => (
             <div key={`${r.txHash}-${i}`} className="flex justify-between border-b border-white/5 py-2 text-sm">
-              <span>User #{r.receiverUserId} · L{r.level}</span>
+              <span>
+                {r.toUserId != null ? `User #${r.toUserId}` : "Pool"} · L{r.level ?? r.boardLevel ?? "—"}
+              </span>
               <span className="text-brand-300">+{fmtEther(BigInt(r.amount))}</span>
             </div>
           ))

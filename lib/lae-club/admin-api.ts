@@ -28,14 +28,15 @@ async function adminFetch<T>(path: string): Promise<AdminFetchResult<T>> {
   }
 }
 
+/** Matches backend getLaeAdminDashboardStats() exactly. */
 export type LaeAdminStats = {
   totalUsers: number;
   todayRegistrations: number;
-  levelSales: Array<{ level: number; count: number; volume: string }>;
-  royalPool: { totalPaid: string; eventCount: number };
+  positionSales: Array<{ position: number; count: number; volume: string }>;
+  treasuryPool: { totalPaid: string; eventCount: number };
   matrixIncome: { totalPaid: string; eventCount: number };
-  placements: number;
-  reinvests: number;
+  positions: number;
+  recycles: number;
   staking: { totalStaked: string; stakeEvents: number; activeStakes: number };
   indexer: { lastBlock: string; chainId: number | null };
   chainEvents: number;
@@ -45,45 +46,96 @@ export function fetchLaeAdminStats() {
   return adminFetch<LaeAdminStats>("/stats");
 }
 
+/** Matches backend listLaeUsers(). */
 export type LaeIndexedUser = {
+  userId: number;
   walletAddress: string;
-  userId: number;
   sponsorId: number | null;
-  teamSize: number;
-  totalIncome: string;
+  currentCycle: number;
+  highestSlot: number;
+  directReferrals: number;
+  totalEarned: string;
+  totalCycles: number;
+  registeredBlock: string;
   registeredAt: string;
+  createdAt: string;
 };
 
+/** Matches backend listLaePlacements() (serialized MatrixCorePosition). */
 export type LaeIndexedPlacement = {
-  userId: number;
-  referrerId: number;
+  id: string;
+  matrixOwnerId: number;
   level: number;
-  cycle: number;
-  spot: number;
-  txHash: string;
+  cycleId: number;
+  position: number;
+  occupantId: number;
   blockNumber: string;
+  txHash: string;
+  logIndex: number;
+  createdAt: string;
 };
 
+/** Matches backend listLaeIncome() (serialized MatrixCoreIncome). */
 export type LaeIndexedIncome = {
-  receiverUserId: number;
+  id: string;
+  kind: string;
   fromUserId: number | null;
-  level: number;
+  toUserId: number | null;
+  matrixOwnerId: number | null;
+  boardLevel: number | null;
+  level: number | null;
+  cycleId: number | null;
+  position: number | null;
   amount: string;
-  incomeKind: string;
+  blockNumber: string;
   txHash: string;
+  logIndex: number;
+  createdAt: string;
 };
 
 export function fetchLaeAdminUsers(limit = 100, offset = 0) {
   return adminFetch<{ users: LaeIndexedUser[]; total: number }>(`/users?limit=${limit}&offset=${offset}`);
 }
 
-export function fetchLaeAdminIncome(kind?: string) {
-  const q = kind ? `?kind=${kind}` : "";
-  return adminFetch<{ incomes: LaeIndexedIncome[] }>(`/income${q}`);
+export function fetchLaeAdminIncome(kind?: string, limit = 100) {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (kind) params.set("kind", kind);
+  return adminFetch<{ incomes: LaeIndexedIncome[] }>(`/income?${params}`);
 }
 
-export function fetchLaeAdminMatrix() {
-  return adminFetch<{ placements: LaeIndexedPlacement[] }>("/matrix");
+export function fetchLaeAdminMatrix(limit = 100) {
+  return adminFetch<{ placements: LaeIndexedPlacement[] }>(`/matrix?limit=${limit}`);
+}
+
+export type LaeAdminAnalytics = {
+  registrationsByDay: Array<{ day: string; count: number }>;
+  incomeByKind: Array<{ kind: string; total: string; count: number }>;
+  topEarners: Array<{
+    userId: number;
+    walletAddress: string;
+    totalEarned: string;
+    directReferrals: number;
+  }>;
+};
+
+export function fetchLaeAdminAnalyticsTyped() {
+  return adminFetch<LaeAdminAnalytics>("/analytics");
+}
+
+export type LaeAdminSettings = {
+  contracts: Record<string, string>;
+  indexer: {
+    lastBlock: string;
+    chainId: number | null;
+    lastBlockHash: string | null;
+    matrixDeployBlock: string;
+    indexedUsers: number;
+  };
+  adminEmail: string;
+};
+
+export function fetchLaeAdminSettings() {
+  return adminFetch<LaeAdminSettings>("/settings");
 }
 
 export type LaeRewardsAnalytics = {
