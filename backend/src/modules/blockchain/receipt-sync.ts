@@ -55,8 +55,13 @@ async function processBlockReceipts(
         } as unknown as ethers.Log;
         await processIndexedLog(parseEthersLog("matrixCore", parsed, rawLog));
         processed++;
-      } catch {
-        /* skip unparseable */
+      } catch (err) {
+        // Don't swallow silently — an unparseable log is expected, but a DB/
+        // processing error (e.g. a missing ON CONFLICT constraint) must surface.
+        console.error(
+          `[indexer] matrix log processing failed (tx=${log.transactionHash} logIndex=${log.logIndex}):`,
+          err instanceof Error ? err.message : err
+        );
       }
     }
   }
