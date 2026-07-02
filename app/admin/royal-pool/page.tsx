@@ -6,7 +6,7 @@ import { Panel } from "@/components/dashboard/ui";
 import { QueryError } from "@/components/dashboard/QueryState";
 import { fetchLaeAdminIncome, fetchLaeAdminStats } from "@/lib/lae-club/admin-api";
 import { useLaeRoyalPoolBalance } from "@/lib/lae-club/hooks";
-import { fmtEther } from "@/lib/contracts/format";
+import { fmtEther, incomeStringToWei } from "@/lib/contracts/format";
 import { addressUrl } from "@/lib/lae-club/contracts";
 import { truncateAddress } from "@/lib/format";
 
@@ -68,7 +68,7 @@ export default function AdminRoyalPoolPage() {
         </Panel>
         <Panel title="Total paid (indexed)">
           <p className="text-2xl font-bold">
-            {stats?.totalPaid ? fmtEther(BigInt(stats.totalPaid)) : "—"}
+            {stats?.totalPaid ? fmtEther(incomeStringToWei(stats.totalPaid)) : "—"}
           </p>
         </Panel>
         <Panel title="TreasuryPool events">
@@ -85,7 +85,7 @@ export default function AdminRoyalPoolPage() {
               <span>
                 {r.toUserId != null ? `User #${r.toUserId}` : "Pool"} · L{r.level ?? r.boardLevel ?? "—"}
               </span>
-              <span className="text-brand-300">+{fmtEther(BigInt(r.amount))}</span>
+              <span className="text-brand-300">+{fmtEther(incomeStringToWei(r.amount))}</span>
             </div>
           ))
         )}

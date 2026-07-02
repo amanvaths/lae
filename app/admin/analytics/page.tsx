@@ -10,7 +10,7 @@ import {
   fetchLaeAdminAnalyticsTyped,
   type LaeAdminAnalytics,
 } from "@/lib/lae-club/admin-api";
-import { fmtEther } from "@/lib/contracts/format";
+import { fmtEther, incomeStringToWei } from "@/lib/contracts/format";
 import { truncateAddress, formatDate } from "@/lib/format";
 import { withBasePath } from "@/lib/paths";
 
@@ -60,7 +60,7 @@ export default function AdminAnalyticsPage() {
                   <div key={r.kind} className="flex items-center justify-between py-2.5 text-sm">
                     <span className="capitalize text-slate-300">{r.kind}</span>
                     <span className="text-right">
-                      <span className="font-mono text-[#D4AF37]">{fmtEther(BigInt(r.total))}</span>
+                      <span className="font-mono text-[#D4AF37]">{fmtEther(incomeStringToWei(r.total))}</span>
                       <span className="ml-2 text-xs text-slate-500">{r.count} events</span>
                     </span>
                   </div>
@@ -90,7 +90,7 @@ export default function AdminAnalyticsPage() {
                     <span className="flex shrink-0 items-center gap-3">
                       <span className="text-xs text-slate-500">{u.directReferrals} directs</span>
                       <span className="font-mono text-emerald-300">
-                        {fmtEther(BigInt(u.totalEarned))}
+                        {fmtEther(incomeStringToWei(u.totalEarned))}
                       </span>
                       <Link
                         href={withBasePath(`/view?viewUserId=${u.userId}`)}

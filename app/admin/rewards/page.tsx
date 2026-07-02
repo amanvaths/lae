@@ -4,7 +4,7 @@ import { AdminShell } from "@/components/admin/AdminShell";
 import { Panel } from "@/components/dashboard/ui";
 import { QueryError, QueryLoading } from "@/components/dashboard/QueryState";
 import { fetchLaeAdminRewards } from "@/lib/lae-club/admin-api";
-import { fmtEther } from "@/lib/contracts/format";
+import { fmtEther, incomeStringToWei } from "@/lib/contracts/format";
 import { truncateAddress } from "@/lib/format";
 import { useAdminFetch } from "@/hooks/useAdminFetch";
 
@@ -12,7 +12,7 @@ function payloadAmount(payload: unknown, key: string): string {
   if (!payload || typeof payload !== "object") return "0";
   const v = (payload as Record<string, unknown>)[key];
   try {
-    return fmtEther(BigInt(String(v ?? 0)));
+    return fmtEther(incomeStringToWei(String(v ?? 0)));
   } catch {
     return "0";
   }
@@ -47,12 +47,12 @@ export default function AdminRewardsPage() {
         </Panel>
         <Panel title="Recent alloc. sample total">
           <p className="text-3xl font-bold">
-            {data ? fmtEther(BigInt(data.sampleAllocatedTotal), 0) : "—"} LAE
+            {data ? fmtEther(incomeStringToWei(data.sampleAllocatedTotal), 0) : "—"} LAE
           </p>
         </Panel>
         <Panel title="Recent claims sample total">
           <p className="text-3xl font-bold">
-            {data ? fmtEther(BigInt(data.sampleClaimedTotal), 0) : "—"} LAE
+            {data ? fmtEther(incomeStringToWei(data.sampleClaimedTotal), 0) : "—"} LAE
           </p>
         </Panel>
       </div>

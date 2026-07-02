@@ -24,7 +24,7 @@ import {
   useLaeRoyalPoolBalance,
 } from "@/lib/lae-club/hooks";
 import { LAE_CONTRACTS, addressUrl } from "@/lib/lae-club/contracts";
-import { fmtEther } from "@/lib/contracts/format";
+import { fmtEther, incomeStringToWei } from "@/lib/contracts/format";
 import { truncateAddress } from "@/lib/format";
 import { withBasePath } from "@/lib/paths";
 import { useAdminFetch } from "@/hooks/useAdminFetch";
@@ -90,7 +90,10 @@ export default function AdminDashboardPage() {
     return [...rows].sort((a, b) => a.position - b.position);
   }, [stats]);
   const maxSlotVolume = useMemo(
-    () => slotSales.reduce((m, r) => (BigInt(r.volume) > m ? BigInt(r.volume) : m), 0n),
+    () => slotSales.reduce((m, r) => {
+      const vol = incomeStringToWei(r.volume);
+      return vol > m ? vol : m;
+    }, 0n),
     [slotSales]
   );
 
@@ -146,7 +149,7 @@ export default function AdminDashboardPage() {
               icon={TrendingUp}
               value={
                 <span className="text-gradient-gold">
-                  {stats?.matrixIncome ? fmtEther(BigInt(stats.matrixIncome.totalPaid)) : "—"}
+                  {stats?.matrixIncome ? fmtEther(incomeStringToWei(stats.matrixIncome.totalPaid)) : "—"}
                 </span>
               }
               sub={`${stats?.matrixIncome?.eventCount ?? 0} payout events`}
@@ -155,7 +158,7 @@ export default function AdminDashboardPage() {
               label="Treasury Income"
               accent="violet"
               icon={Landmark}
-              value={stats?.treasuryPool ? fmtEther(BigInt(stats.treasuryPool.totalPaid)) : "—"}
+              value={stats?.treasuryPool ? fmtEther(incomeStringToWei(stats.treasuryPool.totalPaid)) : "—"}
               sub={`${stats?.treasuryPool?.eventCount ?? 0} pool payments`}
             />
             <StatCard
@@ -234,7 +237,7 @@ export default function AdminDashboardPage() {
                 <div className="flex items-center justify-between border-t border-white/5 pt-2.5">
                   <span className="text-slate-400">Staking TVL</span>
                   <span className="font-mono text-emerald-300">
-                    {stats?.staking?.totalStaked ? fmtEther(BigInt(stats.staking.totalStaked), 0) : "—"}
+                    {stats?.staking?.totalStaked ? fmtEther(incomeStringToWei(stats.staking.totalStaked), 0) : "—"}
                   </span>
                 </div>
               </div>
@@ -254,7 +257,7 @@ export default function AdminDashboardPage() {
             ) : (
               <div className="grid gap-2 sm:grid-cols-2">
                 {slotSales.map((s) => {
-                  const vol = BigInt(s.volume);
+                  const vol = incomeStringToWei(s.volume);
                   const pct = maxSlotVolume > 0n ? Number((vol * 100n) / maxSlotVolume) : 0;
                   return (
                     <div

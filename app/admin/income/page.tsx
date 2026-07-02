@@ -5,7 +5,7 @@ import { AdminShell } from "@/components/admin/AdminShell";
 import { Panel } from "@/components/dashboard/ui";
 import { QueryError, QueryLoading } from "@/components/dashboard/QueryState";
 import { fetchLaeAdminIncome, type LaeIndexedIncome } from "@/lib/lae-club/admin-api";
-import { fmtEther } from "@/lib/contracts/format";
+import { fmtEther, incomeStringToWei } from "@/lib/contracts/format";
 import { txUrl } from "@/lib/lae-club/contracts";
 import { truncateAddress } from "@/lib/format";
 
@@ -54,7 +54,7 @@ function IncomeList({ rows, tone }: { rows: LaeIndexedIncome[]; tone: "emerald" 
               </p>
             </div>
             <span className={`shrink-0 font-display text-sm font-bold tabular-nums ${amountClass}`}>
-              +{fmtEther(BigInt(r.amount))}
+              +{fmtEther(incomeStringToWei(r.amount))}
             </span>
           </div>
         );
@@ -99,7 +99,7 @@ export default function AdminIncomePage() {
 
   const totals = useMemo(() => {
     const sum = (rows: LaeIndexedIncome[]) =>
-      rows.reduce((s, r) => s + BigInt(r.amount || "0"), 0n);
+      rows.reduce((s, r) => s + incomeStringToWei(r.amount), 0n);
     return { matrix: sum(matrix), treasury: sum(treasury) };
   }, [matrix, treasury]);
 

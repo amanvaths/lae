@@ -6,7 +6,7 @@ import { Panel } from "@/components/dashboard/ui";
 import { QueryError } from "@/components/dashboard/QueryState";
 import { fetchLaeAdminStaking } from "@/lib/lae-club/admin-api";
 import { useLaeStaking } from "@/lib/lae-club/hooks";
-import { fmtEther } from "@/lib/contracts/format";
+import { fmtEther, incomeStringToWei } from "@/lib/contracts/format";
 import { truncateAddress } from "@/lib/format";
 
 type StakeRow = {
@@ -60,7 +60,7 @@ export default function AdminStakingPage() {
         </Panel>
         <Panel title="Indexed stake volume">
           <p className="text-2xl font-bold">
-            {indexed?.totalStaked ? fmtEther(BigInt(indexed.totalStaked), 0) : "—"} LAE
+            {indexed?.totalStaked ? fmtEther(incomeStringToWei(indexed.totalStaked), 0) : "—"} LAE
           </p>
         </Panel>
         <Panel title="APR (live)">
@@ -78,7 +78,7 @@ export default function AdminStakingPage() {
                 {truncateAddress(s.walletAddress)} · {s.eventName}
                 {s.released ? " (released)" : ""}
               </span>
-              <span>{fmtEther(BigInt(s.amount), 0)} LAE</span>
+              <span>{fmtEther(incomeStringToWei(s.amount), 0)} LAE</span>
             </div>
           ))
         )}

@@ -7,7 +7,7 @@ import { AdminShell } from "@/components/admin/AdminShell";
 import { Panel } from "@/components/dashboard/ui";
 import { QueryError, QueryLoading } from "@/components/dashboard/QueryState";
 import { fetchLaeAdminUsers } from "@/lib/lae-club/admin-api";
-import { fmtEther } from "@/lib/contracts/format";
+import { fmtEther, incomeStringToWei } from "@/lib/contracts/format";
 import { truncateAddress, formatDate } from "@/lib/format";
 import { withBasePath } from "@/lib/paths";
 import { useAdminFetch } from "@/hooks/useAdminFetch";
@@ -92,7 +92,7 @@ export default function AdminUsersPage() {
                       {u.directReferrals}
                     </td>
                     <td className="py-2.5 pr-3 text-right font-mono tabular-nums text-emerald-300">
-                      {fmtEther(BigInt(u.totalEarned))}
+                      {fmtEther(incomeStringToWei(u.totalEarned))}
                     </td>
                     <td className="py-2.5 pr-3 text-right tabular-nums text-slate-300">
                       {u.totalCycles}
