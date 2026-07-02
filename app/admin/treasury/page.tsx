@@ -138,7 +138,7 @@ export default function AdminTreasuryPage() {
         <div>
           <h1 className="font-display text-2xl font-bold text-white">Treasury & Liquidity</h1>
           <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-slate-400">
-            Live wallet balances + indexed 10% split (ClubPoolPayment)
+            Live wallet balances + indexed lapse / overflow income
             {updated && (
               <Pill tone="emerald" className="gap-1.5">
                 <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
@@ -234,7 +234,7 @@ export default function AdminTreasuryPage() {
       </Panel>
 
       {/* ── Daily chart ── */}
-      <Panel className="mt-4" title="Daily treasury inflow" desc="Last 14 days of ClubPoolPayment events">
+      <Panel className="mt-4" title="Daily treasury inflow" desc="Last 14 days of indexed treasury payouts">
         {byDay.entries.length === 0 ? (
           <p className="text-sm text-slate-500">No treasury payouts indexed yet.</p>
         ) : (
@@ -261,7 +261,11 @@ export default function AdminTreasuryPage() {
       </Panel>
 
       {/* ── Transactions ── */}
-      <Panel className="mt-4" title="Treasury transactions" desc="ClubPoolPayment (10% split from registrations)">
+      <Panel
+        className="mt-4"
+        title="Treasury transactions"
+        desc="ClubPoolPayment — payouts routed to treasury when no eligible upline exists (lapse) or slot 13/14 fallback"
+      >
         {loading ? (
           <QueryLoading label="Loading treasury payouts…" />
         ) : rows.length === 0 ? (
