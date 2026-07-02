@@ -37,11 +37,15 @@ function matrixContract(): ethers.Contract {
 }
 
 async function walletForUserId(userId: number): Promise<string | null> {
-  const row = await prisma.matrixCoreUser.findUnique({
-    where: { userId },
-    select: { walletAddress: true },
-  });
-  if (row?.walletAddress) return row.walletAddress.toLowerCase();
+  try {
+    const row = await prisma.matrixCoreUser.findUnique({
+      where: { userId },
+      select: { walletAddress: true },
+    });
+    if (row?.walletAddress) return row.walletAddress.toLowerCase();
+  } catch {
+    // DB hiccup — fall through to on-chain lookup
+  }
   try {
     const m = matrixContract();
     const wallet = String(await m.idToAddress(userId)).toLowerCase();
@@ -299,9 +303,24 @@ export async function getMatrixTree(
   if (!Number.isInteger(cycleId) || cycleId < 1) return { error: "invalid cycle" };
 
   const chainTree = await treeFromChain(userId, level, cycleId);
-  if (!chainTree) return { error: "user not found or chain read failed" };
+  if (!chainTree) {
+    // Chain read unavailable (e.g. partner users / RPC hiccup) — serve the
+    // authoritative indexed board from the DB instead of hard-failing.
+    try {
+      const dbFallback = await treeFromDb(userId, level, cycleId);
+      if (dbFallback) return dbFallback;
+    } catch {
+      /* fall through to error */
+    }
+    return { error: "user not found or chain read failed" };
+  }
 
-  const dbTree = await treeFromDb(userId, level, cycleId);
+  let dbTree: MatrixTreeDTO | null = null;
+  try {
+    dbTree = await treeFromDb(userId, level, cycleId);
+  } catch {
+    dbTree = null;
+  }
   if (dbTree) {
     for (let p = 1; p <= chainTree.filledSpots; p++) {
       const c = chainTree.slots[p - 1];
@@ -445,8 +464,14 @@ export async function getMatrixOverview(
 
 /** All placements for a user across levels/cycles */
 export async function getUserPlacement(userId: number) {
-  return prisma.matrixCorePosition.findMany({
+  const rows = await prisma.matrixCorePosition.findMany({
     where: { occupantId: userId },
     orderBy: [{ level: "asc" }, { cycleId: "asc" }, { position: "asc" }],
   });
+  // Prisma returns BigInt columns which Fastify cannot JSON-serialize; coerce to strings.
+  return rows.map((r) =>
+    Object.fromEntries(
+      Object.entries(r).map(([k, v]) => [k, typeof v === "bigint" ? v.toString() : v])
+    )
+  );
 }
