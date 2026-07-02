@@ -422,14 +422,22 @@ contract LAEClubMatrix {
             delete b.slots;
             b.reinvestCount += 1;
             emit Reinvest(users[boardOwner].id, users[boardOwner].id, users[boardOwner].id, level);
-            levelBoardOrder[level].push(boardOwner); // re-enter for the next cycle
-            levelFrontier[level] += 1;               // move on to the next board
+            // Only level 1 uses the global frontier queue (registration placement).
+            // Levels 2+ are sponsor-based: a recycled board simply starts its next
+            // cycle in place and keeps receiving that owner's ascending downline.
+            if (level == 1) {
+                levelBoardOrder[level].push(boardOwner); // re-enter for the next cycle
+                levelFrontier[level] += 1;               // move on to the next board
+            }
         }
     }
 
     /**
      * @dev Board owner ascends from `fromLevel` to fromLevel+1, carrying the held
-     *      (slot 4 + slot 5) funds which pay one slot on the next-level board.
+     *      (slot 4 + slot 5) funds which pay one slot on the next-level board. From
+     *      level 2 onward the ascender is placed on its SPONSOR's next-level board
+     *      (upline-based), not the global frontier — so a member's own downline
+     *      fills that member's higher-level boards.
      */
     function _ascend(address boardOwner, uint8 fromLevel) private {
         Board storage fb = users[boardOwner].board[fromLevel];
@@ -443,7 +451,56 @@ contract LAEClubMatrix {
         }
 
         emit Upgrade(users[boardOwner].id, users[boardOwner].referrerId, nextLevel);
-        _enterLevel(boardOwner, nextLevel, carried);
+        _placeAscension(boardOwner, nextLevel, carried);
+    }
+
+    /**
+     * @dev Walk up the sponsor chain and return the first upline that is active at
+     *      `level` and whose current-cycle board still has an open slot. The owner
+     *      is active at every level and its board recycles at 14, so it is the
+     *      guaranteed catch-all. Returns address(0) only for the owner's own
+     *      ascension (no upline exists).
+     */
+    function _uplineWithSpace(address ascender, uint8 level) private view returns (address) {
+        address cur = users[ascender].referrer;
+        for (uint256 hops = 0; cur != address(0) && hops < MAX_UPLINE; hops++) {
+            if (
+                users[cur].activeLevels[level] &&
+                users[cur].board[level].slots.length < MATRIX_SIZE
+            ) {
+                return cur;
+            }
+            cur = users[cur].referrer;
+        }
+        return address(0);
+    }
+
+    /**
+     * @dev Sponsor-based ascension placement (levels 2+). The ascending board
+     *      owner is placed on the nearest upline (its direct sponsor first) whose
+     *      next-level board has room, and carries its held funds to pay that slot.
+     *      Slot-5 on the target triggers the target's own ascension; slot-14
+     *      recycles the target's board in place.
+     */
+    function _placeAscension(address ascender, uint8 level, uint256 carried) private {
+        if (!users[ascender].activeLevels[level]) {
+            users[ascender].activeLevels[level] = true;
+        }
+
+        address target = _uplineWithSpace(ascender, level);
+        if (target == address(0)) {
+            // Root ascension (owner has no upline) — carried funds stay in contract.
+            return;
+        }
+
+        Board storage b = users[target].board[level];
+        b.slots.push(ascender);
+        uint8 spot = uint8(b.slots.length);
+        b.totalFilled += 1;
+        emit NewUserPlace(users[ascender].id, users[target].id, level, b.reinvestCount + 1, spot);
+
+        _payByRole(ascender, target, spot, level, carried);
+        _afterFill(target, spot, level);
     }
 
     // --- INCOME (single payout per slot, role table + eligibility/lapse) ---

@@ -126,7 +126,32 @@ function ascend(ownerId, fromLevel) {
   const carried = fb.held; fb.held = 0n;
   const next = fromLevel + 1;
   if (next > LAST_LEVEL) { if (carried > 0n) pay(carried); return; }
-  enterLevel(ownerId, next, carried);
+  placeAscension(ownerId, next, carried);
+}
+
+// levels 2+: nearest upline (sponsor first) active at lvl with an open slot
+function uplineWithSpace(ascender, lvl) {
+  let cur = U(ascender).referrer;
+  for (let hops = 0; cur && hops < 60; hops++) {
+    if (U(cur).active.has(lvl) && board(cur, lvl).slots.length < MATRIX_SIZE) return cur;
+    cur = U(cur).referrer;
+  }
+  return 0;
+}
+
+function placeAscension(ascender, lvl, carried) {
+  if (lvl > maxLevelReached) maxLevelReached = lvl;
+  U(ascender).active.add(lvl);
+  const target = uplineWithSpace(ascender, lvl);
+  if (!target) { if (carried > 0n) totalHeldStuck += carried; return; }
+  const b = board(target, lvl);
+  b.slots.push(ascender);
+  const spot = b.slots.length;
+  if (carried !== expectedSlot(lvl)) {
+    errors.push(`level ${lvl} carried ${carried} != expected ${expectedSlot(lvl)}`);
+  }
+  payByRole(ascender, target, spot, lvl, carried);
+  afterFill(target, spot, lvl);
 }
 
 function afterFill(ownerId, spot, lvl) {
@@ -134,8 +159,10 @@ function afterFill(ownerId, spot, lvl) {
   if (spot === MATRIX_SIZE) {
     const b = board(ownerId, lvl);
     b.slots = []; b.reinvest += 1;
-    order(lvl).push(ownerId);
-    setFrontier(lvl, frontierIdx(lvl) + 1);
+    if (lvl === 1) { // only L1 uses the global frontier queue
+      order(lvl).push(ownerId);
+      setFrontier(lvl, frontierIdx(lvl) + 1);
+    }
   }
 }
 
@@ -192,6 +219,14 @@ for (const id of [1, 2, 3, 4, 5, 6, 7]) {
   const u = U(id);
   let tot = 0n; for (const [, b] of u.boards) tot += b.earning;
   console.log(`  #${id}: directs=${u.directs.length} activeLevels=${[...u.active].sort((a,b)=>a-b).join(",")} totalEarn=${fmt(tot)}`);
+}
+
+// L2 board ownership (sponsor-based): who sits on whose L2 board?
+console.log(`\n--- Level-2 boards (owner <- occupants) [sponsor-based] ---`);
+for (const id of [1, 2, 3, 4, 5, 6, 7, 8]) {
+  const b = board(id, 2);
+  if (b.slots.length === 0 && b.reinvest === 0) continue;
+  console.log(`  #${id} L2: [${b.slots.join(", ")}]  (cycles=${b.reinvest})`);
 }
 
 console.log(`\n=== VALIDATION ===`);
