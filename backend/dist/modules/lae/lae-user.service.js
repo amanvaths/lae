@@ -102,12 +102,12 @@ export async function getLaeUserIncome(wallet, kind, limit = 100) {
     }
     // Fallback when mc_income is empty: derive from chain events only
     const eventNames = kind === "treasury"
-        ? ["ClubPoolPayment"]
+        ? ["TreasuryPool", "ClubPoolPayment"]
         : kind === "lapse"
             ? ["LapseIncome"]
             : kind === "matrix"
                 ? ["TokenReceived"]
-                : ["TokenReceived", "ClubPoolPayment", "LapseIncome"];
+                : ["TokenReceived", "TreasuryPool", "ClubPoolPayment", "LapseIncome"];
     const uid = String(userId);
     const events = await prisma.chainEvent.findMany({
         where: {

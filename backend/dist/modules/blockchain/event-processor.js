@@ -25,6 +25,28 @@ function expectedSlot14Share(level) {
     return (cost * 9000n) / 10000n;
 }
 async function loadPlacementsForTx(txHash, fromUserId) {
+    const eventRows = [];
+    const events = await prisma.chainEvent.findMany({
+        where: {
+            txHash,
+            eventName: { in: ["NewUserPlace", "SubMatrixPlace", "RecycleMatrixPlace"] },
+        },
+        orderBy: { logIndex: "asc" },
+    });
+    for (const e of events) {
+        const p = (e.payload ?? {});
+        if (num(p.user) !== fromUserId)
+            continue;
+        eventRows.push({
+            matrixOwnerId: num(p.referrer ?? p.matrixOwner),
+            level: num(p.level) || 1,
+            cycleId: num(p.cycle),
+            position: num(p.spot),
+            logIndex: e.logIndex,
+        });
+    }
+    if (eventRows.length)
+        return eventRows;
     const positions = await prisma.matrixCorePosition.findMany({
         where: { txHash, occupantId: fromUserId },
         orderBy: { logIndex: "asc" },
@@ -38,12 +60,12 @@ async function loadPlacementsForTx(txHash, fromUserId) {
             logIndex: p.logIndex,
         }));
     }
-    const events = await prisma.chainEvent.findMany({
+    const legacy = await prisma.chainEvent.findMany({
         where: { txHash, eventName: "NewUserPlace" },
         orderBy: { logIndex: "asc" },
     });
     const rows = [];
-    for (const e of events) {
+    for (const e of legacy) {
         const p = (e.payload ?? {});
         if (num(p.user) !== fromUserId)
             continue;
@@ -214,6 +236,22 @@ export async function processIndexedLog(log) {
             });
             break;
         }
+        case "SubMatrixPlace":
+        case "RecycleMatrixPlace": {
+            const matrixOwnerId = num(args.matrixOwner);
+            const occupantId = num(args.user);
+            const level = num(args.level) || 1;
+            const cycleId = num(args.cycle);
+            const position = num(args.spot);
+            await backfillIncomeBoardContext(txHash, occupantId, {
+                matrixOwnerId,
+                level,
+                cycleId,
+                position,
+                logIndex,
+            });
+            break;
+        }
         case "TokenReceived": {
             const fromUserId = num(args.fromId);
             const eventBoardLevel = num(args.level) || null;
@@ -246,6 +284,7 @@ export async function processIndexedLog(log) {
             });
             break;
         }
+        case "TreasuryPool":
         case "ClubPoolPayment": {
             await prisma.matrixCoreIncome.upsert({
                 where: { txHash_logIndex: { txHash, logIndex } },

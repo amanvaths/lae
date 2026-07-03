@@ -24,4 +24,6 @@ export declare const config: {
     readonly transactionFeePol: number;
     readonly corsOrigin: string;
 };
+/** Comma-separated list from CORS_ORIGIN (supports http + https during SSL rollout). */
+export declare function getCorsOrigins(): string[];
 //# sourceMappingURL=index.d.ts.map

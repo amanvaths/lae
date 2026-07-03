@@ -2,7 +2,7 @@ import Fastify from "fastify";
 import cors from "@fastify/cors";
 import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
-import { config } from "./config/index.js";
+import { config, getCorsOrigins } from "./config/index.js";
 import { errorHandler } from "./middleware/auth.js";
 import authPlugin from "./plugins/auth.plugin.js";
 import { analyticsRoutes } from "./modules/analytics/analytics.routes.js";
@@ -17,8 +17,20 @@ export async function buildApp() {
         logger: config.nodeEnv === "development",
     });
     app.setErrorHandler(errorHandler);
+    const allowedOrigins = getCorsOrigins();
     await app.register(cors, {
-        origin: config.corsOrigin,
+        origin: (origin, callback) => {
+            // Server-to-server / curl — no Origin header
+            if (!origin) {
+                callback(null, true);
+                return;
+            }
+            if (allowedOrigins.includes(origin)) {
+                callback(null, true);
+                return;
+            }
+            callback(new Error(`CORS blocked origin: ${origin}`), false);
+        },
         credentials: true,
     });
     await app.register(swagger, {

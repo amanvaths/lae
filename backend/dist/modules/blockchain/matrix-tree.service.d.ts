@@ -45,15 +45,6 @@ export declare function getMatrixOverview(userId: number, levelFilter?: number):
 }>;
 /** All placements for a user across levels/cycles */
 export declare function getUserPlacement(userId: number): Promise<{
-    level: number;
-    id: string;
-    createdAt: Date;
-    txHash: string;
-    blockNumber: bigint;
-    position: number;
-    logIndex: number;
-    matrixOwnerId: number;
-    cycleId: number;
-    occupantId: number;
+    [k: string]: string | number | Date;
 }[]>;
 //# sourceMappingURL=matrix-tree.service.d.ts.map

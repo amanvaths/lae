@@ -25,8 +25,16 @@ export const config = {
     indexerAdminApiKey: process.env.INDEXER_ADMIN_API_KEY ?? "",
     minWithdrawDai: parseFloat(process.env.MIN_WITHDRAW_DAI ?? "1"),
     transactionFeePol: parseFloat(process.env.TRANSACTION_FEE_POL ?? "0.05"),
-    corsOrigin: process.env.CORS_ORIGIN ?? "http://localhost:3000",
+    corsOrigin: process.env.CORS_ORIGIN ??
+        "http://localhost:3000,http://127.0.0.1:3000",
 };
+/** Comma-separated list from CORS_ORIGIN (supports http + https during SSL rollout). */
+export function getCorsOrigins() {
+    return config.corsOrigin
+        .split(",")
+        .map((origin) => origin.trim())
+        .filter(Boolean);
+}
 function assertConfig() {
     if (!process.env.DATABASE_URL) {
         throw new Error("DATABASE_URL is required");

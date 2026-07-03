@@ -10,12 +10,17 @@ function matrixContract() {
     return new ethers.Contract(CONTRACTS.matrixCore, matrixIface, getIndexerProvider());
 }
 async function walletForUserId(userId) {
-    const row = await prisma.matrixCoreUser.findUnique({
-        where: { userId },
-        select: { walletAddress: true },
-    });
-    if (row?.walletAddress)
-        return row.walletAddress.toLowerCase();
+    try {
+        const row = await prisma.matrixCoreUser.findUnique({
+            where: { userId },
+            select: { walletAddress: true },
+        });
+        if (row?.walletAddress)
+            return row.walletAddress.toLowerCase();
+    }
+    catch {
+        // DB hiccup — fall through to on-chain lookup
+    }
     try {
         const m = matrixContract();
         const wallet = String(await m.idToAddress(userId)).toLowerCase();
@@ -35,21 +40,34 @@ async function idForAddress(address) {
         return null;
     }
 }
-function addrAt(rawRefs, i) {
-    const raw = typeof rawRefs?.getItem === "function"
-        ? rawRefs.getItem(i)
-        : rawRefs?.[i] ?? ethers.ZeroAddress;
-    return String(raw).toLowerCase();
+function referralsList(rawRefs) {
+    if (Array.isArray(rawRefs))
+        return rawRefs.map((a) => String(a).toLowerCase());
+    try {
+        const n = Number(rawRefs.length ?? 0);
+        const out = [];
+        for (let i = 0; i < n; i++) {
+            out.push(String(rawRefs.getItem(i)).toLowerCase());
+        }
+        return out;
+    }
+    catch {
+        return [];
+    }
+}
+function addrAt(refs, i) {
+    return refs[i] ?? ethers.ZeroAddress.toLowerCase();
 }
 /** On-chain 14-slot genealogy board (usersXMatrixReferrals). */
 async function readGenealogyBoard(wallet, level) {
     const m = matrixContract();
     const rawRefs = await m.usersXMatrixReferrals(wallet, level);
+    const refs = referralsList(rawRefs);
     let filled = 0;
     let firstEmpty = 0;
     const slots = [];
     for (let p = 1; p <= MATRIX_SIZE; p++) {
-        const addr = addrAt(rawRefs, p - 1);
+        const addr = addrAt(refs, p - 1);
         const occupied = Boolean(addr) && addr !== ethers.ZeroAddress.toLowerCase();
         if (occupied) {
             filled += 1;
@@ -202,9 +220,26 @@ export async function getMatrixTree(userId, level, cycleId) {
     if (!Number.isInteger(cycleId) || cycleId < 1)
         return { error: "invalid cycle" };
     const chainTree = await treeFromChain(userId, level, cycleId);
-    if (!chainTree)
+    if (!chainTree) {
+        // Chain read unavailable (e.g. partner users / RPC hiccup) — serve the
+        // authoritative indexed board from the DB instead of hard-failing.
+        try {
+            const dbFallback = await treeFromDb(userId, level, cycleId);
+            if (dbFallback)
+                return dbFallback;
+        }
+        catch {
+            /* fall through to error */
+        }
         return { error: "user not found or chain read failed" };
-    const dbTree = await treeFromDb(userId, level, cycleId);
+    }
+    let dbTree = null;
+    try {
+        dbTree = await treeFromDb(userId, level, cycleId);
+    }
+    catch {
+        dbTree = null;
+    }
     if (dbTree) {
         for (let p = 1; p <= chainTree.filledSpots; p++) {
             const c = chainTree.slots[p - 1];
@@ -305,9 +340,11 @@ export async function getMatrixOverview(userId, levelFilter) {
 }
 /** All placements for a user across levels/cycles */
 export async function getUserPlacement(userId) {
-    return prisma.matrixCorePosition.findMany({
+    const rows = await prisma.matrixCorePosition.findMany({
         where: { occupantId: userId },
         orderBy: [{ level: "asc" }, { cycleId: "asc" }, { position: "asc" }],
     });
+    // Prisma returns BigInt columns which Fastify cannot JSON-serialize; coerce to strings.
+    return rows.map((r) => Object.fromEntries(Object.entries(r).map(([k, v]) => [k, typeof v === "bigint" ? v.toString() : v])));
 }
 //# sourceMappingURL=matrix-tree.service.js.map

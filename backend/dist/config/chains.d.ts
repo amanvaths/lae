@@ -9,7 +9,7 @@ export declare const CHAIN: {
     readonly pollMs: number;
 };
 export declare const CONTRACTS: {
-    /** LAEClubMatrix — 15 slots × 14 positions */
+    /** LAEClubMatrix — 12 levels × 14 spots (BTitan-style) */
     readonly matrixCore: string;
     readonly senso: string;
     readonly slt: string;
