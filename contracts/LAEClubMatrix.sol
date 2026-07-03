@@ -21,25 +21,27 @@ interface ILAECoin {
  *         gating. 90% of every registration flows through the matrix, 10% funds
  *         the liquidity pool and mints a vested LAE reward (20 months).
  *
- *  PLACEMENT (global forced-matrix frontier)
- *  -----------------------------------------
- *  Each user owns one 14-slot board per level. New members fill the current
- *  "frontier" board of a level (owner's board first, then its members' boards in
- *  fill order). Every member that enters a level also becomes a future board
- *  owner (appended to that level's fill queue). When a board completes slot 14 it
- *  recycles (empties, cycle++) and re-enters the queue for its next cycle.
+ *  PLACEMENT (genealogy — every upline board)
+ *  -------------------------------------------
+ *  Each user owns one 14-slot board per level. A new registration is placed on
+ *  EVERY upline board along the sponsor chain (sponsor's board gets its next
+ *  spot, sponsor's sponsor gets its next spot, ... up to the owner). Boards fill
+ *  1..14 independently; on slot 14 a board recycles (empties, cycle++) and keeps
+ *  filling from that owner's future downline registrations.
  *
- *  INCOME (closed loop, exact doubling)
- *  ------------------------------------
- *  Every slot on a level-N board carries exactly matrixShare(cost[N]) =
- *  0.0009 * 2^(N-1). Slots 1,2 pay the board owner's uplines; 3,6,8,9,11,12 pay
- *  the board owner; 7,10 pay its directs; 13 pays its 2nd-level; 14 pays upline-1.
- *  Slots 4 & 5 are HELD (2 * slot = matrixShare(cost[N+1])). When slot 5 fills the
- *  board owner ASCENDS to level N+1 carrying the held funds, which pay one slot on
- *  the level N+1 board. Level-1 slots are funded by registration fees; level N>=2
- *  slots are funded by the held funds carried up from level N-1 — so total paid
- *  never exceeds fees collected. A user only reaches level N+1 after its own
- *  level-N board fills slots 4 & 5, so high levels need very deep teams.
+ *  INCOME (single payout per registration, senior filling board)
+ *  -------------------------------------------------------------
+ *  Money is paid ONCE per registration, from the board of the upline whose
+ *  reinvestCount is MINIMUM along the chain (the earliest active cycle).
+ *  Tie-break: at cycle 1 (rc = 0) the MOST SENIOR upline wins (owner first);
+ *  at cycle 2+ the CLOSEST upline wins. The payout uses THAT board's slot role:
+ *  slots 1,2 pay the board owner's uplines; 3,6,8,9,11,12 pay the board owner;
+ *  7,10 pay its directs; 13 pays its 2nd-level; 14 pays upline-1.
+ *  Slots 4 & 5 on the paying board are HELD (2 * slot = matrixShare(cost[N+1])).
+ *  When the paying slot is 5 the board owner ASCENDS to level N+1 carrying the
+ *  held funds, which pay one slot on the level N+1 board. Level-1 slots are
+ *  funded by registration fees; level N>=2 slots are funded by the held funds
+ *  carried up from level N-1 — so total paid never exceeds fees collected.
  *
  *  ELIGIBILITY + LAPSE
  *  -------------------
@@ -95,10 +97,6 @@ contract LAEClubMatrix {
     mapping(uint256 => address) public idToAddress;
     mapping(address => uint256) public addressToId;
     mapping(uint8 => uint256) public levelTokenCost;
-
-    // Global forced-matrix frontier per level.
-    mapping(uint8 => address[]) private levelBoardOrder; // board owners in fill order (with recycle re-entries)
-    mapping(uint8 => uint256) public levelFrontier;      // index of the currently-filling board
 
     uint256 public lastUserId = 2;           // Owner is ID 1
     bool public partnersInitialized;
@@ -196,7 +194,6 @@ contract LAEClubMatrix {
         addressToId[ownerAddress] = 1;
         for (uint8 level = 1; level <= LAST_LEVEL; level++) {
             o.activeLevels[level] = true;
-            levelBoardOrder[level].push(ownerAddress); // owner is the root board at every level
         }
 
         // 20-month release: 5%/month; month M (1..20) requires M+1 direct referrals.
@@ -368,49 +365,62 @@ contract LAEClubMatrix {
     }
 
     /**
-     * @dev Return the current frontier board owner at `level`, advancing past any
-     *      already-full boards. Returns address(0) if the level has no board yet.
-     */
-    function _frontierOwner(uint8 level) private returns (address) {
-        uint256 len = levelBoardOrder[level].length;
-        while (levelFrontier[level] < len) {
-            address candidate = levelBoardOrder[level][levelFrontier[level]];
-            if (users[candidate].board[level].slots.length >= MATRIX_SIZE) {
-                levelFrontier[level] += 1;
-                continue;
-            }
-            return candidate;
-        }
-        return address(0);
-    }
-
-    /**
-     * @dev Place `member` on the current frontier board of `level`, register the
-     *      member as a future board owner at that level, pay the slot role from the
-     *      carried funds, and run slot-5 (ascension) / slot-14 (recycle) hooks.
+     * @dev Place `member` on EVERY upline board at `level` (sponsor first, then
+     *      sponsor's sponsor, ... up to the owner). Each board fills 1..14 and
+     *      recycles independently at slot 14. Money is paid ONCE, from the board
+     *      of the upline with the minimum reinvestCount (earliest active cycle):
+     *      at rc = 0 the most senior upline wins; at rc > 0 the closest wins.
+     *      If the paying slot is 5, that board owner ascends carrying held funds.
      */
     function _enterLevel(address member, uint8 level, uint256 carried) private {
-        address boardOwner = _frontierOwner(level);
-
         if (!users[member].activeLevels[level]) {
             users[member].activeLevels[level] = true;
         }
-        levelBoardOrder[level].push(member); // member gets its own board at this level
 
-        if (boardOwner == address(0) || boardOwner == member) {
-            // First entrant at this level is the root — no board to place into.
-            // Carried funds (if any) stay in the contract balance.
+        address payOwner = address(0);
+        uint8 paySlot = 0;
+        uint256 minRc = type(uint256).max;
+
+        address cur = users[member].referrer;
+        for (uint256 hops = 0; cur != address(0) && hops < MAX_UPLINE; hops++) {
+            if (users[cur].activeLevels[level]) {
+                Board storage b = users[cur].board[level];
+                uint256 rcBefore = b.reinvestCount;
+                b.slots.push(member);
+                uint8 spot = uint8(b.slots.length);
+                b.totalFilled += 1;
+                emit NewUserPlace(users[member].id, users[cur].id, level, rcBefore + 1, spot);
+
+                if (rcBefore < minRc) {
+                    // Earlier cycle found — walking upward, so at rc > 0 the
+                    // CLOSEST upline at that cycle keeps the payment.
+                    minRc = rcBefore;
+                    payOwner = cur;
+                    paySlot = spot;
+                } else if (rcBefore == minRc && rcBefore == 0) {
+                    // Cycle-1 tie — the MORE SENIOR upline takes the payment.
+                    payOwner = cur;
+                    paySlot = spot;
+                }
+
+                if (spot == MATRIX_SIZE) {
+                    delete b.slots;
+                    b.reinvestCount += 1;
+                    emit Reinvest(users[cur].id, users[cur].id, users[cur].id, level);
+                }
+            }
+            cur = users[cur].referrer;
+        }
+
+        if (payOwner == address(0)) {
+            // No upline board at this level (owner's own entry) — funds stay.
             return;
         }
 
-        Board storage b = users[boardOwner].board[level];
-        b.slots.push(member);
-        uint8 spot = uint8(b.slots.length);
-        b.totalFilled += 1;
-        emit NewUserPlace(users[member].id, users[boardOwner].id, level, b.reinvestCount + 1, spot);
-
-        _payByRole(member, boardOwner, spot, level, carried);
-        _afterFill(boardOwner, spot, level);
+        _payByRole(member, payOwner, paySlot, level, carried);
+        if (paySlot == 5) {
+            _ascend(payOwner, level);
+        }
     }
 
     function _afterFill(address boardOwner, uint8 spot, uint8 level) private {
@@ -422,13 +432,6 @@ contract LAEClubMatrix {
             delete b.slots;
             b.reinvestCount += 1;
             emit Reinvest(users[boardOwner].id, users[boardOwner].id, users[boardOwner].id, level);
-            // Only level 1 uses the global frontier queue (registration placement).
-            // Levels 2+ are sponsor-based: a recycled board simply starts its next
-            // cycle in place and keeps receiving that owner's ascending downline.
-            if (level == 1) {
-                levelBoardOrder[level].push(boardOwner); // re-enter for the next cycle
-                levelFrontier[level] += 1;               // move on to the next board
-            }
         }
     }
 

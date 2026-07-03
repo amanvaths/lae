@@ -19,11 +19,11 @@ for (const envPath of [join(__dirname, "../.env"), join(__dirname, "../../.env.l
 
 const MATRIX =
   process.env.LAE_MATRIX_CONTRACT_ADDRESS ??
-  "0xC87B0Ebdd11961FE61c416135c2ebaD3391c6e6A";
+  "0xF36B04a71C27cc983DA3224491E4FaA6300916A7";
 const LAECOIN =
   process.env.LAE_COIN_CONTRACT_ADDRESS ??
   "0xD6698E6a8Ee4712cC2E36C150f1C34e59884C45A";
-const DEPLOY = BigInt(process.env.LAE_MATRIX_DEPLOY_BLOCK ?? "116788274");
+const DEPLOY = BigInt(process.env.LAE_MATRIX_DEPLOY_BLOCK ?? "116923615");
 const API = process.env.API_URL ?? "http://localhost:4000";
 const RPC = process.env.BSC_RPC_URL ?? "https://bsc-testnet.bnbchain.org";
 
