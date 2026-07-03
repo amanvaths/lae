@@ -57,6 +57,19 @@ export default function IncomePage() {
   ].map((v) => (v == null ? undefined : Number(v)));
   const { addressById } = useLaeAddressesForIds(counterpartyIds);
 
+  const directMatrixFromRecords = useMemo(
+    () => sumIncomeRecords(matrixRecords),
+    [matrixRecords]
+  );
+  const lapseTotalFromRecords = useMemo(
+    () => sumIncomeRecords(lapseRecords),
+    [lapseRecords]
+  );
+  const clubTotalFromRecords = useMemo(
+    () => sumIncomeRecords(clubRecords),
+    [clubRecords]
+  );
+
   if (user.isLoading) {
     return <QueryLoading label="Loading income from chain…" />;
   }
@@ -78,19 +91,6 @@ export default function IncomePage() {
       </Panel>
     );
   }
-
-  const directMatrixFromRecords = useMemo(
-    () => sumIncomeRecords(matrixRecords),
-    [matrixRecords]
-  );
-  const lapseTotalFromRecords = useMemo(
-    () => sumIncomeRecords(lapseRecords),
-    [lapseRecords]
-  );
-  const clubTotalFromRecords = useMemo(
-    () => sumIncomeRecords(clubRecords),
-    [clubRecords]
-  );
 
   const directMatrix =
     directMatrixFromRecords > 0n
