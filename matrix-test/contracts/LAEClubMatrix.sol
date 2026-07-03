@@ -29,19 +29,20 @@ interface ILAECoin {
  *  1..14 independently; on slot 14 a board recycles (empties, cycle++) and keeps
  *  filling from that owner's future downline registrations.
  *
- *  INCOME (single payout per registration, senior filling board)
+ *  INCOME (single payout per registration, hold priority first)
  *  -------------------------------------------------------------
- *  Money is paid ONCE per registration, from the board of the upline whose
- *  reinvestCount is MINIMUM along the chain (the earliest active cycle).
- *  Tie-break: at cycle 1 (rc = 0) the MOST SENIOR upline wins (owner first);
- *  at cycle 2+ the CLOSEST upline wins. The payout uses THAT board's slot role:
+ *  Money settles ONCE per registration. HOLD PRIORITY: if the entry fills
+ *  slot 4 or 5 on ANY upline board (closest board first), the payment is HELD
+ *  on that board as its upgrade fund; at slot 5 the owner ASCENDS immediately
+ *  (level N+1 unlock + placement on the nearest upline's N+1 board) carrying
+ *  the held 2 x share = exactly one N+1 slot payment. Otherwise the payment
+ *  goes to the board of the upline whose reinvestCount is MINIMUM along the
+ *  chain (cycle-1 tie -> most senior; cycle 2+ -> closest), by slot role:
  *  slots 1,2 pay the board owner's uplines; 3,6,8,9,11,12 pay the board owner;
  *  7,10 pay its directs; 13 pays its 2nd-level; 14 pays upline-1.
- *  Slots 4 & 5 on the paying board are HELD (2 * slot = matrixShare(cost[N+1])).
- *  When the paying slot is 5 the board owner ASCENDS to level N+1 carrying the
- *  held funds, which pay one slot on the level N+1 board. Level-1 slots are
- *  funded by registration fees; level N>=2 slots are funded by the held funds
- *  carried up from level N-1 — so total paid never exceeds fees collected.
+ *  Level-1 slots are funded by registration fees; level N>=2 slots are funded
+ *  by held funds carried up from level N-1 — total paid never exceeds fees
+ *  collected. The owner's own root ascension pays its carry to the owner.
  *
  *  ELIGIBILITY + LAPSE
  *  -------------------
@@ -367,10 +368,13 @@ contract LAEClubMatrix {
     /**
      * @dev Place `member` on EVERY upline board at `level` (sponsor first, then
      *      sponsor's sponsor, ... up to the owner). Each board fills 1..14 and
-     *      recycles independently at slot 14. Money is paid ONCE, from the board
-     *      of the upline with the minimum reinvestCount (earliest active cycle):
-     *      at rc = 0 the most senior upline wins; at rc > 0 the closest wins.
-     *      If the paying slot is 5, that board owner ascends carrying held funds.
+     *      recycles independently at slot 14. Money settles ONCE per entry:
+     *      HOLD PRIORITY — if this entry fills slot 4 or 5 on any upline board
+     *      (closest board first), the payment is HELD there as that board's
+     *      upgrade fund; at slot 5 the board owner ascends immediately carrying
+     *      the held funds (2 x share = one slot on the next level). Otherwise
+     *      the payment goes by slot role to the board of the upline with the
+     *      minimum reinvestCount (cycle-1 tie -> most senior; else closest).
      */
     function _enterLevel(address member, uint8 level, uint256 carried) private {
         if (!users[member].activeLevels[level]) {
@@ -380,6 +384,8 @@ contract LAEClubMatrix {
         address payOwner = address(0);
         uint8 paySlot = 0;
         uint256 minRc = type(uint256).max;
+        address holdOwner = address(0);
+        uint8 holdSlot = 0;
 
         address cur = users[member].referrer;
         for (uint256 hops = 0; cur != address(0) && hops < MAX_UPLINE; hops++) {
@@ -390,6 +396,12 @@ contract LAEClubMatrix {
                 uint8 spot = uint8(b.slots.length);
                 b.totalFilled += 1;
                 emit NewUserPlace(users[member].id, users[cur].id, level, rcBefore + 1, spot);
+
+                if ((spot == 4 || spot == 5) && holdOwner == address(0)) {
+                    // Upgrade-hold priority — closest board's slot 4/5 wins.
+                    holdOwner = cur;
+                    holdSlot = spot;
+                }
 
                 if (rcBefore < minRc) {
                     // Earlier cycle found — walking upward, so at rc > 0 the
@@ -412,15 +424,22 @@ contract LAEClubMatrix {
             cur = users[cur].referrer;
         }
 
+        if (holdOwner != address(0)) {
+            // Slot 4/5 fill anywhere in the chain converts this payment into
+            // that board's upgrade fund; slot 5 releases the ascension.
+            _payByRole(member, holdOwner, holdSlot, level, carried);
+            if (holdSlot == 5) {
+                _ascend(holdOwner, level);
+            }
+            return;
+        }
+
         if (payOwner == address(0)) {
             // No upline board at this level (owner's own entry) — funds stay.
             return;
         }
 
         _payByRole(member, payOwner, paySlot, level, carried);
-        if (paySlot == 5) {
-            _ascend(payOwner, level);
-        }
     }
 
     function _afterFill(address boardOwner, uint8 spot, uint8 level) private {
@@ -492,7 +511,11 @@ contract LAEClubMatrix {
 
         address target = _uplineWithSpace(ascender, level);
         if (target == address(0)) {
-            // Root ascension (owner has no upline) — carried funds stay in contract.
+            // Root ascension (owner has no upline) — pay the carried upgrade
+            // funds to the owner instead of stranding them in the contract.
+            if (carried > 0) {
+                _sendTokenDividends(owner, ascender, level, carried);
+            }
             return;
         }
 

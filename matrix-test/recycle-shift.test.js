@@ -42,10 +42,12 @@ async function main() {
     for (const log of rcpt.logs) {
       let p; try { p = matrix.interface.parseLog(log); } catch { continue; }
       if (!p) continue;
-      if (p.name === "TokenReceived") payLog.push({ reg: id, to: Number(p.args.receiverId), kind: "income" });
-      if (p.name === "UpgradeHold") payLog.push({ reg: id, to: Number(p.args.boardOwnerId), kind: "hold" });
-      if (p.name === "LapseIncome") payLog.push({ reg: id, to: Number(p.args.receiverId), kind: "lapse" });
-      if (p.name === "ClubPoolPayment") payLog.push({ reg: id, to: 0, kind: "treasury" });
+      // Only the L1 settlement is once-per-registration; ascension cascades
+      // legitimately add L2+ income/hold events in the same tx.
+      if (p.name === "TokenReceived" && Number(p.args.level) === 1) payLog.push({ reg: id, to: Number(p.args.receiverId), kind: "income" });
+      if (p.name === "UpgradeHold" && Number(p.args.boardLevel) === 1) payLog.push({ reg: id, to: Number(p.args.boardOwnerId), kind: "hold" });
+      if (p.name === "LapseIncome" && Number(p.args.level) === 1) payLog.push({ reg: id, to: Number(p.args.receiverId), kind: "lapse" });
+      if (p.name === "ClubPoolPayment" && Number(p.args.level) === 1) payLog.push({ reg: id, to: 0, kind: "treasury" });
       if (p.name === "Reinvest" && Number(p.args.level) === 1) {
         console.log(`recycle: board #${p.args.userId} at registration of #${id}`);
       }
