@@ -3,6 +3,7 @@ import cors from "@fastify/cors";
 import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
 import { config, getCorsOrigins } from "./config/index.js";
+import { CONTRACTS, MATRIX_CORE_DEPLOY_BLOCK } from "./config/chains.js";
 import { errorHandler } from "./middleware/auth.js";
 import authPlugin from "./plugins/auth.plugin.js";
 import { analyticsRoutes } from "./modules/analytics/analytics.routes.js";
@@ -55,6 +56,8 @@ export async function buildApp() {
     status: "ok",
     service: "lae-analytics-api",
     mode: "indexer-only",
+    matrix: CONTRACTS.matrixCore,
+    deployBlock: MATRIX_CORE_DEPLOY_BLOCK.toString(),
     timestamp: new Date().toISOString(),
   }));
 

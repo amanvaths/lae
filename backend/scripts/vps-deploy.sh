@@ -56,10 +56,9 @@ if ! command -v pm2 >/dev/null 2>&1; then
 fi
 
 if pm2 describe "${APP_NAME}" >/dev/null 2>&1; then
-  pm2 restart ecosystem.config.cjs --only "${APP_NAME}" --update-env
-else
-  pm2 start ecosystem.config.cjs --only "${APP_NAME}"
+  pm2 delete "${APP_NAME}" || true
 fi
+pm2 start ecosystem.config.cjs --only "${APP_NAME}"
 
 pm2 save
 

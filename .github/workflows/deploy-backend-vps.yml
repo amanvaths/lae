@@ -168,6 +168,7 @@ jobs:
             printf '%s=%s\n' SPIN_CONTRACT_ADDRESS 0xF9bdE4a2Ca487b18DA8546124b63Ec9e938ea1aE >> "${ENV_FILE}"
             printf '%s=%s\n' STAKING_CONTRACT_ADDRESS 0xdb25Af21346aD358D5e52835934AF5f326169984 >> "${ENV_FILE}"
             printf '%s=%s\n' DAI_CONTRACT_ADDRESS 0xb2bE66BE07E1AD04074B32B8b13DcdFaB6B57575 >> "${ENV_FILE}"
+            printf '%s=%s\n' PAYMENT_TOKEN_ADDRESS 0xb2bE66BE07E1AD04074B32B8b13DcdFaB6B57575 >> "${ENV_FILE}"
             printf '%s=%s\n' LAE_MATRIX_CONTRACT_ADDRESS 0xADf9A610BCaCE52721458F5d3c62E375525BC510 >> "${ENV_FILE}"
             printf '%s=%s\n' MATRIX_CORE_CONTRACT_ADDRESS 0xADf9A610BCaCE52721458F5d3c62E375525BC510 >> "${ENV_FILE}"
             printf '%s=%s\n' LAE_MATRIX_DEPLOY_BLOCK 117000224 >> "${ENV_FILE}"
@@ -179,6 +180,8 @@ jobs:
             printf '%s=%s\n' ADMIN_WALLET_ADDRESSES "$(sanitize "${ADMIN_WALLET_ADDRESSES:-0xef9594fC5145404BfC7B5640296C3864319e3d86}")" >> "${ENV_FILE}"
 
             printf '%s=%s\n' RESET_INDEXER_ON_DEPLOY "$(sanitize "${RESET_INDEXER_ON_DEPLOY:-}")" >> "${ENV_FILE}"
+
+            grep -E '^(LAE_MATRIX|MATRIX_CORE|INDEXER_START)' "${ENV_FILE}" || true
 
             chmod +x "${DEPLOY_ROOT}/backend/scripts/"*.sh
             bash "${DEPLOY_ROOT}/backend/scripts/vps-deploy.sh"
