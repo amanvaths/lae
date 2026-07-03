@@ -245,6 +245,13 @@ export async function replayFromBlock(fromBlock: bigint): Promise<number> {
     where: { id: "main" },
     data: { lastBlock: fromBlock > 0n ? fromBlock - 1n : 0n, lastBlockHash: null },
   });
+  // Owner #1 is created in the constructor (no Registration event), so replay
+  // must re-pull users from chain state or a post-reset DB stays empty.
+  try {
+    await backfillLaeUsersFromChain();
+  } catch (err) {
+    console.warn("[indexer] replay user backfill:", err instanceof Error ? err.message : err);
+  }
   await runIndexerSync();
   return prisma.matrixCoreUser.count();
 }
