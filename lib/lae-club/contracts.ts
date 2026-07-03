@@ -6,7 +6,7 @@ export const LAE_CONTRACTS = {
   /** LAEClubMatrix — 12 levels × 14 spots (BTitan-style) */
   matrix: (process.env.NEXT_PUBLIC_LAE_MATRIX_CONTRACT ??
     process.env.NEXT_PUBLIC_MATRIX_CORE_CONTRACT ??
-    "0xd36E0380039cE259aF4eF0f34504124021958BeF") as `0x${string}`,
+    "0xADf9A610BCaCE52721458F5d3c62E375525BC510") as `0x${string}`,
   payment: (process.env.NEXT_PUBLIC_PAYMENT_TOKEN ??
     "0xb2bE66BE07E1AD04074B32B8b13DcdFaB6B57575") as `0x${string}`,
   laeCoin: (process.env.NEXT_PUBLIC_LAE_COIN_CONTRACT ??
