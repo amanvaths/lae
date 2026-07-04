@@ -383,7 +383,30 @@ contract LAEClubMatrix {
         if (!users[member].activeLevels[level]) {
             users[member].activeLevels[level] = true;
         }
+        // Fresh entry: fill ONLY cycle-1 upline boards.
+        _distribute(member, level, carried, true);
+    }
 
+    /**
+     * @dev A board owner whose board just recycled re-enters the chain: placed on
+     *      EVERY active upline board at its CURRENT cycle (cycleOneOnly = false),
+     *      carrying the completing slot's payment.
+     */
+    function _reenter(address entrant, uint8 level, uint256 amount) private {
+        _distribute(entrant, level, amount, false);
+    }
+
+    /**
+     * @dev Shared placement + settlement. Walks the sponsor chain and places
+     *      `entrant` on each active upline board (fresh entries restrict to
+     *      cycle-1 boards; re-entries take each upline's current board). The
+     *      payment settles ONCE: a cycle-1 slot 4/5 HOLD wins (auto-upgrade at
+     *      slot 5); else if the senior board completed its 14th slot its owner
+     *      re-enters carrying the payment; else the SENIOR (topmost) board is
+     *      paid by slot role. A board that completes always re-enters, even if
+     *      the payment was claimed elsewhere by a hold.
+     */
+    function _distribute(address entrant, uint8 level, uint256 amount, bool cycleOneOnly) private {
         address payOwner = address(0);
         uint8 paySlot = 0;
         bool payCompleted = false;
@@ -391,26 +414,25 @@ contract LAEClubMatrix {
         uint8 holdSlot = 0;
         bool placedAny = false;
 
-        address cur = users[member].referrer;
+        address cur = users[entrant].referrer;
         for (uint256 hops = 0; cur != address(0) && hops < MAX_UPLINE; hops++) {
             Board storage b = users[cur].board[level];
-            // Fresh entries fill ONLY cycle-1 boards; recycled boards (cycle 2+)
-            // are filled exclusively by re-entries (see _reenter).
-            if (users[cur].activeLevels[level] && b.reinvestCount == 0) {
-                b.slots.push(member);
+            if (users[cur].activeLevels[level] && (!cycleOneOnly || b.reinvestCount == 0)) {
+                uint256 rcBefore = b.reinvestCount;
+                b.slots.push(entrant);
                 uint8 spot = uint8(b.slots.length);
                 b.totalFilled += 1;
                 placedAny = true;
-                emit NewUserPlace(users[member].id, users[cur].id, level, 1, spot);
+                emit NewUserPlace(users[entrant].id, users[cur].id, level, rcBefore + 1, spot);
 
-                if ((spot == 4 || spot == 5) && holdOwner == address(0)) {
-                    // Upgrade-hold priority — closest cycle-1 board's slot 4/5 wins.
+                // Upgrade-hold only ever fires on a cycle-1 board.
+                if ((spot == 4 || spot == 5) && rcBefore == 0 && holdOwner == address(0)) {
                     holdOwner = cur;
                     holdSlot = spot;
                 }
 
-                // Every placed board is cycle-1 here, so the MORE SENIOR (topmost)
-                // upline keeps the payment; walking upward keeps overwriting.
+                // The MORE SENIOR (topmost) board keeps the payment; walking
+                // upward keeps overwriting so the highest board wins.
                 payOwner = cur;
                 paySlot = spot;
                 payCompleted = (spot == MATRIX_SIZE);
@@ -428,94 +450,40 @@ contract LAEClubMatrix {
 
         // HOLD PRIORITY: a cycle-1 slot 4/5 fill funds that board's ascension.
         if (holdOwner != address(0)) {
-            _payByRole(member, holdOwner, holdSlot, level, carried);
+            _payByRole(entrant, holdOwner, holdSlot, level, amount);
             if (holdSlot == 5) {
                 _ascend(holdOwner, level);
             }
-            // A senior board that completed in the same entry still re-enters
-            // structurally, but the payment was already claimed by the hold.
+            // A senior board that completed still re-enters structurally, but the
+            // payment was already claimed by the hold (carry = 0).
             if (completedOwner != address(0)) {
                 _reenter(completedOwner, level, 0);
             }
             return;
         }
 
-        // The senior board completed its 14th slot: its owner re-enters the
-        // upline carrying this payment instead of paying the slot-14 role.
+        // Senior board completed its 14th slot: its owner re-enters the upline
+        // carrying this payment instead of paying the slot-14 role.
         if (completedOwner != address(0)) {
-            _reenter(completedOwner, level, carried);
+            _reenter(completedOwner, level, amount);
             return;
         }
 
         if (payOwner != address(0)) {
-            _payByRole(member, payOwner, paySlot, level, carried);
-            return;
-        }
-
-        // No cycle-1 upline board (all recycled, or owner's own root entry):
-        // re-enter the nearest active upline's current board so the entry is
-        // always placed and its payment always settles.
-        if (!placedAny && users[member].referrer != address(0)) {
-            _reenter(member, level, carried);
-            return;
-        }
-        if (carried > 0) {
-            _sendTokenDividends(owner, member, level, carried);
-        }
-    }
-
-    /**
-     * @dev Single placement of `entrant` onto `target`'s CURRENT board at
-     *      `level`, carrying `amount`. Used for recycle re-entry and the
-     *      all-uplines-recycled fallback. A slot-14 landing recycles `target`
-     *      and cascades the re-entry up to target's own upline.
-     */
-    function _placeSingle(address entrant, address target, uint8 level, uint256 amount) private {
-        Board storage b = users[target].board[level];
-        b.slots.push(entrant);
-        uint8 spot = uint8(b.slots.length);
-        b.totalFilled += 1;
-        emit NewUserPlace(users[entrant].id, users[target].id, level, b.reinvestCount + 1, spot);
-
-        if (spot == MATRIX_SIZE) {
-            delete b.slots;
-            b.reinvestCount += 1;
-            emit Reinvest(users[target].id, users[target].id, users[target].id, level);
-            _reenter(target, level, amount);
-            return;
-        }
-        if (amount > 0) {
-            _settleSlot(entrant, target, spot, level, amount);
-        }
-    }
-
-    /**
-     * @dev A board owner whose board just recycled re-enters the nearest active
-     *      upline's current board, carrying the completing slot's payment. If no
-     *      active upline exists, the carry is paid to the owner.
-     */
-    function _reenter(address boardOwner, uint8 level, uint256 amount) private {
-        address up = users[boardOwner].referrer;
-        for (uint256 h = 0; up != address(0) && h < MAX_UPLINE; h++) {
-            if (users[up].activeLevels[level]) {
-                _placeSingle(boardOwner, up, level, amount);
-                return;
+            if (amount > 0) {
+                _payByRole(entrant, payOwner, paySlot, level, amount);
             }
-            up = users[up].referrer;
+            return;
+        }
+
+        // No board found. A fresh entry whose uplines all recycled re-enters
+        // (which fills their current-cycle boards); otherwise pay the owner.
+        if (!placedAny && cycleOneOnly && users[entrant].referrer != address(0)) {
+            _reenter(entrant, level, amount);
+            return;
         }
         if (amount > 0) {
-            _sendTokenDividends(owner, boardOwner, level, amount);
-        }
-    }
-
-    /**
-     * @dev Settle a single landed slot by its role, then trigger ascension if it
-     *      was a cycle-1 slot 5 (auto-upgrade). Cycle-2+ slot 5 just pays owner.
-     */
-    function _settleSlot(address entrant, address boardOwner, uint8 spot, uint8 level, uint256 amount) private {
-        _payByRole(entrant, boardOwner, spot, level, amount);
-        if (spot == 5 && users[boardOwner].board[level].reinvestCount == 0) {
-            _ascend(boardOwner, level);
+            _sendTokenDividends(owner, entrant, level, amount);
         }
     }
 

@@ -114,11 +114,11 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           BSC_RPC_URL: ${{ secrets.BSC_RPC_URL }}
           CHAIN_ID: ${{ secrets.CHAIN_ID }}
-          INDEXER_START_BLOCK: "117122306"
-          LAE_MATRIX_CONTRACT_ADDRESS: "0x52241011b999EF9bb8Be5E95B65EEE8682ee7eF0"
-          MATRIX_CORE_CONTRACT_ADDRESS: "0x52241011b999EF9bb8Be5E95B65EEE8682ee7eF0"
-          MATRIX_CORE_DEPLOY_BLOCK: "117122306"
-          LAE_MATRIX_DEPLOY_BLOCK: "117122306"
+          INDEXER_START_BLOCK: "117126461"
+          LAE_MATRIX_CONTRACT_ADDRESS: "0x32a4B3f011691ddB2881CCd6D14797186a211460"
+          MATRIX_CORE_CONTRACT_ADDRESS: "0x32a4B3f011691ddB2881CCd6D14797186a211460"
+          MATRIX_CORE_DEPLOY_BLOCK: "117126461"
+          LAE_MATRIX_DEPLOY_BLOCK: "117126461"
           INDEXER_ADMIN_API_KEY: ${{ secrets.INDEXER_ADMIN_API_KEY }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           CORS_ORIGIN: ${{ secrets.CORS_ORIGIN }}
@@ -156,7 +156,7 @@ jobs:
             printf '%s=%s\n' DATABASE_URL "$(sanitize "${DATABASE_URL}")" >> "${ENV_FILE}"
             printf '%s=%s\n' BSC_RPC_URL "$(sanitize "${BSC_RPC_URL:-https://data-seed-prebsc-1-s1.binance.org:8545/}")" >> "${ENV_FILE}"
             printf '%s=%s\n' CHAIN_ID "$(sanitize "${CHAIN_ID:-97}")" >> "${ENV_FILE}"
-            printf '%s=%s\n' INDEXER_START_BLOCK "117122306" >> "${ENV_FILE}"
+            printf '%s=%s\n' INDEXER_START_BLOCK "117126461" >> "${ENV_FILE}"
             # Public BSC testnet RPCs rate-limit eth_getLogs (silently empty) — use receipt scan.
             printf '%s=%s\n' INDEXER_SYNC_MODE receipt >> "${ENV_FILE}"
             printf '%s=%s\n' INDEXER_SCAN_CONCURRENCY 32 >> "${ENV_FILE}"
@@ -169,10 +169,10 @@ jobs:
             printf '%s=%s\n' STAKING_CONTRACT_ADDRESS 0xdb25Af21346aD358D5e52835934AF5f326169984 >> "${ENV_FILE}"
             printf '%s=%s\n' DAI_CONTRACT_ADDRESS 0xb2bE66BE07E1AD04074B32B8b13DcdFaB6B57575 >> "${ENV_FILE}"
             printf '%s=%s\n' PAYMENT_TOKEN_ADDRESS 0xb2bE66BE07E1AD04074B32B8b13DcdFaB6B57575 >> "${ENV_FILE}"
-            printf '%s=%s\n' LAE_MATRIX_CONTRACT_ADDRESS 0x52241011b999EF9bb8Be5E95B65EEE8682ee7eF0 >> "${ENV_FILE}"
-            printf '%s=%s\n' MATRIX_CORE_CONTRACT_ADDRESS 0x52241011b999EF9bb8Be5E95B65EEE8682ee7eF0 >> "${ENV_FILE}"
-            printf '%s=%s\n' LAE_MATRIX_DEPLOY_BLOCK 117122306 >> "${ENV_FILE}"
-            printf '%s=%s\n' MATRIX_CORE_DEPLOY_BLOCK 117122306 >> "${ENV_FILE}"
+            printf '%s=%s\n' LAE_MATRIX_CONTRACT_ADDRESS 0x32a4B3f011691ddB2881CCd6D14797186a211460 >> "${ENV_FILE}"
+            printf '%s=%s\n' MATRIX_CORE_CONTRACT_ADDRESS 0x32a4B3f011691ddB2881CCd6D14797186a211460 >> "${ENV_FILE}"
+            printf '%s=%s\n' LAE_MATRIX_DEPLOY_BLOCK 117126461 >> "${ENV_FILE}"
+            printf '%s=%s\n' MATRIX_CORE_DEPLOY_BLOCK 117126461 >> "${ENV_FILE}"
             printf '%s=%s\n' LAE_COIN_CONTRACT_ADDRESS "$(sanitize "${LAE_COIN_CONTRACT_ADDRESS:-0xD6698E6a8Ee4712cC2E36C150f1C34e59884C45A}")" >> "${ENV_FILE}"
             printf '%s=%s\n' INDEXER_ADMIN_API_KEY "$(sanitize "${INDEXER_ADMIN_API_KEY}")" >> "${ENV_FILE}"
             printf '%s=%s\n' JWT_SECRET "$(sanitize "${JWT_SECRET}")" >> "${ENV_FILE}"
@@ -226,9 +226,9 @@ jobs:
             echo "| Item | Value |"
             echo "|------|-------|"
             echo "| API | https://laeclub.org/api/ |"
-            echo "| Matrix | \`0x52241011b999EF9bb8Be5E95B65EEE8682ee7eF0\` |"
-            echo "| Index from block | \`117122306\` |"
+            echo "| Matrix | \`0x32a4B3f011691ddB2881CCd6D14797186a211460\` |"
+            echo "| Index from block | \`117126461\` |"
             echo "| Reset indexer | \`${{ github.event_name == 'workflow_dispatch' && inputs.reset_indexer || 'false' }}\` |"
             echo "| Commit | \`${{ github.sha }}\` |"
           } >> "$GITHUB_STEP_SUMMARY"
-          echo "✅ Backend live — indexer contract 0x52241011b999EF9bb8Be5E95B65EEE8682ee7eF0"
+          echo "✅ Backend live — indexer contract 0x32a4B3f011691ddB2881CCd6D14797186a211460"

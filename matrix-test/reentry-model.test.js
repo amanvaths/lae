@@ -79,7 +79,8 @@ async function main() {
   console.log("");
   const b1 = await matrix.usersXMatrix(deployer.address, 1);
   console.log(`#1 L1 reinvestCount=${b1[1]} (cycle ${Number(b1[1]) + 1})`);
-  expect("#1 L1 current-cycle slots", await idsOf(1, 1), [2]);
+  expect("#1 L1 current-cycle slots", await idsOf(1, 1), [2, 4]);
+  expect("#2 L1 current-cycle slots", await idsOf(2, 1), [4]);
   expect("#1 L1 is cycle 2", Number(b1[1]), 1);
   expect("#1 L2 cycle 1", await idsOf(1, 2), [2, 4, 6, 7]);
   expect("#2 L2", await idsOf(2, 2), [4, 6, 7]);
