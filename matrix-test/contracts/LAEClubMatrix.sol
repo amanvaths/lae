@@ -31,11 +31,13 @@ interface ILAECoin {
  *
  *  INCOME (single payout per registration, hold priority first)
  *  -------------------------------------------------------------
- *  Money settles ONCE per registration. HOLD PRIORITY: if the entry fills
- *  slot 4 or 5 on ANY upline board (closest board first), the payment is HELD
- *  on that board as its upgrade fund; at slot 5 the owner ASCENDS immediately
- *  (level N+1 unlock + placement on the nearest upline's N+1 board) carrying
- *  the held 2 x share = exactly one N+1 slot payment. Otherwise the payment
+ *  Money settles ONCE per registration. HOLD PRIORITY (CYCLE 1 ONLY): if the
+ *  entry fills slot 4 or 5 on a first-cycle upline board (closest board first),
+ *  the payment is HELD on that board as its upgrade fund; at slot 5 the owner
+ *  ASCENDS immediately (level N+1 unlock + placement on the nearest upline's
+ *  N+1 board) carrying the held 2 x share = exactly one N+1 slot payment.
+ *  Recycled boards (cycle 2+) never auto-upgrade: their slot 4 pays the
+ *  treasury and slot 5 pays the board owner (like slots 3 & 6). Otherwise the payment
  *  goes to the board of the upline whose reinvestCount is MINIMUM along the
  *  chain (cycle-1 tie -> most senior; cycle 2+ -> closest), by slot role:
  *  slots 1,2 pay the board owner's uplines; 3,6,8,9,11,12 pay the board owner;
@@ -397,8 +399,10 @@ contract LAEClubMatrix {
                 b.totalFilled += 1;
                 emit NewUserPlace(users[member].id, users[cur].id, level, rcBefore + 1, spot);
 
-                if ((spot == 4 || spot == 5) && holdOwner == address(0)) {
-                    // Upgrade-hold priority — closest board's slot 4/5 wins.
+                if ((spot == 4 || spot == 5) && rcBefore == 0 && holdOwner == address(0)) {
+                    // Upgrade-hold priority — closest CYCLE-1 board's slot 4/5
+                    // wins. Recycled boards (cycle 2+) never auto-upgrade, so
+                    // their slot 4/5 pay normally instead of holding.
                     holdOwner = cur;
                     holdSlot = spot;
                 }
@@ -443,7 +447,8 @@ contract LAEClubMatrix {
     }
 
     function _afterFill(address boardOwner, uint8 spot, uint8 level) private {
-        if (spot == 5) {
+        if (spot == 5 && users[boardOwner].board[level].reinvestCount == 0) {
+            // Auto-upgrade fires only from a cycle-1 board's slot 5.
             _ascend(boardOwner, level);
         }
         if (spot == MATRIX_SIZE) {
@@ -538,10 +543,17 @@ contract LAEClubMatrix {
         uint8 level,
         uint256 amount
     ) private {
-        // Slots 4 & 5 hold toward the board owner's ascension (funds stay in contract).
-        if (spot == 4 || spot == 5) {
+        // Slots 4 & 5 hold toward the board owner's ascension ONLY on a cycle-1
+        // board (auto-upgrade happens once, from the first cycle). On recycled
+        // boards (cycle 2+) there is no upgrade: slot 4 pays the treasury and
+        // slot 5 pays the board owner (like slots 3 & 6).
+        if ((spot == 4 || spot == 5) && users[boardOwner].board[level].reinvestCount == 0) {
             users[boardOwner].board[level].heldForUpgrade += amount;
             emit UpgradeHold(users[boardOwner].id, users[member].id, level, amount);
+            return;
+        }
+        if (spot == 4) {
+            _sendToTreasuryAmount(member, level, amount);
             return;
         }
 

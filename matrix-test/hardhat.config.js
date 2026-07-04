@@ -22,6 +22,7 @@ module.exports = {
     hardhat: {
       allowUnlimitedContractSize: false,
       mining: { auto: true },
+      accounts: { count: 30 },
     },
   },
 };
