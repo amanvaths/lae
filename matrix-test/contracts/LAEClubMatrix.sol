@@ -368,15 +368,16 @@ contract LAEClubMatrix {
     }
 
     /**
-     * @dev Place `member` on EVERY upline board at `level` (sponsor first, then
-     *      sponsor's sponsor, ... up to the owner). Each board fills 1..14 and
-     *      recycles independently at slot 14. Money settles ONCE per entry:
-     *      HOLD PRIORITY — if this entry fills slot 4 or 5 on any upline board
-     *      (closest board first), the payment is HELD there as that board's
-     *      upgrade fund; at slot 5 the board owner ascends immediately carrying
-     *      the held funds (2 x share = one slot on the next level). Otherwise
-     *      the payment goes by slot role to the board of the upline with the
-     *      minimum reinvestCount (cycle-1 tie -> most senior; else closest).
+     * @dev Place `member` on EVERY active upline board at `level` that is still
+     *      in its FIRST cycle (sponsor first, ... up to the owner). Recycled
+     *      boards (cycle 2+) are skipped here — they only fill via re-entry.
+     *      Money settles ONCE per entry: HOLD PRIORITY — if this entry fills slot
+     *      4 or 5 on any cycle-1 upline board (closest first), the payment is
+     *      HELD there as its upgrade fund; at slot 5 the board ascends carrying
+     *      the held funds (one slot on the next level). If the senior board
+     *      completes its 14th slot, its owner RE-ENTERS the upline carrying the
+     *      payment (filling cycle 2+). Otherwise the payment goes by slot role to
+     *      the SENIOR (topmost) cycle-1 upline board.
      */
     function _enterLevel(address member, uint8 level, uint256 carried) private {
         if (!users[member].activeLevels[level]) {
@@ -385,39 +386,34 @@ contract LAEClubMatrix {
 
         address payOwner = address(0);
         uint8 paySlot = 0;
-        uint256 minRc = type(uint256).max;
+        bool payCompleted = false;
         address holdOwner = address(0);
         uint8 holdSlot = 0;
+        bool placedAny = false;
 
         address cur = users[member].referrer;
         for (uint256 hops = 0; cur != address(0) && hops < MAX_UPLINE; hops++) {
-            if (users[cur].activeLevels[level]) {
-                Board storage b = users[cur].board[level];
-                uint256 rcBefore = b.reinvestCount;
+            Board storage b = users[cur].board[level];
+            // Fresh entries fill ONLY cycle-1 boards; recycled boards (cycle 2+)
+            // are filled exclusively by re-entries (see _reenter).
+            if (users[cur].activeLevels[level] && b.reinvestCount == 0) {
                 b.slots.push(member);
                 uint8 spot = uint8(b.slots.length);
                 b.totalFilled += 1;
-                emit NewUserPlace(users[member].id, users[cur].id, level, rcBefore + 1, spot);
+                placedAny = true;
+                emit NewUserPlace(users[member].id, users[cur].id, level, 1, spot);
 
-                if ((spot == 4 || spot == 5) && rcBefore == 0 && holdOwner == address(0)) {
-                    // Upgrade-hold priority — closest CYCLE-1 board's slot 4/5
-                    // wins. Recycled boards (cycle 2+) never auto-upgrade, so
-                    // their slot 4/5 pay normally instead of holding.
+                if ((spot == 4 || spot == 5) && holdOwner == address(0)) {
+                    // Upgrade-hold priority — closest cycle-1 board's slot 4/5 wins.
                     holdOwner = cur;
                     holdSlot = spot;
                 }
 
-                if (rcBefore < minRc) {
-                    // Earlier cycle found — walking upward, so at rc > 0 the
-                    // CLOSEST upline at that cycle keeps the payment.
-                    minRc = rcBefore;
-                    payOwner = cur;
-                    paySlot = spot;
-                } else if (rcBefore == minRc && rcBefore == 0) {
-                    // Cycle-1 tie — the MORE SENIOR upline takes the payment.
-                    payOwner = cur;
-                    paySlot = spot;
-                }
+                // Every placed board is cycle-1 here, so the MORE SENIOR (topmost)
+                // upline keeps the payment; walking upward keeps overwriting.
+                payOwner = cur;
+                paySlot = spot;
+                payCompleted = (spot == MATRIX_SIZE);
 
                 if (spot == MATRIX_SIZE) {
                     delete b.slots;
@@ -428,43 +424,107 @@ contract LAEClubMatrix {
             cur = users[cur].referrer;
         }
 
+        address completedOwner = payCompleted ? payOwner : address(0);
+
+        // HOLD PRIORITY: a cycle-1 slot 4/5 fill funds that board's ascension.
         if (holdOwner != address(0)) {
-            // Slot 4/5 fill anywhere in the chain converts this payment into
-            // that board's upgrade fund; slot 5 releases the ascension.
             _payByRole(member, holdOwner, holdSlot, level, carried);
             if (holdSlot == 5) {
                 _ascend(holdOwner, level);
             }
+            // A senior board that completed in the same entry still re-enters
+            // structurally, but the payment was already claimed by the hold.
+            if (completedOwner != address(0)) {
+                _reenter(completedOwner, level, 0);
+            }
             return;
         }
 
-        if (payOwner == address(0)) {
-            // No upline board at this level (owner's own entry) — funds stay.
+        // The senior board completed its 14th slot: its owner re-enters the
+        // upline carrying this payment instead of paying the slot-14 role.
+        if (completedOwner != address(0)) {
+            _reenter(completedOwner, level, carried);
             return;
         }
 
-        _payByRole(member, payOwner, paySlot, level, carried);
+        if (payOwner != address(0)) {
+            _payByRole(member, payOwner, paySlot, level, carried);
+            return;
+        }
+
+        // No cycle-1 upline board (all recycled, or owner's own root entry):
+        // re-enter the nearest active upline's current board so the entry is
+        // always placed and its payment always settles.
+        if (!placedAny && users[member].referrer != address(0)) {
+            _reenter(member, level, carried);
+            return;
+        }
+        if (carried > 0) {
+            _sendTokenDividends(owner, member, level, carried);
+        }
     }
 
-    function _afterFill(address boardOwner, uint8 spot, uint8 level) private {
-        if (spot == 5 && users[boardOwner].board[level].reinvestCount == 0) {
-            // Auto-upgrade fires only from a cycle-1 board's slot 5.
-            _ascend(boardOwner, level);
-        }
+    /**
+     * @dev Single placement of `entrant` onto `target`'s CURRENT board at
+     *      `level`, carrying `amount`. Used for recycle re-entry and the
+     *      all-uplines-recycled fallback. A slot-14 landing recycles `target`
+     *      and cascades the re-entry up to target's own upline.
+     */
+    function _placeSingle(address entrant, address target, uint8 level, uint256 amount) private {
+        Board storage b = users[target].board[level];
+        b.slots.push(entrant);
+        uint8 spot = uint8(b.slots.length);
+        b.totalFilled += 1;
+        emit NewUserPlace(users[entrant].id, users[target].id, level, b.reinvestCount + 1, spot);
+
         if (spot == MATRIX_SIZE) {
-            Board storage b = users[boardOwner].board[level];
             delete b.slots;
             b.reinvestCount += 1;
-            emit Reinvest(users[boardOwner].id, users[boardOwner].id, users[boardOwner].id, level);
+            emit Reinvest(users[target].id, users[target].id, users[target].id, level);
+            _reenter(target, level, amount);
+            return;
+        }
+        if (amount > 0) {
+            _settleSlot(entrant, target, spot, level, amount);
+        }
+    }
+
+    /**
+     * @dev A board owner whose board just recycled re-enters the nearest active
+     *      upline's current board, carrying the completing slot's payment. If no
+     *      active upline exists, the carry is paid to the owner.
+     */
+    function _reenter(address boardOwner, uint8 level, uint256 amount) private {
+        address up = users[boardOwner].referrer;
+        for (uint256 h = 0; up != address(0) && h < MAX_UPLINE; h++) {
+            if (users[up].activeLevels[level]) {
+                _placeSingle(boardOwner, up, level, amount);
+                return;
+            }
+            up = users[up].referrer;
+        }
+        if (amount > 0) {
+            _sendTokenDividends(owner, boardOwner, level, amount);
+        }
+    }
+
+    /**
+     * @dev Settle a single landed slot by its role, then trigger ascension if it
+     *      was a cycle-1 slot 5 (auto-upgrade). Cycle-2+ slot 5 just pays owner.
+     */
+    function _settleSlot(address entrant, address boardOwner, uint8 spot, uint8 level, uint256 amount) private {
+        _payByRole(entrant, boardOwner, spot, level, amount);
+        if (spot == 5 && users[boardOwner].board[level].reinvestCount == 0) {
+            _ascend(boardOwner, level);
         }
     }
 
     /**
      * @dev Board owner ascends from `fromLevel` to fromLevel+1, carrying the held
-     *      (slot 4 + slot 5) funds which pay one slot on the next-level board. From
-     *      level 2 onward the ascender is placed on its SPONSOR's next-level board
-     *      (upline-based), not the global frontier — so a member's own downline
-     *      fills that member's higher-level boards.
+     *      (slot 4 + slot 5) funds which pay one slot on the next-level board. The
+     *      ascender enters level N+1 exactly like an L1 registration: placed on
+     *      EVERY active upline's N+1 board (genealogy), settling once by role on
+     *      the senior board (or held on a cycle-1 slot 4/5).
      */
     function _ascend(address boardOwner, uint8 fromLevel) private {
         Board storage fb = users[boardOwner].board[fromLevel];
@@ -478,60 +538,7 @@ contract LAEClubMatrix {
         }
 
         emit Upgrade(users[boardOwner].id, users[boardOwner].referrerId, nextLevel);
-        _placeAscension(boardOwner, nextLevel, carried);
-    }
-
-    /**
-     * @dev Walk up the sponsor chain and return the first upline that is active at
-     *      `level` and whose current-cycle board still has an open slot. The owner
-     *      is active at every level and its board recycles at 14, so it is the
-     *      guaranteed catch-all. Returns address(0) only for the owner's own
-     *      ascension (no upline exists).
-     */
-    function _uplineWithSpace(address ascender, uint8 level) private view returns (address) {
-        address cur = users[ascender].referrer;
-        for (uint256 hops = 0; cur != address(0) && hops < MAX_UPLINE; hops++) {
-            if (
-                users[cur].activeLevels[level] &&
-                users[cur].board[level].slots.length < MATRIX_SIZE
-            ) {
-                return cur;
-            }
-            cur = users[cur].referrer;
-        }
-        return address(0);
-    }
-
-    /**
-     * @dev Sponsor-based ascension placement (levels 2+). The ascending board
-     *      owner is placed on the nearest upline (its direct sponsor first) whose
-     *      next-level board has room, and carries its held funds to pay that slot.
-     *      Slot-5 on the target triggers the target's own ascension; slot-14
-     *      recycles the target's board in place.
-     */
-    function _placeAscension(address ascender, uint8 level, uint256 carried) private {
-        if (!users[ascender].activeLevels[level]) {
-            users[ascender].activeLevels[level] = true;
-        }
-
-        address target = _uplineWithSpace(ascender, level);
-        if (target == address(0)) {
-            // Root ascension (owner has no upline) — pay the carried upgrade
-            // funds to the owner instead of stranding them in the contract.
-            if (carried > 0) {
-                _sendTokenDividends(owner, ascender, level, carried);
-            }
-            return;
-        }
-
-        Board storage b = users[target].board[level];
-        b.slots.push(ascender);
-        uint8 spot = uint8(b.slots.length);
-        b.totalFilled += 1;
-        emit NewUserPlace(users[ascender].id, users[target].id, level, b.reinvestCount + 1, spot);
-
-        _payByRole(ascender, target, spot, level, carried);
-        _afterFill(target, spot, level);
+        _enterLevel(boardOwner, nextLevel, carried);
     }
 
     // --- INCOME (single payout per slot, role table + eligibility/lapse) ---
