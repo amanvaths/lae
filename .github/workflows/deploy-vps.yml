@@ -15,37 +15,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build static site
-        run: npm run build
-        env:
-          NEXT_STATIC_EXPORT: "true"
-          NEXT_PUBLIC_SITE_LIVE: "true"
-          NEXT_PUBLIC_CHAIN_ID: "97"
-          NEXT_PUBLIC_SITE_URL: "https://laeclub.org"
-          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL != '' && secrets.NEXT_PUBLIC_API_URL || 'https://laeclub.org' }}
-          NEXT_PUBLIC_WC_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_WC_PROJECT_ID }}
-          NEXT_PUBLIC_SENSO_CONTRACT: "0x6521619C38fe4be6B800263CC783d9524ED4F7BA"
-          NEXT_PUBLIC_DAI_CONTRACT: "0xb2bE66BE07E1AD04074B32B8b13DcdFaB6B57575"
-          NEXT_PUBLIC_SLT_CONTRACT: "0xc842c083E703ecf82496813cc3BFe6d36c0A49b0"
-          NEXT_PUBLIC_SPIN_CONTRACT: "0xF9bdE4a2Ca487b18DA8546124b63Ec9e938ea1aE"
-          NEXT_PUBLIC_STAKING_CONTRACT: "0xdb25Af21346aD358D5e52835934AF5f326169984"
-          NEXT_PUBLIC_LAE_MATRIX_CONTRACT: "0x6E67c21514A0B977F63f601fd4490917041C2488"
-          NEXT_PUBLIC_LAE_MATRIX_DEPLOY_BLOCK: "117150016"
-          NEXT_PUBLIC_MATRIX_CORE_CONTRACT: "0x6E67c21514A0B977F63f601fd4490917041C2488"
-          NEXT_PUBLIC_MATRIX_CORE_DEPLOY_BLOCK: "117150016"
-          NEXT_PUBLIC_LAE_COIN_CONTRACT: "0xD6698E6a8Ee4712cC2E36C150f1C34e59884C45A"
-          NEXT_PUBLIC_PAYMENT_TOKEN: "0xb2bE66BE07E1AD04074B32B8b13DcdFaB6B57575"
-
-      - name: Pack build artifact
-        run: tar -czf site.tar.gz -C out .
+      - name: Pack blank frontend
+        run: |
+          mkdir -p out
+          printf '%s\n' '<!doctype html><html><head><meta charset="utf-8"><title></title></head><body></body></html>' > out/index.html
+          tar -czf site.tar.gz -C out .
 
       - name: Upload to VPS
         uses: appleboy/scp-action@v1.0.0
@@ -126,10 +100,8 @@ jobs:
             echo ""
             echo "| Item | Value |"
             echo "|------|-------|"
-            echo "| Site | https://laeclub.org |"
-            echo "| Matrix | \`0x6E67c21514A0B977F63f601fd4490917041C2488\` |"
-            echo "| Deploy block | \`117150016\` |"
-            echo "| Seeded users | 0 (owner only) |"
+            echo "| Site | https://laeclub.org (blank frontend) |"
+            echo "| API | still live at /api and /health |"
             echo "| Commit | \`${{ github.sha }}\` |"
           } >> "$GITHUB_STEP_SUMMARY"
-          echo "✅ Frontend live at https://laeclub.org with contract 0x6E67c21514A0B977F63f601fd4490917041C2488"
+          echo "✅ Blank frontend live at https://laeclub.org (API still up)"
